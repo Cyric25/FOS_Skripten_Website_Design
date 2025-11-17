@@ -369,6 +369,15 @@ body {
     top: 80px; /* Below sticky header */
     max-height: calc(100vh - 100px);
     overflow-y: auto;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Sidebar hidden state (desktop) */
+.sidebar.hidden {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
 }
 
 .sidebar-header {
@@ -407,31 +416,29 @@ body {
 }
 
 .sidebar-toggle-close {
-    display: none; /* Hidden on desktop */
+    display: block; /* Now visible on desktop */
     background: none;
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.25rem 0.5rem;
     color: #666;
     line-height: 1;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .sidebar-toggle-close:hover {
     color: #0073aa;
+    background-color: #e8eef2;
 }
 
-/* Mobile toggle button */
-.sidebar-toggle-mobile {
-    display: none; /* Hidden on desktop */
+/* Sidebar toggle button (desktop and mobile) */
+.sidebar-toggle-btn {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
     background-color: #0073aa;
     color: #fff;
     border: none;
-    border-radius: 50px;
-    padding: 0.75rem 1.25rem;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0, 115, 170, 0.3);
     z-index: 999;
@@ -442,13 +449,37 @@ body {
     transition: all 0.3s ease;
 }
 
-.sidebar-toggle-mobile:hover {
-    background-color: #005a87;
-    box-shadow: 0 6px 16px rgba(0, 115, 170, 0.4);
+/* Desktop: Top-left position, vertical pill */
+.sidebar-toggle-btn {
+    top: 100px; /* Below sticky header */
+    left: 20px;
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 0.75rem;
+    flex-direction: column;
+    writing-mode: vertical-rl;
+    transform: translateX(0);
 }
 
-.sidebar-toggle-mobile .toggle-icon {
+/* Hide when sidebar is visible on desktop */
+.sidebar:not(.hidden) ~ .sidebar-toggle-btn {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #005a87;
+    box-shadow: 0 6px 16px rgba(0, 115, 170, 0.4);
+    left: 22px;
+}
+
+.sidebar-toggle-btn .toggle-icon {
     font-size: 1.2rem;
+    writing-mode: horizontal-tb;
+}
+
+.sidebar-toggle-btn .toggle-text {
+    font-size: 0.9rem;
 }
 
 /* Page tree navigation */
@@ -563,6 +594,14 @@ body {
 .content-with-sidebar .content-area {
     flex: 1;
     min-width: 0; /* Prevents flex item from overflowing */
+    transition: margin-left 0.3s ease;
+}
+
+/* Content expands when sidebar is hidden */
+.sidebar.hidden ~ .content-area,
+.content-with-sidebar:has(.sidebar.hidden) .content-area {
+    margin-left: 0;
+    max-width: 100%;
 }
 
 /* Responsive Design for Sidebar */
@@ -575,11 +614,15 @@ body {
         bottom: 0;
         width: 280px;
         max-height: 100vh;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
         z-index: 1001;
         border-radius: 0;
         padding-top: 1rem;
+    }
+
+    /* Mobile uses .active class instead of .hidden */
+    .sidebar:not(.active) {
+        transform: translateX(-100%);
+        opacity: 1;
     }
 
     .sidebar.active {
@@ -587,12 +630,40 @@ body {
         box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
     }
 
-    .sidebar-toggle-close {
-        display: block;
+    /* Override desktop hidden state on mobile */
+    .sidebar.hidden {
+        transform: translateX(-100%);
+        opacity: 1;
+        position: fixed;
     }
 
-    .sidebar-toggle-mobile {
-        display: flex;
+    /* Mobile: Bottom-left button, horizontal layout */
+    .sidebar-toggle-btn {
+        top: auto;
+        bottom: 20px;
+        left: 20px;
+        border-radius: 50px;
+        padding: 0.75rem 1.25rem;
+        flex-direction: row;
+        writing-mode: horizontal-tb;
+    }
+
+    .sidebar-toggle-btn .toggle-text {
+        font-size: 1rem;
+    }
+
+    /* Show button when sidebar is not active on mobile */
+    .sidebar:not(.active) ~ .sidebar-toggle-btn {
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Hide button when sidebar is active on mobile */
+    .sidebar.active ~ .sidebar-toggle-btn {
+        transform: translateX(-100%);
+        opacity: 0;
+        pointer-events: none;
     }
 
     /* Remove flex layout on mobile */
@@ -626,10 +697,13 @@ body {
         left: 260px;
     }
 
-    .sidebar-toggle-mobile {
+    .sidebar-toggle-btn {
         bottom: 15px;
         left: 15px;
         padding: 0.6rem 1rem;
+    }
+
+    .sidebar-toggle-btn .toggle-text {
         font-size: 0.9rem;
     }
 

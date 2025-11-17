@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <h3 class="sidebar-title">Navigation</h3>
-        <button class="sidebar-toggle-close" id="sidebar-toggle-close" aria-label="Sidebar schließen">
+        <button class="sidebar-toggle-close" id="sidebar-toggle-close" aria-label="Sidebar schließen" title="Navigation schließen">
             ✕
         </button>
     </div>
@@ -59,10 +59,10 @@ if (!defined('ABSPATH')) {
     </nav>
 </aside>
 
-<!-- Mobile sidebar toggle button -->
-<button class="sidebar-toggle-mobile" id="sidebar-toggle-mobile" aria-label="Navigation öffnen">
+<!-- Sidebar toggle button (works on mobile and desktop) -->
+<button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Navigation öffnen" title="Navigation öffnen/schließen">
     <span class="toggle-icon">☰</span>
-    <span class="toggle-text">Seiten</span>
+    <span class="toggle-text">Navigation</span>
 </button>
 
 <?php

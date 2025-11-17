@@ -44,50 +44,93 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function initializeSidebar() {
   const sidebar = document.getElementById('sidebar');
-  const sidebarToggleMobile = document.getElementById('sidebar-toggle-mobile');
+  const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
   const sidebarToggleClose = document.getElementById('sidebar-toggle-close');
   const pageToggles = document.querySelectorAll('.page-toggle');
 
   if (!sidebar) return; // Exit if sidebar doesn't exist on this page
 
-  // Mobile sidebar toggle - open
-  if (sidebarToggleMobile) {
-    sidebarToggleMobile.addEventListener('click', () => {
-      sidebar.classList.add('active');
-      sidebarToggleMobile.setAttribute('aria-expanded', 'true');
+  // Detect if we're on mobile or desktop
+  const isMobile = () => window.innerWidth <= 992;
+
+  // Sidebar toggle button - open/close
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', () => {
+      if (isMobile()) {
+        // Mobile: use .active class
+        sidebar.classList.add('active');
+        sidebarToggleBtn.setAttribute('aria-expanded', 'true');
+      } else {
+        // Desktop: remove .hidden class
+        sidebar.classList.remove('hidden');
+        sidebarToggleBtn.setAttribute('aria-expanded', 'true');
+      }
     });
   }
 
-  // Mobile sidebar toggle - close
+  // Sidebar close button
   if (sidebarToggleClose) {
     sidebarToggleClose.addEventListener('click', () => {
-      sidebar.classList.remove('active');
-      if (sidebarToggleMobile) {
-        sidebarToggleMobile.setAttribute('aria-expanded', 'false');
+      if (isMobile()) {
+        // Mobile: remove .active class
+        sidebar.classList.remove('active');
+        if (sidebarToggleBtn) {
+          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      } else {
+        // Desktop: add .hidden class
+        sidebar.classList.add('hidden');
+        if (sidebarToggleBtn) {
+          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
       }
     });
   }
 
   // Close sidebar when clicking overlay (on mobile)
   sidebar.addEventListener('click', (e) => {
-    // Check if click is on the overlay (pseudo-element)
-    const rect = sidebar.getBoundingClientRect();
-    if (e.clientX > rect.right) {
-      sidebar.classList.remove('active');
-      if (sidebarToggleMobile) {
-        sidebarToggleMobile.setAttribute('aria-expanded', 'false');
+    if (isMobile()) {
+      // Check if click is on the overlay (pseudo-element)
+      const rect = sidebar.getBoundingClientRect();
+      if (e.clientX > rect.right) {
+        sidebar.classList.remove('active');
+        if (sidebarToggleBtn) {
+          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
       }
     }
   });
 
-  // Close sidebar on ESC key (on mobile)
+  // Close sidebar on ESC key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && sidebar.classList.contains('active')) {
-      sidebar.classList.remove('active');
-      if (sidebarToggleMobile) {
-        sidebarToggleMobile.setAttribute('aria-expanded', 'false');
+    if (e.key === 'Escape') {
+      if (isMobile() && sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+        if (sidebarToggleBtn) {
+          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      } else if (!isMobile() && !sidebar.classList.contains('hidden')) {
+        sidebar.classList.add('hidden');
+        if (sidebarToggleBtn) {
+          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
       }
     }
+  });
+
+  // Handle window resize - clean up classes when switching between mobile/desktop
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (isMobile()) {
+        // On mobile, remove desktop .hidden class
+        sidebar.classList.remove('hidden');
+      } else {
+        // On desktop, remove mobile .active class
+        sidebar.classList.remove('active');
+      }
+    }, 250);
   });
 
   // Page expand/collapse toggles
