@@ -71,21 +71,38 @@ function initializeSidebar() {
   // Sidebar close button
   if (sidebarToggleClose) {
     sidebarToggleClose.addEventListener('click', () => {
-      if (isMobile()) {
-        // Mobile: remove .active class
-        sidebar.classList.remove('active');
-        if (sidebarToggleBtn) {
-          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
-        }
-      } else {
-        // Desktop: add .hidden class
-        sidebar.classList.add('hidden');
-        if (sidebarToggleBtn) {
-          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
-        }
-      }
+      closeSidebar();
     });
   }
+
+  // Helper function to close sidebar
+  function closeSidebar() {
+    if (isMobile()) {
+      // Mobile: remove .active class
+      sidebar.classList.remove('active');
+      if (sidebarToggleBtn) {
+        sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+    } else {
+      // Desktop: add .hidden class
+      sidebar.classList.add('hidden');
+      if (sidebarToggleBtn) {
+        sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+  }
+
+  // Click outside to close sidebar (desktop)
+  document.addEventListener('click', (e) => {
+    if (!isMobile() && !sidebar.classList.contains('hidden')) {
+      // Check if click is outside sidebar and not on toggle button
+      if (!sidebar.contains(e.target) &&
+          !sidebarToggleBtn.contains(e.target) &&
+          e.target !== sidebarToggleBtn) {
+        closeSidebar();
+      }
+    }
+  });
 
   // Close sidebar when clicking overlay (on mobile)
   sidebar.addEventListener('click', (e) => {
@@ -93,27 +110,49 @@ function initializeSidebar() {
       // Check if click is on the overlay (pseudo-element)
       const rect = sidebar.getBoundingClientRect();
       if (e.clientX > rect.right) {
-        sidebar.classList.remove('active');
-        if (sidebarToggleBtn) {
-          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
-        }
+        closeSidebar();
       }
     }
   });
+
+  // Swipe gesture support for touch devices
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchEndX = 0;
+  let touchEndY = 0;
+
+  sidebar.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  sidebar.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipeGesture();
+  }, { passive: true });
+
+  function handleSwipeGesture() {
+    const swipeThreshold = 50; // minimum distance for swipe
+    const swipeX = touchEndX - touchStartX;
+    const swipeY = touchEndY - touchStartY;
+
+    // Check if horizontal swipe is dominant (not vertical scroll)
+    if (Math.abs(swipeX) > Math.abs(swipeY) && Math.abs(swipeX) > swipeThreshold) {
+      // Swipe left to close sidebar
+      if (swipeX < 0) {
+        closeSidebar();
+      }
+    }
+  }
 
   // Close sidebar on ESC key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (isMobile() && sidebar.classList.contains('active')) {
-        sidebar.classList.remove('active');
-        if (sidebarToggleBtn) {
-          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
-        }
+        closeSidebar();
       } else if (!isMobile() && !sidebar.classList.contains('hidden')) {
-        sidebar.classList.add('hidden');
-        if (sidebarToggleBtn) {
-          sidebarToggleBtn.setAttribute('aria-expanded', 'false');
-        }
+        closeSidebar();
       }
     }
   });
