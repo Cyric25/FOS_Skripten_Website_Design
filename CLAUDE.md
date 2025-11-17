@@ -43,8 +43,9 @@ Theme/
 │   ├── footer.php               # Footer with login link
 │   ├── index.php                # Blog posts listing
 │   ├── single.php               # Single post template
-│   └── page.php                 # Static page template
-├── styles.css                   # Main stylesheet (includes theme header)
+│   ├── page.php                 # Static page template
+│   └── sidebar.php              # Hierarchical page navigation
+├── style.css                    # Main stylesheet (includes theme header)
 ├── vite.config.js               # Vite build configuration
 ├── create-theme-zip.js          # ZIP creation script
 ├── package.json                 # NPM dependencies & scripts
@@ -130,7 +131,7 @@ The theme includes an automated ZIP creation system that packages the theme for 
 
 **What's included in the ZIP:**
 - All PHP template files (`*.php`)
-- Main stylesheet (`styles.css`)
+- Main stylesheet (`style.css`)
 - Built JavaScript (`dist/js/main.js`)
 - Vite manifest (`dist/.vite/manifest.json`)
 - Documentation (`readme.md`)
@@ -258,7 +259,7 @@ function simple_clean_theme_assets() {
 
 ### Main Stylesheet
 
-**File:** `styles.css`
+**File:** `style.css`
 
 **Theme header (lines 1-12):**
 ```css
@@ -272,11 +273,11 @@ Text Domain: simple-clean-theme
 */
 ```
 
-**Important:** The theme header in `styles.css` is required for WordPress theme recognition.
+**Important:** The theme header in `style.css` is required for WordPress theme recognition.
 
 ### CSS Architecture
 
-**Reset & Base:** `styles.css:14-26`
+**Reset & Base:** `style.css:14-26`
 - CSS box-sizing reset
 - System font stack
 - Base typography settings
@@ -287,26 +288,35 @@ Text Domain: simple-clean-theme
 - `.site-main` - Min-height calc, 2rem padding
 - `.site-footer` - Light background, top border
 
-**Navigation:** `styles.css:58-74`
+**Navigation:** `style.css:58-74`
 - Horizontal flex menu on desktop
 - Hover effects with color transition
 - Mobile toggle button (hidden on desktop)
 
-**Content Styles:** `styles.css:127-248`
+**Content Styles:** `style.css:127-248`
 - Typography: H1-H6, paragraphs, lists
 - Blockquotes with left border accent
 - Code blocks with syntax highlighting background
 - Tables with borders and header styling
 
+**Sidebar Navigation:** `style.css:350-602`
+- Hierarchical page tree layout
+- Expand/collapse animations
+- Sticky positioning on desktop
+- Fixed slide-in on mobile
+- Current page and ancestor highlighting
+
 **Responsive Breakpoints:**
 - **Desktop:** Default (1200px max container)
-- **Tablet/Mobile:** `@media (max-width: 768px)` - Lines 279-334
+- **Tablet/Mobile:** `@media (max-width: 992px)` - Sidebar becomes mobile slide-in
+- **Tablet/Mobile (Header):** `@media (max-width: 768px)` - Lines 279-334
   - Hamburger menu appears
   - Vertical navigation
   - Stacked footer layout
-- **Small Mobile:** `@media (max-width: 480px)` - Lines 336-348
+- **Small Mobile:** `@media (max-width: 480px)` - Lines 336-348, 583-602
   - Reduced font sizes
   - Tighter spacing
+  - Smaller sidebar width
 
 ### Color Scheme
 
@@ -318,7 +328,7 @@ Text Domain: simple-clean-theme
 - Muted text: `#666`
 - Borders: `#eee`, `#ddd`
 
-**To customize colors:** Search and replace hex values in `styles.css` or add CSS variables.
+**To customize colors:** Search and replace hex values in `style.css` or add CSS variables.
 
 ## Navigation System
 
@@ -569,7 +579,7 @@ git pull origin main
 
 **Method 2: CSS Variables** (recommended)
 ```css
-/* Add to top of styles.css after theme header */
+/* Add to top of style.css after theme header */
 :root {
     --color-primary: #0073aa;
     --color-text: #333;
@@ -582,7 +592,7 @@ git pull origin main
 
 ### Changing Fonts
 
-**Location:** `styles.css:22`
+**Location:** `style.css:22`
 
 ```css
 /* Current: System font stack */
@@ -592,7 +602,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, ...;
 /* 1. Add to header.php <head> */
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-/* 2. Update styles.css */
+/* 2. Update style.css */
 font-family: 'Inter', -apple-system, BlinkMacSystemFont, ...;
 ```
 
@@ -623,7 +633,7 @@ get_header();
 1. Register sidebar in `functions.php`
 2. Create `sidebar.php`
 3. Update templates to call `get_sidebar()`
-4. Add sidebar styles to `styles.css`
+4. Add sidebar styles to `style.css`
 
 ## Compatibility
 
@@ -716,8 +726,8 @@ get_header();
 **Symptoms:** Unstyled content, broken layout
 
 **Checks:**
-1. Verify `styles.css` exists in theme root
-2. Check theme header in `styles.css` (required for WordPress)
+1. Verify `style.css` exists in theme root
+2. Check theme header in `style.css` (required for WordPress)
 3. Clear browser cache (Ctrl+Shift+R)
 4. Check for CSS conflicts with plugins
 5. Verify file permissions (should be readable by web server)
@@ -773,11 +783,12 @@ git push origin main          # Push again
 - Footer: `footer.php:1-16`
 
 ### Styles
-- Theme header: `styles.css:1-12`
-- Layout: `styles.css:28-88`
-- Navigation: `styles.css:58-74`
-- Content: `styles.css:127-248`
-- Responsive: `styles.css:279-348`
+- Theme header: `style.css:1-12`
+- Layout: `style.css:28-88`
+- Navigation: `style.css:58-74`
+- Content: `style.css:127-248`
+- Sidebar: `style.css:350-602`
+- Responsive: `style.css:279-348, 532-602`
 
 ### JavaScript
 - Main entry: `src/js/main.js:7-33` (menu toggle)

@@ -15,7 +15,7 @@ const OUTPUT_FILE = `${THEME_NAME}-v${VERSION}.zip`;
 // Files and folders to include in the ZIP
 const INCLUDE_PATTERNS = [
     '*.php',
-    'styles.css',
+    'style.css',
     'readme.md',
     'LICENSE',
     'dist/js/**/*',
@@ -48,8 +48,8 @@ async function shouldIncludeFile(filePath) {
         }
     }
 
-    // Include all PHP files and styles.css in root
-    if (filePath.match(/\.php$/) || filePath === 'styles.css' || filePath === 'readme.md' || filePath === 'LICENSE') {
+    // Include all PHP files and style.css in root
+    if (filePath.match(/\.php$/) || filePath === 'style.css' || filePath === 'readme.md' || filePath === 'LICENSE') {
         return true;
     }
 
@@ -122,11 +122,11 @@ async function createThemeZip() {
         // Get all files
         const allFiles = await getAllFiles('.');
 
-        // Add files to archive
+        // Add files to archive (directly in root, no parent folder)
         for (const file of allFiles) {
             if (await shouldIncludeFile(file)) {
                 const relativePath = file.replace(/^\.[\\/]/, '');
-                archive.file(file, { name: `${THEME_NAME}/${relativePath}` });
+                archive.file(file, { name: relativePath });
                 console.log(`  + ${relativePath}`);
             }
         }
