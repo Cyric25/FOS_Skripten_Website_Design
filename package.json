@@ -1,0 +1,22 @@
+{
+  "name": "simple-clean-theme",
+  "version": "1.0.0",
+  "description": "Ein einfaches, responsives WordPress-Theme ohne Widgets",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "watch": "vite build --watch",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "wordpress",
+    "theme",
+    "responsive"
+  ],
+  "author": "Ihr Name",
+  "license": "GPL-2.0-or-later",
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}
