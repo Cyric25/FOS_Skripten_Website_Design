@@ -11,13 +11,22 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'src/js/main.js')
+        main: resolve(__dirname, 'src/js/main.js'),
+        glossar: resolve(__dirname, 'src/js/glossar.js'),
+        'glossar-editor': resolve(__dirname, 'src/js/glossar-editor.js'),
+        'glossar-style': resolve(__dirname, 'src/css/glossar.css')
       },
       output: {
         // Output format
         entryFileNames: 'js/[name].js',
         chunkFileNames: 'js/[name]-[hash].js',
-        assetFileNames: 'assets/[name].[ext]'
+        assetFileNames: (assetInfo) => {
+          // Put CSS files in css/ directory
+          if (assetInfo.name.endsWith('.css')) {
+            return 'css/[name][extname]';
+          }
+          return 'assets/[name][extname]';
+        }
       }
     }
   },

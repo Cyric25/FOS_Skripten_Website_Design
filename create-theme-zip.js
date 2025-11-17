@@ -19,6 +19,7 @@ const INCLUDE_PATTERNS = [
     'readme.md',
     'LICENSE',
     'dist/js/**/*',
+    'dist/css/**/*',
     'dist/.vite/manifest.json'
 ];
 
@@ -53,8 +54,10 @@ async function shouldIncludeFile(filePath) {
         return true;
     }
 
-    // Include dist/js and dist/.vite/manifest.json
-    if (relativePath.startsWith('dist/js/') || relativePath === 'dist/.vite/manifest.json') {
+    // Include dist/js, dist/css, and dist/.vite/manifest.json
+    if (relativePath.startsWith('dist/js/') ||
+        relativePath.startsWith('dist/css/') ||
+        relativePath === 'dist/.vite/manifest.json') {
         return true;
     }
 
