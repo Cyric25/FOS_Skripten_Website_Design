@@ -24,23 +24,36 @@ if (!defined('ABSPATH')) {
         // Get current page ID
         $current_page_id = get_the_ID();
 
-        // Get all pages in hierarchical structure
+        // Find the root page (top-level ancestor of current page)
+        $root_page_id = get_root_page_id($current_page_id);
+
+        // Get the root page title for display
+        $root_page = get_post($root_page_id);
+        $root_title = $root_page ? $root_page->post_title : '';
+
+        // Display root page title as section header
+        if ($root_title) {
+            echo '<div class="sidebar-section-title">' . esc_html($root_title) . '</div>';
+        }
+
+        // Get child pages of the root page
         $pages = get_pages(array(
+            'child_of' => $root_page_id,
+            'parent' => $root_page_id,
             'sort_column' => 'menu_order, post_title',
-            'hierarchical' => true,
-            'parent' => 0, // Only top-level pages
         ));
 
         if ($pages) {
             echo '<ul class="page-tree">';
 
             foreach ($pages as $page) {
-                display_page_tree_item($page, $current_page_id);
+                display_page_tree_item($page, $current_page_id, 0, true); // true = auto-expand all
             }
 
             echo '</ul>';
         } else {
-            echo '<p>Keine Seiten gefunden.</p>';
+            // If no child pages, show a message
+            echo '<p class="no-pages-message">Keine Unterseiten vorhanden.</p>';
         }
         ?>
     </nav>
@@ -54,13 +67,32 @@ if (!defined('ABSPATH')) {
 
 <?php
 /**
+ * Get the root page ID (top-level ancestor) for the current page
+ *
+ * @param int $page_id Current page ID
+ * @return int Root page ID
+ */
+function get_root_page_id($page_id) {
+    $ancestors = get_post_ancestors($page_id);
+
+    if (!empty($ancestors)) {
+        // Return the topmost ancestor
+        return end($ancestors);
+    }
+
+    // If no ancestors, the current page is the root
+    return $page_id;
+}
+
+/**
  * Recursively display page tree items
  *
  * @param WP_Post $page Current page object
  * @param int $current_page_id Currently viewed page ID
  * @param int $depth Current depth level
+ * @param bool $auto_expand Auto-expand all items
  */
-function display_page_tree_item($page, $current_page_id, $depth = 0) {
+function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expand = true) {
     // Get child pages
     $children = get_pages(array(
         'child_of' => $page->ID,
@@ -88,7 +120,11 @@ function display_page_tree_item($page, $current_page_id, $depth = 0) {
     }
     if ($is_ancestor) {
         $classes[] = 'current-page-ancestor';
-        $classes[] = 'expanded'; // Auto-expand ancestor pages
+    }
+
+    // Auto-expand all items if specified, or just ancestors
+    if ($auto_expand || $is_ancestor) {
+        $classes[] = 'expanded';
     }
 
     echo '<li class="' . esc_attr(implode(' ', $classes)) . '">';
@@ -109,7 +145,7 @@ function display_page_tree_item($page, $current_page_id, $depth = 0) {
     if ($has_children) {
         echo '<ul class="page-tree-children">';
         foreach ($children as $child) {
-            display_page_tree_item($child, $current_page_id, $depth + 1);
+            display_page_tree_item($child, $current_page_id, $depth + 1, $auto_expand);
         }
         echo '</ul>';
     }
