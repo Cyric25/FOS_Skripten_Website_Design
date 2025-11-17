@@ -65,6 +65,9 @@ function initializeSidebar() {
         sidebar.classList.remove('hidden');
         sidebarToggleBtn.setAttribute('aria-expanded', 'true');
       }
+
+      // Scroll to current page after opening
+      scrollToCurrentPage();
     });
   }
 
@@ -188,6 +191,39 @@ function initializeSidebar() {
       }
     });
   });
+
+  // Helper function to scroll to current page in sidebar
+  function scrollToCurrentPage() {
+    // Wait for sidebar animation to complete
+    setTimeout(() => {
+      const currentPageItem = sidebar.querySelector('.page-item.current-page');
+      if (currentPageItem) {
+        const sidebarNavigation = sidebar.querySelector('.sidebar-navigation');
+        if (sidebarNavigation) {
+          // Get the position of current page relative to sidebar navigation
+          const itemOffset = currentPageItem.offsetTop;
+          const sidebarHeight = sidebarNavigation.clientHeight;
+          const itemHeight = currentPageItem.clientHeight;
+
+          // Calculate scroll position to center the current page
+          const scrollPosition = itemOffset - (sidebarHeight / 2) + (itemHeight / 2);
+
+          // Smooth scroll to current page
+          sidebarNavigation.scrollTo({
+            top: scrollPosition,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 100); // Wait for sidebar open animation
+  }
+
+  // Scroll to current page on initial load
+  // Desktop: if sidebar is visible
+  // Mobile: always (sidebar will scroll when opened)
+  if ((!isMobile() && !sidebar.classList.contains('hidden')) || isMobile()) {
+    scrollToCurrentPage();
+  }
 
   console.log('Sidebar initialized with', pageToggles.length, 'expandable items');
 }
