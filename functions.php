@@ -563,11 +563,11 @@ function simple_clean_glossar_assets() {
     }
 
     // Enqueue glossar CSS
-    $glossar_css = get_template_directory() . '/dist/css/glossar.css';
+    $glossar_css = get_template_directory() . '/dist/css/glossar-style.css';
     if (file_exists($glossar_css)) {
         wp_enqueue_style(
             'simple-clean-glossar-style',
-            get_template_directory_uri() . '/dist/css/glossar.css',
+            get_template_directory_uri() . '/dist/css/glossar-style.css',
             array(),
             filemtime($glossar_css)
         );
