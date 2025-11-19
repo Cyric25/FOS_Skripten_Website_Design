@@ -1,7 +1,7 @@
 {
-  "name": "simple-clean-theme",
+  "name": "fos-online-schulbuch",
   "version": "1.0.0",
-  "description": "Ein einfaches, responsives WordPress-Theme ohne Widgets",
+  "description": "WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,9 +15,11 @@
   "keywords": [
     "wordpress",
     "theme",
-    "responsive"
+    "education",
+    "schulbuch",
+    "fos"
   ],
-  "author": "Ihr Name",
+  "author": "Martin Huber",
   "license": "GPL-2.0-or-later",
   "devDependencies": {
     "archiver": "^7.0.1",

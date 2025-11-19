@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const packageJson = require('./package.json');
 
 const OUTPUT_DIR = './dist';
-const THEME_NAME = 'simple-clean-theme';
+const THEME_NAME = 'fos-online-schulbuch';
 const VERSION = packageJson.version;
 const OUTPUT_FILE = `${THEME_NAME}-v${VERSION}.zip`;
 

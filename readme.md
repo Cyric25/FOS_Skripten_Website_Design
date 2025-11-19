@@ -1,32 +1,28 @@
-# Simple Clean WordPress Theme
+# FOS Online Schulbuch - WordPress Theme
 
-Ein einfaches, responsives WordPress-Theme ohne Widgets, mit sauberem Design und fokussiert auf Inhalt.
+WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar-System und hierarchischer Navigation.
 
 ## Features
 
-- ✅ Einfaches Menü oben (sticky navigation)
-- ✅ Keine Widgets/Sidebars
-- ✅ Footer mit Anmeldelink
-- ✅ Vollständig responsiv
-- ✅ Mobile-optimiert mit Hamburger-Menü
-- ✅ Sauberer, minimalistischer Code
+- ✅ Hierarchische Seitennavigation (collapsible tree)
+- ✅ Glossar-System mit automatischer Verlinkung
+- ✅ Glossar-Editor im Block-Editor (vollständiges Formular)
+- ✅ Container Block Designer Integration
+- ✅ Modulare Blöcke Integration
+- ✅ Custom Field für Navigation ein/aus
+- ✅ Vollständig responsiv (Desktop, Tablet, Mobile)
+- ✅ Touch-optimiert (Swipe-Gesten)
+- ✅ Farbschema: #71230a (Text) & #e24614 (UI)
 - ✅ SEO-freundlich
 
 ## Installation als ZIP-Datei
 
-### Schritt 1: ZIP-Datei erstellen
-1. Erstellen Sie einen neuen Ordner namens `simple-clean-theme`
-2. Kopieren Sie alle Theme-Dateien in diesen Ordner:
-   - style.css
-   - index.php
-   - header.php
-   - footer.php
-   - functions.php
-   - single.php
-   - page.php
-   - README.md (diese Datei)
-
-3. Komprimieren Sie den Ordner `simple-clean-theme` zu einer ZIP-Datei
+### Schritt 1: ZIP-Datei erhalten
+Die ZIP-Datei wird automatisch beim Build erstellt:
+```bash
+npm run build
+```
+Die fertige ZIP-Datei befindet sich dann in `dist/fos-online-schulbuch-v1.0.0.zip`
 
 ### Schritt 2: Installation in WordPress
 1. Loggen Sie sich in Ihr WordPress-Admin-Panel ein
@@ -47,15 +43,26 @@ Ein einfaches, responsives WordPress-Theme ohne Widgets, mit sauberem Design und
 ## Theme-Struktur
 
 ```
-simple-clean-theme/
-├── style.css          # Haupt-Stylesheet mit Theme-Header
-├── index.php          # Hauptseite für Blog-Posts
-├── header.php         # Header mit Navigation
-├── footer.php         # Footer mit Anmeldelink
-├── functions.php      # Theme-Funktionen
-├── single.php         # Einzelne Blogpost-Ansicht
-├── page.php           # Statische Seiten
-└── README.md          # Diese Anleitung
+fos-online-schulbuch/
+├── style.css             # Haupt-Stylesheet
+├── functions.php         # Theme-Setup, Glossar, REST API
+├── page.php              # Seiten mit Sidebar
+├── sidebar.php           # Hierarchische Navigation
+├── header.php            # Header (optional per Custom Field)
+├── footer.php            # Footer
+├── index.php             # Blog-Posts
+├── single.php            # Einzelne Posts
+├── archive-glossar.php   # Glossar-Archiv
+├── single-glossar.php    # Einzelner Glossar-Eintrag
+├── src/                  # Source-Dateien (JavaScript, CSS)
+│   ├── js/
+│   │   ├── main.js           # Theme-JavaScript (Sidebar, Menu)
+│   │   ├── glossar.js        # Glossar-Frontend
+│   │   └── glossar-editor.js # Glossar Block-Editor
+│   └── css/
+│       └── glossar.css       # Glossar-Styles
+├── dist/                 # Build-Output (generiert)
+└── README.md             # Diese Anleitung
 ```
 
 ## Anpassungen
@@ -106,7 +113,9 @@ Dieses Theme ist selbst-unterstützt. Bei Problemen überprüfen Sie:
 
 ---
 
-**Theme Name:** Simple Clean Theme  
-**Version:** 1.0  
-**WordPress Kompatibilität:** 5.0+  
+**Theme Name:** FOS Online Schulbuch
+**Version:** 1.0
+**Author:** Martin Huber
+**WordPress Kompatibilität:** 5.0+
 **PHP Kompatibilität:** 7.4+
+**Text Domain:** fos-online-schulbuch
