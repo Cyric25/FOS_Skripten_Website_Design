@@ -91,16 +91,14 @@ class GlossarFormatButton extends Component {
         this.setState({ isLoading: true, error: null });
 
         try {
+            // apiFetch automatically handles authentication and nonce
             const response = await apiFetch({
-                path: glossarEditorData.restUrl + 'glossar',
+                path: '/simple-clean/v1/glossar',
                 method: 'POST',
                 data: formData,
-                headers: {
-                    'X-WP-Nonce': glossarEditorData.nonce,
-                },
             });
 
-            if (response.success) {
+            if (response && response.success) {
                 // Mark the selected text as glossar term
                 const newValue = applyFormat(value, {
                     type: 'simple-clean-theme/glossar',
@@ -108,7 +106,7 @@ class GlossarFormatButton extends Component {
                 onChange(newValue);
 
                 this.setState({
-                    success: response.message,
+                    success: response.message || 'Glossar-Eintrag erfolgreich erstellt!',
                     isLoading: false,
                 });
 
@@ -116,8 +114,11 @@ class GlossarFormatButton extends Component {
                 setTimeout(() => {
                     this.closeModal();
                 }, 2000);
+            } else {
+                throw new Error('Unerwartete Antwort vom Server.');
             }
         } catch (error) {
+            console.error('Glossar API Error:', error);
             this.setState({
                 error: error.message || 'Fehler beim Erstellen des Glossar-Eintrags.',
                 isLoading: false,

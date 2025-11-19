@@ -669,28 +669,52 @@ function simple_clean_get_glossar_categories() {
 // REST API Endpoint for creating glossary terms
 function simple_clean_register_glossar_rest_routes() {
     register_rest_route('simple-clean/v1', '/glossar', array(
-        'methods' => 'POST',
+        'methods' => WP_REST_Server::CREATABLE,
         'callback' => 'simple_clean_create_glossar_term',
         'permission_callback' => function() {
             return current_user_can('edit_posts');
         },
+        'args' => array(
+            'title' => array(
+                'required' => true,
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'definition' => array(
+                'required' => true,
+                'type' => 'string',
+                'sanitize_callback' => 'wp_kses_post',
+            ),
+            'category' => array(
+                'required' => false,
+                'type' => 'integer',
+            ),
+            'tags' => array(
+                'required' => false,
+                'type' => 'string',
+            ),
+            'links' => array(
+                'required' => false,
+                'type' => 'string',
+            ),
+        ),
     ));
 }
 add_action('rest_api_init', 'simple_clean_register_glossar_rest_routes');
 
 // Create glossar term via REST API
 function simple_clean_create_glossar_term($request) {
-    $params = $request->get_json_params();
-
-    // Validate required fields
-    if (empty($params['title']) || empty($params['definition'])) {
-        return new WP_Error('missing_fields', 'Titel und Definition sind erforderlich.', array('status' => 400));
-    }
+    // Get parameters (already validated and sanitized by REST API args schema)
+    $title = $request->get_param('title');
+    $definition = $request->get_param('definition');
+    $category = $request->get_param('category');
+    $tags = $request->get_param('tags');
+    $links = $request->get_param('links');
 
     // Create the post
     $post_data = array(
-        'post_title'   => sanitize_text_field($params['title']),
-        'post_content' => wp_kses_post($params['definition']),
+        'post_title'   => $title,
+        'post_content' => $definition,
         'post_type'    => 'glossar',
         'post_status'  => 'publish',
     );
@@ -702,24 +726,19 @@ function simple_clean_create_glossar_term($request) {
     }
 
     // Add category if provided
-    if (!empty($params['category'])) {
-        wp_set_object_terms($post_id, intval($params['category']), 'glossar_category');
+    if (!empty($category)) {
+        wp_set_object_terms($post_id, intval($category), 'glossar_category');
     }
 
     // Add tags if provided
-    if (!empty($params['tags'])) {
-        $tags = array_map('sanitize_text_field', explode(',', $params['tags']));
-        wp_set_post_tags($post_id, $tags);
-    }
-
-    // Add featured image if provided
-    if (!empty($params['image_id'])) {
-        set_post_thumbnail($post_id, intval($params['image_id']));
+    if (!empty($tags)) {
+        $tags_array = array_map('trim', explode(',', $tags));
+        wp_set_post_tags($post_id, $tags_array);
     }
 
     // Add custom meta for links if provided
-    if (!empty($params['links'])) {
-        update_post_meta($post_id, '_glossar_links', sanitize_textarea_field($params['links']));
+    if (!empty($links)) {
+        update_post_meta($post_id, '_glossar_links', $links);
     }
 
     // Return success response
