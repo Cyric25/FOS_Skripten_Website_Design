@@ -133,9 +133,17 @@ add_action('save_post', 'simple_clean_save_navigation_meta');
 
 // Helper function to check if navigation should be hidden
 function simple_clean_should_hide_navigation() {
-    if (is_page()) {
-        $hide = get_post_meta(get_the_ID(), '_simple_clean_hide_navigation', true);
-        return $hide === '1';
+    // Check if we're on a page (not in admin, not a post, not archive, etc.)
+    if (is_page() && !is_admin()) {
+        $page_id = get_the_ID();
+        if ($page_id) {
+            $hide = get_post_meta($page_id, '_simple_clean_hide_navigation', true);
+
+            // Debug: uncomment next line to see what's being checked
+            error_log("Page ID: $page_id | Hide Navigation Meta: " . var_export($hide, true));
+
+            return $hide === '1' || $hide === 1;
+        }
     }
     return false;
 }
