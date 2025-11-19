@@ -33,12 +33,9 @@
         echo '<div style="position: fixed; bottom: 10px; right: 10px; background: ' . ($hide_navigation ? '#28a745' : '#dc3545') . '; color: #fff; padding: 10px; z-index: 99999; border-radius: 5px; font-size: 11px;">';
         echo '<strong>Header Check:</strong><br>';
         echo 'Hide Navigation: ' . ($hide_navigation ? 'TRUE ✅' : 'FALSE ❌') . '<br>';
-        echo 'Render Header: ' . (!$hide_navigation ? 'YES' : 'NO');
+        echo 'Render Navigation: ' . (!$hide_navigation ? 'YES' : 'NO');
         echo '</div>';
     }
-
-    // Only show header if hide_navigation is FALSE
-    if (!$hide_navigation):
     ?>
     <header class="site-header">
         <div class="container">
@@ -47,6 +44,7 @@
                     <?php bloginfo('name'); ?>
                 </a>
 
+                <?php if (!$hide_navigation): ?>
                 <button class="menu-toggle" id="menu-toggle" aria-label="Menü öffnen">
                     ☰
                 </button>
@@ -71,20 +69,20 @@
                     }
                     ?>
                 </nav>
+
+                <script>
+                // Only initialize menu toggle if navigation exists
+                const menuToggle = document.getElementById('menu-toggle');
+                const mainNav = document.getElementById('main-navigation');
+                if (menuToggle && mainNav) {
+                    menuToggle.addEventListener('click', function() {
+                        mainNav.classList.toggle('active');
+                    });
+                }
+                </script>
+                <?php else: ?>
+                <!-- Navigation menu is hidden for this page (ID: <?php echo get_the_ID(); ?>) -->
+                <?php endif; ?>
             </div>
         </div>
     </header>
-
-    <script>
-    // Only initialize menu toggle if navigation exists
-    const menuToggle = document.getElementById('menu-toggle');
-    const mainNav = document.getElementById('main-navigation');
-    if (menuToggle && mainNav) {
-        menuToggle.addEventListener('click', function() {
-            mainNav.classList.toggle('active');
-        });
-    }
-    </script>
-    <?php else: ?>
-    <!-- Navigation is hidden for this page (ID: <?php echo get_the_ID(); ?>) -->
-    <?php endif; ?>
