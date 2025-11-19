@@ -501,8 +501,8 @@ body {
     flex-direction: column;
     writing-mode: vertical-rl;
     transform: translateX(0);
-    background-color: rgba(0, 115, 170, 0.7);
-    opacity: 0.6;
+    /* Orange background is already set in main declaration */
+    opacity: 0.95; /* Slightly transparent but orange is clearly visible */
     font-size: 0.75rem;
 }
 
