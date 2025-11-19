@@ -41,14 +41,3 @@
             </div>
         </div>
     </header>
-
-    <script>
-    // Only initialize menu toggle if navigation exists
-    const menuToggle = document.getElementById('menu-toggle');
-    const mainNav = document.getElementById('main-navigation');
-    if (menuToggle && mainNav) {
-        menuToggle.addEventListener('click', function() {
-            mainNav.classList.toggle('active');
-        });
-    }
-    </script>
