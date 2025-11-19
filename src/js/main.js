@@ -198,24 +198,22 @@ function initializeSidebar() {
     setTimeout(() => {
       const currentPageItem = sidebar.querySelector('.page-item.current-page');
       if (currentPageItem) {
-        const sidebarNavigation = sidebar.querySelector('.sidebar-navigation');
-        if (sidebarNavigation) {
-          // Get the position of current page relative to sidebar navigation
-          const itemOffset = currentPageItem.offsetTop;
-          const sidebarHeight = sidebarNavigation.clientHeight;
-          const itemHeight = currentPageItem.clientHeight;
+        // The sidebar itself is the scrollable element (has overflow-y: auto)
+        // Get the position of current page relative to sidebar top
+        const itemOffsetTop = currentPageItem.offsetTop;
+        const sidebarHeight = sidebar.clientHeight;
+        const itemHeight = currentPageItem.clientHeight;
 
-          // Calculate scroll position to center the current page
-          const scrollPosition = itemOffset - (sidebarHeight / 2) + (itemHeight / 2);
+        // Calculate scroll position to center the current page
+        const scrollPosition = itemOffsetTop - (sidebarHeight / 2) + (itemHeight / 2);
 
-          // Smooth scroll to current page
-          sidebarNavigation.scrollTo({
-            top: scrollPosition,
-            behavior: 'smooth'
-          });
-        }
+        // Smooth scroll to current page
+        sidebar.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+        });
       }
-    }, 100); // Wait for sidebar open animation
+    }, 350); // Wait for sidebar open animation (300ms) + buffer
   }
 
   // Note: Sidebar starts hidden by default now (on all devices)
