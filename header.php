@@ -25,7 +25,6 @@
         echo '</div>';
     }
 
-    <?php
     // Check if navigation should be hidden
     $hide_navigation = simple_clean_should_hide_navigation();
 
