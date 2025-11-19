@@ -198,22 +198,28 @@ function initializeSidebar() {
     setTimeout(() => {
       const currentPageItem = sidebar.querySelector('.page-item.current-page');
       if (currentPageItem) {
-        // The sidebar itself is the scrollable element (has overflow-y: auto)
-        // Get the position of current page relative to sidebar top
-        const itemOffsetTop = currentPageItem.offsetTop;
-        const sidebarHeight = sidebar.clientHeight;
-        const itemHeight = currentPageItem.clientHeight;
+        const pageLink = currentPageItem.querySelector('.page-link');
+        if (pageLink) {
+          // Use getBoundingClientRect for accurate positioning
+          const sidebarRect = sidebar.getBoundingClientRect();
+          const linkRect = pageLink.getBoundingClientRect();
 
-        // Calculate scroll position to center the current page
-        const scrollPosition = itemOffsetTop - (sidebarHeight / 2) + (itemHeight / 2);
+          // Calculate the position of the link relative to the sidebar's current scroll position
+          const relativeTop = linkRect.top - sidebarRect.top + sidebar.scrollTop;
 
-        // Smooth scroll to current page
-        sidebar.scrollTo({
-          top: scrollPosition,
-          behavior: 'smooth'
-        });
+          // Center the current page in the visible area
+          const sidebarHeight = sidebar.clientHeight;
+          const linkHeight = linkRect.height;
+          const scrollPosition = relativeTop - (sidebarHeight / 2) + (linkHeight / 2);
+
+          // Smooth scroll to current page
+          sidebar.scrollTo({
+            top: Math.max(0, scrollPosition), // Ensure we don't scroll to negative position
+            behavior: 'smooth'
+          });
+        }
       }
-    }, 350); // Wait for sidebar open animation (300ms) + buffer
+    }, 400); // Wait for sidebar open animation + expansion animations
   }
 
   // Note: Sidebar starts hidden by default now (on all devices)
