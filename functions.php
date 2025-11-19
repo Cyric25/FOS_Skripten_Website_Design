@@ -387,7 +387,7 @@ function simple_clean_register_glossar_cpt() {
         'search_items'       => 'Begriffe durchsuchen',
         'not_found'          => 'Keine Begriffe gefunden',
         'not_found_in_trash' => 'Keine Begriffe im Papierkorb',
-        'all_items'          => 'Alle Begriffe',
+        'all_items'          => 'Glossar',
     );
 
     $args = array(
