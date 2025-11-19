@@ -90,17 +90,31 @@ function simple_clean_navigation_meta_box_callback($post) {
     $hide_navigation = get_post_meta($post->ID, '_simple_clean_hide_navigation', true);
 
     ?>
-    <label for="simple_clean_hide_navigation">
-        <input type="checkbox"
-               id="simple_clean_hide_navigation"
-               name="simple_clean_hide_navigation"
-               value="1"
-               <?php checked($hide_navigation, '1'); ?>>
-        Navigation auf dieser Seite ausblenden
-    </label>
-    <p class="description">
-        Wenn aktiviert, wird die Hauptnavigation auf dieser Seite nicht angezeigt.
-    </p>
+    <div style="padding: 10px; background: #f0f7fb; border-left: 4px solid #0073aa; margin-bottom: 10px;">
+        <label for="simple_clean_hide_navigation" style="display: block; margin-bottom: 8px;">
+            <input type="checkbox"
+                   id="simple_clean_hide_navigation"
+                   name="simple_clean_hide_navigation"
+                   value="1"
+                   <?php checked($hide_navigation, '1'); ?>
+                   style="margin-right: 5px;">
+            <strong>Navigation auf dieser Seite ausblenden</strong>
+        </label>
+        <p class="description" style="margin: 5px 0 0 0; color: #666;">
+            ✓ Aktiviert = Keine Navigationsleiste oben<br>
+            ✗ Deaktiviert = Navigationsleiste wird angezeigt
+        </p>
+    </div>
+
+    <?php if ($hide_navigation === '1'): ?>
+        <div style="padding: 8px; background: #d4edda; border-left: 4px solid #28a745; color: #155724;">
+            ✅ <strong>Status:</strong> Navigation ist für diese Seite ausgeblendet
+        </div>
+    <?php else: ?>
+        <div style="padding: 8px; background: #fff3cd; border-left: 4px solid #ffc107; color: #856404;">
+            ℹ️ <strong>Status:</strong> Navigation wird auf dieser Seite angezeigt
+        </div>
+    <?php endif; ?>
     <?php
 }
 
@@ -122,11 +136,24 @@ function simple_clean_save_navigation_meta($post_id) {
         return;
     }
 
+    // Only process for pages
+    if (get_post_type($post_id) !== 'page') {
+        return;
+    }
+
     // Save or delete meta
     if (isset($_POST['simple_clean_hide_navigation']) && $_POST['simple_clean_hide_navigation'] === '1') {
-        update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
+        $result = update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
+        // Add admin notice
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Navigation ausgeblendet:</strong> Die Navigationsleiste wird auf dieser Seite nicht angezeigt.</p></div>';
+        });
     } else {
         delete_post_meta($post_id, '_simple_clean_hide_navigation');
+        // Add admin notice
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-info is-dismissible"><p><strong>ℹ️ Navigation aktiviert:</strong> Die Navigationsleiste wird auf dieser Seite angezeigt.</p></div>';
+        });
     }
 }
 add_action('save_post', 'simple_clean_save_navigation_meta');
@@ -140,7 +167,7 @@ function simple_clean_should_hide_navigation() {
             $hide = get_post_meta($page_id, '_simple_clean_hide_navigation', true);
 
             // Debug: uncomment next line to see what's being checked
-            error_log("Page ID: $page_id | Hide Navigation Meta: " . var_export($hide, true));
+            // error_log("Page ID: $page_id | Hide Navigation Meta: " . var_export($hide, true));
 
             return $hide === '1' || $hide === 1;
         }
