@@ -3,7 +3,12 @@
 <main id="main" class="site-main site-main-with-sidebar">
     <div class="container">
         <div class="content-with-sidebar">
-            <?php get_sidebar(); ?>
+            <?php
+            // Only show sidebar if navigation is not hidden
+            if (!simple_clean_should_hide_navigation()) {
+                get_sidebar();
+            }
+            ?>
 
             <div class="content-area">
                 <?php while (have_posts()) : the_post(); ?>

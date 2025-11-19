@@ -68,11 +68,11 @@ add_filter('body_class', 'simple_clean_body_classes');
 // CUSTOM FIELD: HIDE NAVIGATION
 // ===================================================================
 
-// Add meta box for hiding navigation
+// Add meta box for hiding sidebar navigation
 function simple_clean_add_navigation_meta_box() {
     add_meta_box(
         'simple_clean_hide_navigation',
-        'Navigation Einstellungen',
+        'Seitenleiste (Sidebar) Einstellungen',
         'simple_clean_navigation_meta_box_callback',
         'page',
         'side',
@@ -98,21 +98,22 @@ function simple_clean_navigation_meta_box_callback($post) {
                    value="1"
                    <?php checked($hide_navigation, '1'); ?>
                    style="margin-right: 5px;">
-            <strong>Navigation auf dieser Seite ausblenden</strong>
+            <strong>Seitenleiste am linken Rand ausblenden</strong>
         </label>
         <p class="description" style="margin: 5px 0 0 0; color: #666;">
-            ✓ Aktiviert = Keine Navigationsleiste oben<br>
-            ✗ Deaktiviert = Navigationsleiste wird angezeigt
+            ✓ Aktiviert = Keine Sidebar (hierarchische Navigation) am linken Rand<br>
+            ✗ Deaktiviert = Sidebar wird angezeigt<br>
+            <strong>Hinweis:</strong> Der Header oben bleibt immer sichtbar!
         </p>
     </div>
 
     <?php if ($hide_navigation === '1'): ?>
         <div style="padding: 8px; background: #d4edda; border-left: 4px solid #28a745; color: #155724;">
-            ✅ <strong>Status:</strong> Navigation ist für diese Seite ausgeblendet
+            ✅ <strong>Status:</strong> Sidebar ist für diese Seite ausgeblendet
         </div>
     <?php else: ?>
         <div style="padding: 8px; background: #fff3cd; border-left: 4px solid #ffc107; color: #856404;">
-            ℹ️ <strong>Status:</strong> Navigation wird auf dieser Seite angezeigt
+            ℹ️ <strong>Status:</strong> Sidebar wird auf dieser Seite angezeigt
         </div>
     <?php endif; ?>
     <?php
@@ -146,13 +147,13 @@ function simple_clean_save_navigation_meta($post_id) {
         $result = update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
         // Add admin notice
         add_action('admin_notices', function() {
-            echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Navigation ausgeblendet:</strong> Die Navigationsleiste wird auf dieser Seite nicht angezeigt.</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Sidebar ausgeblendet:</strong> Die Seitenleiste am linken Rand wird auf dieser Seite nicht angezeigt.</p></div>';
         });
     } else {
         delete_post_meta($post_id, '_simple_clean_hide_navigation');
         // Add admin notice
         add_action('admin_notices', function() {
-            echo '<div class="notice notice-info is-dismissible"><p><strong>ℹ️ Navigation aktiviert:</strong> Die Navigationsleiste wird auf dieser Seite angezeigt.</p></div>';
+            echo '<div class="notice notice-info is-dismissible"><p><strong>ℹ️ Sidebar aktiviert:</strong> Die Seitenleiste wird auf dieser Seite angezeigt.</p></div>';
         });
     }
 }
