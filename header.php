@@ -25,7 +25,21 @@
         echo '</div>';
     }
 
-    if (!simple_clean_should_hide_navigation()):
+    <?php
+    // Check if navigation should be hidden
+    $hide_navigation = simple_clean_should_hide_navigation();
+
+    // Debug: show what we're checking
+    if (is_page()) {
+        echo '<div style="position: fixed; bottom: 10px; right: 10px; background: ' . ($hide_navigation ? '#28a745' : '#dc3545') . '; color: #fff; padding: 10px; z-index: 99999; border-radius: 5px; font-size: 11px;">';
+        echo '<strong>Header Check:</strong><br>';
+        echo 'Hide Navigation: ' . ($hide_navigation ? 'TRUE ✅' : 'FALSE ❌') . '<br>';
+        echo 'Render Header: ' . (!$hide_navigation ? 'YES' : 'NO');
+        echo '</div>';
+    }
+
+    // Only show header if hide_navigation is FALSE
+    if (!$hide_navigation):
     ?>
     <header class="site-header">
         <div class="container">
@@ -72,4 +86,6 @@
         });
     }
     </script>
+    <?php else: ?>
+    <!-- Navigation is hidden for this page (ID: <?php echo get_the_ID(); ?>) -->
     <?php endif; ?>
