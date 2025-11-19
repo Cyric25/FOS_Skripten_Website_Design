@@ -7,17 +7,18 @@
 </head>
 
 <body <?php body_class(); ?>>
+    <?php if (!simple_clean_should_hide_navigation()): ?>
     <header class="site-header">
         <div class="container">
             <div class="header-content">
                 <a href="<?php echo esc_url(home_url('/')); ?>" class="site-title">
                     <?php bloginfo('name'); ?>
                 </a>
-                
+
                 <button class="menu-toggle" id="menu-toggle" aria-label="Menü öffnen">
                     ☰
                 </button>
-                
+
                 <nav class="main-navigation" id="main-navigation">
                     <?php
                     if (has_nav_menu('primary')) {
@@ -43,8 +44,13 @@
     </header>
 
     <script>
-    document.getElementById('menu-toggle').addEventListener('click', function() {
-        var nav = document.getElementById('main-navigation');
-        nav.classList.toggle('active');
-    });
+    // Only initialize menu toggle if navigation exists
+    const menuToggle = document.getElementById('menu-toggle');
+    const mainNav = document.getElementById('main-navigation');
+    if (menuToggle && mainNav) {
+        menuToggle.addEventListener('click', function() {
+            mainNav.classList.toggle('active');
+        });
+    }
     </script>
+    <?php endif; ?>

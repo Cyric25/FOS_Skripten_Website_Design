@@ -65,6 +65,82 @@ function simple_clean_body_classes($classes) {
 add_filter('body_class', 'simple_clean_body_classes');
 
 // ===================================================================
+// CUSTOM FIELD: HIDE NAVIGATION
+// ===================================================================
+
+// Add meta box for hiding navigation
+function simple_clean_add_navigation_meta_box() {
+    add_meta_box(
+        'simple_clean_hide_navigation',
+        'Navigation Einstellungen',
+        'simple_clean_navigation_meta_box_callback',
+        'page',
+        'side',
+        'default'
+    );
+}
+add_action('add_meta_boxes', 'simple_clean_add_navigation_meta_box');
+
+// Meta box callback
+function simple_clean_navigation_meta_box_callback($post) {
+    // Add nonce for security
+    wp_nonce_field('simple_clean_save_navigation_meta', 'simple_clean_navigation_nonce');
+
+    // Get current value
+    $hide_navigation = get_post_meta($post->ID, '_simple_clean_hide_navigation', true);
+
+    ?>
+    <label for="simple_clean_hide_navigation">
+        <input type="checkbox"
+               id="simple_clean_hide_navigation"
+               name="simple_clean_hide_navigation"
+               value="1"
+               <?php checked($hide_navigation, '1'); ?>>
+        Navigation auf dieser Seite ausblenden
+    </label>
+    <p class="description">
+        Wenn aktiviert, wird die Hauptnavigation auf dieser Seite nicht angezeigt.
+    </p>
+    <?php
+}
+
+// Save meta box data
+function simple_clean_save_navigation_meta($post_id) {
+    // Verify nonce
+    if (!isset($_POST['simple_clean_navigation_nonce']) ||
+        !wp_verify_nonce($_POST['simple_clean_navigation_nonce'], 'simple_clean_save_navigation_meta')) {
+        return;
+    }
+
+    // Check autosave
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    // Check permissions
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    // Save or delete meta
+    if (isset($_POST['simple_clean_hide_navigation']) && $_POST['simple_clean_hide_navigation'] === '1') {
+        update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
+    } else {
+        delete_post_meta($post_id, '_simple_clean_hide_navigation');
+    }
+}
+add_action('save_post', 'simple_clean_save_navigation_meta');
+
+// Helper function to check if navigation should be hidden
+function simple_clean_should_hide_navigation() {
+    if (is_page()) {
+        $hide = get_post_meta(get_the_ID(), '_simple_clean_hide_navigation', true);
+        return $hide === '1';
+    }
+    return false;
+}
+
+// ===================================================================
 // GLOSSAR SYSTEM
 // ===================================================================
 

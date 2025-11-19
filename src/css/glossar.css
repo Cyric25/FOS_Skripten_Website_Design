@@ -9,7 +9,7 @@
 
 .glossar-term,
 .glossar-clickable {
-    color: #0073aa;
+    color: #71230a; /* Dark reddish-brown for special text */
     text-decoration: underline;
     text-decoration-style: dotted;
     text-decoration-thickness: 1px;
@@ -20,14 +20,14 @@
 
 .glossar-term:hover,
 .glossar-clickable:hover {
-    color: #005a87;
+    color: #e24614; /* Bright orange on hover */
     text-decoration-style: solid;
-    background-color: rgba(0, 115, 170, 0.05);
+    background-color: rgba(226, 70, 20, 0.05);
 }
 
 .glossar-term:focus,
 .glossar-clickable:focus {
-    outline: 2px solid #0073aa;
+    outline: 2px solid #71230a;
     outline-offset: 2px;
     border-radius: 2px;
 }
@@ -167,7 +167,7 @@
     margin: 0 0 0.75rem 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #0073aa;
+    color: #71230a; /* Dark reddish-brown for emphasis */
 }
 
 .glossar-tooltip .glossar-modal-title {
@@ -184,7 +184,7 @@
 
 .glossar-modal-link {
     display: inline-block;
-    color: #0073aa;
+    color: #71230a; /* Dark reddish-brown */
     text-decoration: none;
     font-weight: 500;
     font-size: 0.9rem;
@@ -192,7 +192,7 @@
 }
 
 .glossar-modal-link:hover {
-    color: #005a87;
+    color: #e24614; /* Bright orange on hover */
     text-decoration: underline;
 }
 
@@ -219,7 +219,7 @@
 }
 
 .glossar-close:focus {
-    outline: 2px solid #0073aa;
+    outline: 2px solid #71230a;
     outline-offset: 2px;
 }
 

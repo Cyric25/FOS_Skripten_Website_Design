@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 }
 ?>
 
-<aside class="sidebar" id="sidebar">
+<aside class="sidebar hidden" id="sidebar">
     <div class="sidebar-header">
         <h3 class="sidebar-title">Navigation</h3>
         <button class="sidebar-toggle-close" id="sidebar-toggle-close" aria-label="Sidebar schließen" title="Navigation schließen">

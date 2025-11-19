@@ -218,12 +218,9 @@ function initializeSidebar() {
     }, 100); // Wait for sidebar open animation
   }
 
-  // Scroll to current page on initial load
-  // Desktop: if sidebar is visible
-  // Mobile: always (sidebar will scroll when opened)
-  if ((!isMobile() && !sidebar.classList.contains('hidden')) || isMobile()) {
-    scrollToCurrentPage();
-  }
+  // Note: Sidebar starts hidden by default now (on all devices)
+  // scrollToCurrentPage() is called when sidebar is opened via toggle button
+  // No need to scroll on initial load anymore
 
   console.log('Sidebar initialized with', pageToggles.length, 'expandable items');
 }

@@ -20,6 +20,21 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 /* Root variables for fluid scaling */
 :root {
+    /* Project Color Scheme */
+    --color-special-text: #71230a;        /* Dark reddish-brown for emphasis */
+    --color-ui-surface: #e24614;          /* Bright orange for UI elements */
+    --color-ui-surface-dark: #c93d12;     /* Darker orange for hover/active */
+    --color-ui-surface-light: #f5ede9;    /* Light orange for backgrounds */
+    --color-accent: #0073aa;              /* WordPress blue (legacy) */
+    --color-accent-dark: #005a87;         /* Darker blue for hover */
+
+    /* Semantic color assignments */
+    --color-link: var(--color-special-text);
+    --color-link-hover: var(--color-ui-surface);
+    --color-glossary: var(--color-special-text);
+    --color-sidebar-bg: var(--color-ui-surface-light);
+    --color-sidebar-border: var(--color-ui-surface);
+
     /* Fluid font sizes: min size, preferred (viewport-based), max size */
     --font-size-base: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
     --font-size-small: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
@@ -389,8 +404,9 @@ body {
 .sidebar {
     width: var(--sidebar-width);
     flex-shrink: 0;
-    background-color: #f8f9fa;
+    background-color: var(--color-sidebar-bg);
     border-radius: 8px;
+    border: 1px solid var(--color-sidebar-border);
     padding: var(--space-md);
     position: sticky;
     top: 80px; /* Below sticky header */
@@ -399,7 +415,7 @@ body {
     transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
 }
 
-/* Sidebar hidden state (desktop) */
+/* Sidebar hidden state (desktop) - DEFAULT STATE */
 .sidebar.hidden {
     transform: translateX(-100%);
     opacity: 0;

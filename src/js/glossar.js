@@ -310,19 +310,32 @@ class GlossarSystem {
                 if (termData) {
                     this.showModal(termData, term);
                 }
-            }
-
-            // Close modal on click outside
-            if (this.currentModal && this.currentModal.classList.contains('active')) {
-                if (!e.target.closest('.glossar-modal-content, .glossar-sidebar-content, .glossar-clickable')) {
-                    this.hideModal();
-                }
+                return; // Don't process other click handlers
             }
 
             // Close button
             if (e.target.closest('.glossar-close')) {
                 e.preventDefault();
                 this.hideModal();
+                return;
+            }
+
+            // Close modal on click outside
+            if (this.currentModal && this.currentModal.classList.contains('active')) {
+                // For sidebar: check if click is outside sidebar content
+                if (this.modalType === 'sidebar') {
+                    const sidebarContent = this.currentModal.querySelector('.glossar-sidebar-content');
+                    if (sidebarContent && !sidebarContent.contains(e.target)) {
+                        this.hideModal();
+                    }
+                }
+                // For tooltip: check if click is outside tooltip content
+                else if (this.modalType === 'tooltip') {
+                    const tooltipContent = this.currentModal.querySelector('.glossar-tooltip-content');
+                    if (tooltipContent && !tooltipContent.contains(e.target)) {
+                        this.hideModal();
+                    }
+                }
             }
         });
 
@@ -330,6 +343,7 @@ class GlossarSystem {
         document.addEventListener('keydown', (e) => {
             // ESC to close
             if (e.key === 'Escape' && this.currentModal && this.currentModal.classList.contains('active')) {
+                e.preventDefault();
                 this.hideModal();
             }
 
@@ -343,6 +357,39 @@ class GlossarSystem {
                 }
             }
         });
+
+        // Swipe gesture support for glossar sidebar (touch devices)
+        if (this.modalType === 'sidebar' && this.currentModal) {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+
+            this.currentModal.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            this.currentModal.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                this.handleGlossarSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+            }, { passive: true });
+        }
+    }
+
+    handleGlossarSwipe(startX, startY, endX, endY) {
+        const swipeThreshold = 50;
+        const swipeX = endX - startX;
+        const swipeY = endY - startY;
+
+        // Check if horizontal swipe is dominant (not vertical scroll)
+        if (Math.abs(swipeX) > Math.abs(swipeY) && Math.abs(swipeX) > swipeThreshold) {
+            // Swipe right to close sidebar (it's on the right side)
+            if (swipeX > 0) {
+                this.hideModal();
+            }
+        }
     }
 
     showModal(termData, triggerElement) {
