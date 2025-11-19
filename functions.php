@@ -375,10 +375,130 @@ function simple_clean_glossar_editor_assets() {
         wp_enqueue_script(
             'simple-clean-glossar-editor',
             get_template_directory_uri() . '/dist/js/glossar-editor.js',
-            array('wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-data', 'wp-rich-text'),
+            array('wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-data', 'wp-rich-text', 'wp-api-fetch'),
             filemtime($editor_js),
             true
         );
+
+        // Pass data to JavaScript
+        wp_localize_script('simple-clean-glossar-editor', 'glossarEditorData', array(
+            'restUrl' => rest_url('simple-clean/v1/'),
+            'nonce' => wp_create_nonce('wp_rest'),
+            'categories' => simple_clean_get_glossar_categories(),
+        ));
     }
 }
 add_action('enqueue_block_editor_assets', 'simple_clean_glossar_editor_assets');
+
+// Register Glossar Taxonomy (Categories)
+function simple_clean_register_glossar_taxonomy() {
+    $labels = array(
+        'name'              => 'Glossar-Kategorien',
+        'singular_name'     => 'Kategorie',
+        'search_items'      => 'Kategorien durchsuchen',
+        'all_items'         => 'Alle Kategorien',
+        'edit_item'         => 'Kategorie bearbeiten',
+        'update_item'       => 'Kategorie aktualisieren',
+        'add_new_item'      => 'Neue Kategorie hinzufügen',
+        'new_item_name'     => 'Neuer Kategoriename',
+        'menu_name'         => 'Kategorien',
+    );
+
+    register_taxonomy('glossar_category', array('glossar'), array(
+        'hierarchical'      => true,
+        'labels'            => $labels,
+        'show_ui'           => true,
+        'show_in_rest'      => true,
+        'show_admin_column' => true,
+        'query_var'         => true,
+        'rewrite'           => array('slug' => 'glossar-kategorie'),
+    ));
+}
+add_action('init', 'simple_clean_register_glossar_taxonomy');
+
+// Get glossar categories
+function simple_clean_get_glossar_categories() {
+    $terms = get_terms(array(
+        'taxonomy' => 'glossar_category',
+        'hide_empty' => false,
+    ));
+
+    $categories = array();
+    if (!is_wp_error($terms)) {
+        foreach ($terms as $term) {
+            $categories[] = array(
+                'id' => $term->term_id,
+                'name' => $term->name,
+                'slug' => $term->slug,
+            );
+        }
+    }
+
+    return $categories;
+}
+
+// REST API Endpoint for creating glossary terms
+function simple_clean_register_glossar_rest_routes() {
+    register_rest_route('simple-clean/v1', '/glossar', array(
+        'methods' => 'POST',
+        'callback' => 'simple_clean_create_glossar_term',
+        'permission_callback' => function() {
+            return current_user_can('edit_posts');
+        },
+    ));
+}
+add_action('rest_api_init', 'simple_clean_register_glossar_rest_routes');
+
+// Create glossar term via REST API
+function simple_clean_create_glossar_term($request) {
+    $params = $request->get_json_params();
+
+    // Validate required fields
+    if (empty($params['title']) || empty($params['definition'])) {
+        return new WP_Error('missing_fields', 'Titel und Definition sind erforderlich.', array('status' => 400));
+    }
+
+    // Create the post
+    $post_data = array(
+        'post_title'   => sanitize_text_field($params['title']),
+        'post_content' => wp_kses_post($params['definition']),
+        'post_type'    => 'glossar',
+        'post_status'  => 'publish',
+    );
+
+    $post_id = wp_insert_post($post_data);
+
+    if (is_wp_error($post_id)) {
+        return new WP_Error('creation_failed', 'Fehler beim Erstellen des Glossar-Eintrags.', array('status' => 500));
+    }
+
+    // Add category if provided
+    if (!empty($params['category'])) {
+        wp_set_object_terms($post_id, intval($params['category']), 'glossar_category');
+    }
+
+    // Add tags if provided
+    if (!empty($params['tags'])) {
+        $tags = array_map('sanitize_text_field', explode(',', $params['tags']));
+        wp_set_post_tags($post_id, $tags);
+    }
+
+    // Add featured image if provided
+    if (!empty($params['image_id'])) {
+        set_post_thumbnail($post_id, intval($params['image_id']));
+    }
+
+    // Add custom meta for links if provided
+    if (!empty($params['links'])) {
+        update_post_meta($post_id, '_glossar_links', sanitize_textarea_field($params['links']));
+    }
+
+    // Return success response
+    return rest_ensure_response(array(
+        'success' => true,
+        'id' => $post_id,
+        'title' => get_the_title($post_id),
+        'permalink' => get_permalink($post_id),
+        'message' => 'Glossar-Eintrag erfolgreich erstellt!',
+    ));
+}
