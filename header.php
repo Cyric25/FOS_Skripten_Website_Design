@@ -7,7 +7,26 @@
 </head>
 
 <body <?php body_class(); ?>>
-    <?php if (!simple_clean_should_hide_navigation()): ?>
+    <?php
+    // TEMPORARY DEBUG - Shows what's happening
+    if (is_page()) {
+        $page_id = get_the_ID();
+        $hide_meta = get_post_meta($page_id, '_simple_clean_hide_navigation', true);
+        $should_hide = simple_clean_should_hide_navigation();
+
+        // Visible debug info (remove after testing)
+        echo '<div style="position: fixed; top: 10px; right: 10px; background: #000; color: #fff; padding: 15px; z-index: 99999; border-radius: 5px; font-size: 12px; max-width: 300px;">';
+        echo '<strong>🔍 DEBUG INFO:</strong><br>';
+        echo 'Seiten-ID: ' . $page_id . '<br>';
+        echo 'Custom Field Wert: "' . esc_html($hide_meta) . '"<br>';
+        echo 'Typ: ' . gettype($hide_meta) . '<br>';
+        echo 'Funktion Ergebnis: ' . ($should_hide ? 'TRUE (verstecken)' : 'FALSE (anzeigen)') . '<br>';
+        echo '<small>Wenn Wert = "1" und TRUE → Navigation weg!</small>';
+        echo '</div>';
+    }
+
+    if (!simple_clean_should_hide_navigation()):
+    ?>
     <header class="site-header">
         <div class="container">
             <div class="header-content">
