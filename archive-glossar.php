@@ -98,12 +98,12 @@ get_header();
 .page-header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #0073aa;
+    border-bottom: 2px solid var(--color-ui-surface, #e24614);
 }
 
 .page-title {
     margin: 0 0 0.5rem 0;
-    color: #0073aa;
+    color: var(--color-special-text, #71230a);
 }
 
 .archive-description {
@@ -116,7 +116,7 @@ get_header();
 .glossar-alphabet {
     margin: 2rem 0;
     padding: 1rem;
-    background: #f8f9fa;
+    background: var(--color-background-light, #f8f9fa);
     border-radius: 8px;
     position: sticky;
     top: 80px;
@@ -137,7 +137,7 @@ get_header();
     width: 2.5rem;
     height: 2.5rem;
     background: #fff;
-    color: #0073aa;
+    color: var(--color-ui-surface, #e24614);
     text-decoration: none;
     font-weight: 600;
     border-radius: 4px;
@@ -146,9 +146,9 @@ get_header();
 }
 
 .alphabet-link:hover {
-    background: #0073aa;
+    background: var(--color-ui-surface, #e24614);
     color: #fff;
-    border-color: #0073aa;
+    border-color: var(--color-ui-surface, #e24614);
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -161,7 +161,7 @@ get_header();
 
 .glossar-letter-heading {
     font-size: 2.5rem;
-    color: #0073aa;
+    color: var(--color-special-text, #71230a);
     margin: 0 0 1.5rem 0;
     padding-bottom: 0.5rem;
     border-bottom: 2px solid #e0e0e0;
@@ -182,8 +182,8 @@ get_header();
 }
 
 .glossar-term-entry:hover {
-    border-color: #0073aa;
-    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
+    border-color: var(--color-ui-surface, #e24614);
+    box-shadow: 0 2px 8px rgba(226, 70, 20, 0.1);
 }
 
 .glossar-term-title {
@@ -192,13 +192,13 @@ get_header();
 }
 
 .glossar-term-title a {
-    color: #333;
+    color: var(--color-text-primary, #333);
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 .glossar-term-title a:hover {
-    color: #0073aa;
+    color: var(--color-ui-surface, #e24614);
 }
 
 .glossar-term-excerpt {
@@ -209,14 +209,14 @@ get_header();
 
 .glossar-read-more {
     display: inline-block;
-    color: #0073aa;
+    color: var(--color-ui-surface, #e24614);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s ease;
 }
 
 .glossar-read-more:hover {
-    color: #005a87;
+    color: var(--color-ui-surface-dark, #c93d12);
     text-decoration: underline;
 }
 

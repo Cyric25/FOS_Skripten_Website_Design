@@ -76,25 +76,25 @@ get_header();
 }
 
 .breadcrumb a {
-    color: #0073aa;
+    color: var(--color-ui-surface, #e24614);
     text-decoration: none;
     font-size: 0.95rem;
     transition: color 0.2s ease;
 }
 
 .breadcrumb a:hover {
-    color: #005a87;
+    color: var(--color-ui-surface-dark, #c93d12);
     text-decoration: underline;
 }
 
 .glossar-single .entry-header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #0073aa;
+    border-bottom: 2px solid var(--color-ui-surface, #e24614);
 }
 
 .glossar-single .glossar-term-title {
-    color: #0073aa;
+    color: var(--color-special-text, #71230a);
     margin: 0;
     font-size: 2.5rem;
 }
@@ -102,7 +102,7 @@ get_header();
 .glossar-term-content {
     line-height: 1.8;
     font-size: 1.05rem;
-    color: #333;
+    color: var(--color-text-primary, #333);
 }
 
 .glossar-term-content p {
@@ -114,7 +114,7 @@ get_header();
 .glossar-term-content h4 {
     margin-top: 2rem;
     margin-bottom: 1rem;
-    color: #0073aa;
+    color: var(--color-special-text, #71230a);
 }
 
 .glossar-term-content ul,
@@ -154,8 +154,8 @@ get_header();
 .term-navigation a {
     flex: 1;
     padding: 1rem;
-    background: #f8f9fa;
-    color: #0073aa;
+    background: var(--color-ui-surface-light, #f5ede9);
+    color: var(--color-ui-surface, #e24614);
     text-decoration: none;
     border-radius: 4px;
     transition: all 0.2s ease;
@@ -163,7 +163,7 @@ get_header();
 }
 
 .term-navigation a:hover {
-    background: #0073aa;
+    background: var(--color-ui-surface, #e24614);
     color: #fff;
 }
 
