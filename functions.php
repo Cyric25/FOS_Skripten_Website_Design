@@ -44,6 +44,199 @@ function simple_clean_theme_assets() {
 }
 add_action('wp_enqueue_scripts', 'simple_clean_theme_assets');
 
+/**
+ * Theme Customizer - Color Settings
+ */
+function simple_clean_customize_register($wp_customize) {
+    // Add Color Settings Section
+    $wp_customize->add_section('simple_clean_colors', array(
+        'title'    => __('Farbeinstellungen', 'simple-clean-theme'),
+        'priority' => 30,
+    ));
+
+    // Special Text Color (Dark reddish-brown for emphasis)
+    $wp_customize->add_setting('color_special_text', array(
+        'default'           => '#71230a',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_special_text', array(
+        'label'    => __('Spezialtext-Farbe', 'simple-clean-theme'),
+        'description' => __('Dunkelrotbraun für besonderen Text und Hervorhebungen', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_special_text',
+    )));
+
+    // UI Surface Color (Orange for buttons, highlights)
+    $wp_customize->add_setting('color_ui_surface', array(
+        'default'           => '#e24614',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_ui_surface', array(
+        'label'    => __('UI-Oberflächen-Farbe', 'simple-clean-theme'),
+        'description' => __('Orange für Buttons, aktive Elemente, Sidebar-Toggle', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_ui_surface',
+    )));
+
+    // UI Surface Dark Color (Darker orange for hover states)
+    $wp_customize->add_setting('color_ui_surface_dark', array(
+        'default'           => '#c93d12',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_ui_surface_dark', array(
+        'label'    => __('UI-Oberflächen-Farbe (Dunkel)', 'simple-clean-theme'),
+        'description' => __('Dunkleres Orange für Hover-Zustände', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_ui_surface_dark',
+    )));
+
+    // UI Surface Light Color (Light orange for backgrounds)
+    $wp_customize->add_setting('color_ui_surface_light', array(
+        'default'           => '#f5ede9',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_ui_surface_light', array(
+        'label'    => __('UI-Oberflächen-Farbe (Hell)', 'simple-clean-theme'),
+        'description' => __('Helles Orange für Hintergründe und Sidebar', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_ui_surface_light',
+    )));
+
+    // Sidebar Border Color
+    $wp_customize->add_setting('color_sidebar_border', array(
+        'default'           => '#e0e0e0',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_sidebar_border', array(
+        'label'    => __('Sidebar-Rahmen-Farbe', 'simple-clean-theme'),
+        'description' => __('Farbe für Sidebar-Rahmen und Trennlinien', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_sidebar_border',
+    )));
+
+    // Primary Text Color
+    $wp_customize->add_setting('color_text_primary', array(
+        'default'           => '#333333',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_text_primary', array(
+        'label'    => __('Primäre Textfarbe', 'simple-clean-theme'),
+        'description' => __('Hauptfarbe für Text im Theme', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_text_primary',
+    )));
+
+    // Background Color
+    $wp_customize->add_setting('color_background', array(
+        'default'           => '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_background', array(
+        'label'    => __('Hintergrundfarbe', 'simple-clean-theme'),
+        'description' => __('Haupthintergrundfarbe des Themes', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_background',
+    )));
+
+    // Light Background Color (for subtle backgrounds)
+    $wp_customize->add_setting('color_background_light', array(
+        'default'           => '#f8f9fa',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'color_background_light', array(
+        'label'    => __('Heller Hintergrund', 'simple-clean-theme'),
+        'description' => __('Helle Hintergrundfarbe für Bereiche wie Footer', 'simple-clean-theme'),
+        'section'  => 'simple_clean_colors',
+        'settings' => 'color_background_light',
+    )));
+}
+add_action('customize_register', 'simple_clean_customize_register');
+
+/**
+ * Generate Custom CSS from Customizer Settings
+ */
+function simple_clean_customizer_css() {
+    // Get color values from customizer
+    $color_special_text = get_theme_mod('color_special_text', '#71230a');
+    $color_ui_surface = get_theme_mod('color_ui_surface', '#e24614');
+    $color_ui_surface_dark = get_theme_mod('color_ui_surface_dark', '#c93d12');
+    $color_ui_surface_light = get_theme_mod('color_ui_surface_light', '#f5ede9');
+    $color_sidebar_border = get_theme_mod('color_sidebar_border', '#e0e0e0');
+    $color_text_primary = get_theme_mod('color_text_primary', '#333333');
+    $color_background = get_theme_mod('color_background', '#ffffff');
+    $color_background_light = get_theme_mod('color_background_light', '#f8f9fa');
+
+    // Calculate RGB values for rgba() usage
+    $ui_surface_rgb = simple_clean_hex_to_rgb($color_ui_surface);
+
+    // Generate custom CSS
+    $css = "
+    <style type='text/css'>
+        :root {
+            --color-special-text: {$color_special_text};
+            --color-ui-surface: {$color_ui_surface};
+            --color-ui-surface-dark: {$color_ui_surface_dark};
+            --color-ui-surface-light: {$color_ui_surface_light};
+            --color-sidebar-bg: {$color_ui_surface_light};
+            --color-sidebar-border: {$color_sidebar_border};
+            --color-text-primary: {$color_text_primary};
+            --color-background: {$color_background};
+            --color-background-light: {$color_background_light};
+        }
+
+        /* Apply colors to elements */
+        body {
+            color: {$color_text_primary};
+            background-color: {$color_background};
+        }
+
+        /* Sidebar toggle button shadow with dynamic color */
+        .sidebar-toggle-btn {
+            box-shadow: 0 4px 12px rgba({$ui_surface_rgb}, 0.3);
+        }
+
+        .sidebar-toggle-btn:hover {
+            box-shadow: 0 2px 8px rgba({$ui_surface_rgb}, 0.4);
+        }
+
+        /* Footer */
+        .site-footer {
+            background-color: {$color_background_light};
+        }
+    </style>
+    ";
+
+    echo $css;
+}
+add_action('wp_head', 'simple_clean_customizer_css');
+
+/**
+ * Helper function to convert hex color to RGB
+ */
+function simple_clean_hex_to_rgb($hex) {
+    // Remove # if present
+    $hex = ltrim($hex, '#');
+
+    // Convert to RGB
+    if (strlen($hex) == 6) {
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        return "$r, $g, $b";
+    }
+
+    // Default to black if invalid
+    return "0, 0, 0";
+}
+
 // Custom Excerpt Length
 function simple_clean_excerpt_length($length) {
     return 30;
