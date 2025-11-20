@@ -519,18 +519,246 @@ function simple_clean_glossar_settings_menu() {
 add_action('admin_menu', 'simple_clean_glossar_settings_menu');
 
 function simple_clean_glossar_settings_page() {
+    // Handle delete actions
+    simple_clean_handle_glossar_delete_actions();
+
+    // Get all glossar terms
+    $glossar_posts = get_posts(array(
+        'post_type' => 'glossar',
+        'posts_per_page' => -1,
+        'post_status' => array('publish', 'draft', 'pending'),
+        'orderby' => 'title',
+        'order' => 'ASC',
+    ));
+
+    $total_terms = count($glossar_posts);
     ?>
     <div class="wrap">
         <h1>Glossar Einstellungen</h1>
-        <form method="post" action="options.php">
-            <?php
-            settings_fields('simple_clean_glossar');
-            do_settings_sections('simple_clean_glossar');
-            submit_button();
-            ?>
-        </form>
+
+        <!-- Settings Form -->
+        <h2 class="nav-tab-wrapper">
+            <a href="#settings" class="nav-tab nav-tab-active" onclick="switchTab(event, 'settings')">Einstellungen</a>
+            <a href="#manage" class="nav-tab" onclick="switchTab(event, 'manage')">Begriffe verwalten (<?php echo $total_terms; ?>)</a>
+        </h2>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="glossar-tab-content">
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('simple_clean_glossar');
+                do_settings_sections('simple_clean_glossar');
+                submit_button();
+                ?>
+            </form>
+        </div>
+
+        <!-- Manage Terms Tab -->
+        <div id="manage-tab" class="glossar-tab-content" style="display: none;">
+            <h2>Glossar-Begriffe verwalten</h2>
+
+            <?php if ($total_terms > 0): ?>
+                <!-- Bulk Delete Section -->
+                <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #d63638; padding: 15px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">⚠️ Gefahr: Alle Begriffe löschen</h3>
+                    <p>Diese Aktion löscht <strong>alle <?php echo $total_terms; ?> Glossar-Begriffe</strong> dauerhaft aus der Datenbank.</p>
+                    <p><strong>Diese Aktion kann nicht rückgängig gemacht werden!</strong></p>
+                    <form method="post" onsubmit="return confirm('ACHTUNG: Möchten Sie wirklich ALLE <?php echo $total_terms; ?> Glossar-Begriffe unwiderruflich löschen? Diese Aktion kann nicht rückgängig gemacht werden!');">
+                        <?php wp_nonce_field('glossar_bulk_delete', 'glossar_bulk_delete_nonce'); ?>
+                        <input type="hidden" name="glossar_action" value="bulk_delete">
+                        <button type="submit" class="button button-danger" style="background: #d63638; color: white; border-color: #d63638;">
+                            🗑️ Alle <?php echo $total_terms; ?> Begriffe unwiderruflich löschen
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Terms List -->
+                <div style="background: #fff; border: 1px solid #c3c4c7; padding: 15px; margin: 20px 0;">
+                    <h3>Einzelne Begriffe verwalten</h3>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th style="width: 40%;">Begriff</th>
+                                <th style="width: 15%;">Status</th>
+                                <th style="width: 20%;">Erstellt</th>
+                                <th style="width: 25%;">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($glossar_posts as $post): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?php echo esc_html($post->post_title); ?></strong>
+                                        <?php if (!empty($post->post_content)): ?>
+                                            <br><small style="color: #666;"><?php echo esc_html(wp_trim_words($post->post_content, 15)); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $status_labels = array(
+                                            'publish' => '<span style="color: #00a32a;">✓ Veröffentlicht</span>',
+                                            'draft' => '<span style="color: #dba617;">📝 Entwurf</span>',
+                                            'pending' => '<span style="color: #996800;">⏳ Ausstehend</span>',
+                                        );
+                                        echo $status_labels[$post->post_status] ?? esc_html($post->post_status);
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php echo date_i18n('d.m.Y H:i', strtotime($post->post_date)); ?>
+                                    </td>
+                                    <td>
+                                        <a href="<?php echo get_edit_post_link($post->ID); ?>" class="button button-small">
+                                            ✏️ Bearbeiten
+                                        </a>
+                                        <form method="post" style="display: inline-block; margin-left: 5px;" onsubmit="return confirm('Begriff \'<?php echo esc_js($post->post_title); ?>\' wirklich löschen?');">
+                                            <?php wp_nonce_field('glossar_delete_' . $post->ID, 'glossar_delete_nonce'); ?>
+                                            <input type="hidden" name="glossar_action" value="delete_single">
+                                            <input type="hidden" name="glossar_post_id" value="<?php echo $post->ID; ?>">
+                                            <button type="submit" class="button button-small" style="color: #d63638;">
+                                                🗑️ Löschen
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+            <?php else: ?>
+                <div class="notice notice-info" style="margin: 20px 0;">
+                    <p><strong>ℹ️ Keine Glossar-Begriffe vorhanden</strong></p>
+                    <p>Es wurden noch keine Glossar-Begriffe erstellt. Erstellen Sie neue Begriffe unter <a href="<?php echo admin_url('post-new.php?post_type=glossar'); ?>">Glossar → Begriff hinzufügen</a>.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Tab Switching Script -->
+        <script>
+        function switchTab(event, tabName) {
+            event.preventDefault();
+
+            // Hide all tabs
+            document.querySelectorAll('.glossar-tab-content').forEach(function(tab) {
+                tab.style.display = 'none';
+            });
+
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(function(navTab) {
+                navTab.classList.remove('nav-tab-active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            event.target.classList.add('nav-tab-active');
+        }
+        </script>
+
+        <!-- Custom Styles -->
+        <style>
+        .glossar-tab-content {
+            background: white;
+            padding: 20px;
+            border: 1px solid #c3c4c7;
+            border-top: none;
+            margin-bottom: 20px;
+        }
+        .button-danger:hover {
+            background: #b32d2e !important;
+            border-color: #b32d2e !important;
+        }
+        </style>
     </div>
     <?php
+}
+
+// Handle glossar delete actions
+function simple_clean_handle_glossar_delete_actions() {
+    // Only process if we have an action
+    if (!isset($_POST['glossar_action'])) {
+        return;
+    }
+
+    // Check user permissions
+    if (!current_user_can('manage_options')) {
+        wp_die('Sie haben keine Berechtigung, diese Aktion auszuführen.');
+    }
+
+    $action = sanitize_text_field($_POST['glossar_action']);
+
+    // Handle bulk delete
+    if ($action === 'bulk_delete') {
+        // Verify nonce
+        if (!isset($_POST['glossar_bulk_delete_nonce']) ||
+            !wp_verify_nonce($_POST['glossar_bulk_delete_nonce'], 'glossar_bulk_delete')) {
+            wp_die('Sicherheitsüberprüfung fehlgeschlagen.');
+        }
+
+        // Get all glossar posts
+        $glossar_posts = get_posts(array(
+            'post_type' => 'glossar',
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+        ));
+
+        $deleted_count = 0;
+        foreach ($glossar_posts as $post) {
+            if (wp_delete_post($post->ID, true)) {
+                $deleted_count++;
+            }
+        }
+
+        // Add admin notice
+        add_action('admin_notices', function() use ($deleted_count) {
+            echo '<div class="notice notice-success is-dismissible">';
+            echo '<p><strong>✓ Erfolgreich gelöscht!</strong></p>';
+            echo '<p>' . $deleted_count . ' Glossar-Begriffe wurden dauerhaft aus der Datenbank entfernt.</p>';
+            echo '</div>';
+        });
+
+        return;
+    }
+
+    // Handle single delete
+    if ($action === 'delete_single') {
+        // Get post ID
+        if (!isset($_POST['glossar_post_id'])) {
+            wp_die('Keine Post-ID angegeben.');
+        }
+
+        $post_id = intval($_POST['glossar_post_id']);
+
+        // Verify nonce
+        if (!isset($_POST['glossar_delete_nonce']) ||
+            !wp_verify_nonce($_POST['glossar_delete_nonce'], 'glossar_delete_' . $post_id)) {
+            wp_die('Sicherheitsüberprüfung fehlgeschlagen.');
+        }
+
+        // Verify post type
+        if (get_post_type($post_id) !== 'glossar') {
+            wp_die('Ungültiger Post-Typ.');
+        }
+
+        // Get post title before deletion
+        $post_title = get_the_title($post_id);
+
+        // Delete post
+        if (wp_delete_post($post_id, true)) {
+            add_action('admin_notices', function() use ($post_title) {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>✓ Begriff gelöscht!</strong></p>';
+                echo '<p>Der Begriff "' . esc_html($post_title) . '" wurde dauerhaft gelöscht.</p>';
+                echo '</div>';
+            });
+        } else {
+            add_action('admin_notices', function() use ($post_title) {
+                echo '<div class="notice notice-error is-dismissible">';
+                echo '<p><strong>❌ Fehler beim Löschen!</strong></p>';
+                echo '<p>Der Begriff "' . esc_html($post_title) . '" konnte nicht gelöscht werden.</p>';
+                echo '</div>';
+            });
+        }
+    }
 }
 
 // Enqueue Glossar Assets
