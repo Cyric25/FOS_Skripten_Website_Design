@@ -696,12 +696,12 @@ body {
     }
 
     .sidebar.active {
-        transform: translateX(0);
+        transform: translateX(0) !important;
         box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
     }
 
-    /* Override desktop hidden state on mobile */
-    .sidebar.hidden {
+    /* Override desktop hidden state on mobile - but NOT when .active is present */
+    .sidebar.hidden:not(.active) {
         transform: translateX(-100%);
         opacity: 1;
         position: fixed;
