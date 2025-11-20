@@ -304,3 +304,49 @@
         border-width: 2px;
     }
 }
+
+/* ===================================================================
+   AUTO-SCROLL HIGHLIGHT ANIMATION
+   =================================================================== */
+
+/* Highlight animation when scrolling to a term from backlinks */
+.glossar-term-highlight {
+    animation: glossarHighlight 2s ease-in-out;
+    animation-fill-mode: forwards;
+}
+
+@keyframes glossarHighlight {
+    0% {
+        background-color: transparent;
+        box-shadow: none;
+    }
+    10% {
+        background-color: rgba(226, 70, 20, 0.3); /* Orange from Customizer with opacity */
+        box-shadow: 0 0 0 4px rgba(226, 70, 20, 0.2);
+    }
+    40% {
+        background-color: rgba(226, 70, 20, 0.3);
+        box-shadow: 0 0 0 4px rgba(226, 70, 20, 0.2);
+    }
+    100% {
+        background-color: transparent;
+        box-shadow: none;
+    }
+}
+
+/* Smooth scroll behavior for all links */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    .glossar-term-highlight {
+        animation: none;
+        background-color: rgba(226, 70, 20, 0.2);
+    }
+}

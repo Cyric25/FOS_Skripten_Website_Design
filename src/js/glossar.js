@@ -58,6 +58,44 @@ class GlossarSystem {
 
         // Create modal container
         this.createModalContainer();
+
+        // Auto-scroll to glossar term if URL hash is present
+        this.handleAutoScroll();
+    }
+
+    /**
+     * Handle auto-scrolling to a glossar term when coming from a backlink
+     * e.g., /seite#glossar-term-123
+     */
+    handleAutoScroll() {
+        const hash = window.location.hash;
+
+        if (hash && hash.startsWith('#glossar-term-')) {
+            // Small delay to ensure DOM is ready and terms are processed
+            setTimeout(() => {
+                const element = document.querySelector(hash);
+
+                if (element) {
+                    // Scroll to element with smooth behavior
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+
+                    // Add highlight effect
+                    element.classList.add('glossar-term-highlight');
+
+                    // Remove highlight after animation
+                    setTimeout(() => {
+                        element.classList.remove('glossar-term-highlight');
+                    }, 2000);
+
+                    if (window.glossarDebug) {
+                        console.log(`Glossar: Auto-Scroll zu "${element.textContent}"`);
+                    }
+                }
+            }, 500);
+        }
     }
 
     processMarkedTerms() {
@@ -242,42 +280,80 @@ class GlossarSystem {
     getTermVariants(term) {
         const variants = [term];
 
-        // German grammatical variants
-        // This covers most common German noun inflections
+        // Check if this is a multi-word term (e.g., "dynamisches Gleichgewicht")
+        const words = term.trim().split(/\s+/);
 
-        // 1. Plural forms
-        if (term.endsWith('e')) {
+        if (words.length > 1) {
+            // Multi-word term: handle adjective + noun combinations
+            const nounVariants = this.getNounVariants(words[words.length - 1]); // Last word is the noun
+            const adjectiveVariants = words.length > 1 ? this.getAdjectiveVariants(words[0]) : [words[0]]; // First word might be adjective
+
+            // Combine adjective and noun variants
+            adjectiveVariants.forEach(adj => {
+                nounVariants.forEach(noun => {
+                    // For multi-word terms with more than 2 words, keep middle words unchanged
+                    if (words.length === 2) {
+                        variants.push(`${adj} ${noun}`);
+                    } else {
+                        // e.g., "sehr dynamisches Gleichgewicht" -> middle words stay the same
+                        const middleWords = words.slice(1, -1).join(' ');
+                        variants.push(`${adj} ${middleWords} ${noun}`);
+                    }
+                });
+            });
+        } else {
+            // Single word: apply noun variant generation
+            const nounVariants = this.getNounVariants(term);
+            variants.push(...nounVariants);
+        }
+
+        const uniqueVariants = [...new Set(variants)]; // Remove duplicates
+
+        // Debug logging
+        if (window.glossarDebug) {
+            console.log(`Glossar: Varianten für "${term}":`, uniqueVariants);
+        }
+
+        return uniqueVariants;
+    }
+
+    /**
+     * Generate noun variants (for single words or the noun in multi-word terms)
+     */
+    getNounVariants(noun) {
+        const variants = [noun];
+
+        // German noun inflections
+        if (noun.endsWith('e')) {
             // Wörter auf -e: Atome -> Atomen (Dativ Plural)
-            variants.push(term + 'n');
-            variants.push(term + 's'); // Genitiv: Atomes
-        } else if (term.endsWith('er')) {
+            variants.push(noun + 'n');
+            variants.push(noun + 's'); // Genitiv: Atomes
+        } else if (noun.endsWith('er')) {
             // Wörter auf -er: Moleküler -> Molekülers, Molekülen
-            variants.push(term + 's');
-            variants.push(term + 'n');
-        } else if (term.endsWith('el')) {
+            variants.push(noun + 's');
+            variants.push(noun + 'n');
+        } else if (noun.endsWith('el')) {
             // Wörter auf -el: Artikel -> Artikels, Artikeln
-            variants.push(term + 's');
-            variants.push(term + 'n');
-        } else if (term.endsWith('en')) {
-            // Wörter auf -en: System -> Systemen (already covered below)
-            variants.push(term + 's');
+            variants.push(noun + 's');
+            variants.push(noun + 'n');
+        } else if (noun.endsWith('en')) {
+            // Wörter auf -en: System -> Systemen
+            variants.push(noun + 's');
         } else {
             // Standard-Endungen für die meisten Substantive
-            variants.push(term + 'e');   // Plural: System -> Systeme
-            variants.push(term + 's');   // Genitiv: Systems
-            variants.push(term + 'es');  // Genitiv: Systemes
-            variants.push(term + 'en');  // Dativ/Akkusativ Plural: Systemen
+            variants.push(noun + 'e');   // Plural: System -> Systeme
+            variants.push(noun + 's');   // Genitiv: Systems
+            variants.push(noun + 'es');  // Genitiv: Systemes
+            variants.push(noun + 'en');  // Dativ/Akkusativ Plural: Systemen
         }
 
-        // 2. Dativ singular (dem/einem + Substantiv)
-        // Oft -e am Ende bei starken Maskulina/Neutra (veraltet, aber manchmal noch verwendet)
-        if (!term.endsWith('e') && !term.endsWith('en')) {
-            variants.push(term + 'e'); // dem Systeme (veraltet)
+        // Dativ singular (veraltet)
+        if (!noun.endsWith('e') && !noun.endsWith('en')) {
+            variants.push(noun + 'e'); // dem Systeme
         }
 
-        // 3. Umlaute für Pluralformen (häufige Muster)
-        // Dies ist eine Heuristik und deckt nicht alle Fälle ab
-        const withUmlaut = this.addUmlautVariants(term);
+        // Umlaute für Pluralformen
+        const withUmlaut = this.addUmlautVariants(noun);
         withUmlaut.forEach(variant => {
             variants.push(variant);
             variants.push(variant + 'e');
@@ -286,14 +362,42 @@ class GlossarSystem {
             variants.push(variant + 'es');
         });
 
-        const uniqueVariants = [...new Set(variants)]; // Remove duplicates
+        return variants;
+    }
 
-        // Debug logging (can be removed in production)
-        if (window.glossarDebug) {
-            console.log(`Glossar: Varianten für "${term}":`, uniqueVariants);
+    /**
+     * Generate adjective variants (for German adjective declension)
+     * e.g., dynamisches -> dynamische, dynamischen, dynamischer, dynamischem
+     */
+    getAdjectiveVariants(adjective) {
+        const variants = [adjective];
+
+        // Common German adjective endings
+        // Strong declension: -er, -es, -e, -en, -em
+        // Weak declension: -e, -en
+        // Mixed declension: similar to strong
+
+        // Remove existing ending if present
+        let stem = adjective;
+        const commonEndings = ['es', 'er', 'en', 'em', 'e'];
+
+        for (const ending of commonEndings) {
+            if (adjective.endsWith(ending) && adjective.length > ending.length + 2) {
+                stem = adjective.substring(0, adjective.length - ending.length);
+                break;
+            }
         }
 
-        return uniqueVariants;
+        // Generate all common declension forms
+        const endings = ['e', 'es', 'er', 'en', 'em'];
+        endings.forEach(ending => {
+            variants.push(stem + ending);
+        });
+
+        // Also include the stem without ending (nominative masculine strong)
+        variants.push(stem);
+
+        return variants;
     }
 
     /**
@@ -400,6 +504,9 @@ class GlossarSystem {
         element.setAttribute('role', 'button');
         element.setAttribute('tabindex', '0');
         element.setAttribute('aria-label', `Glossar-Begriff: ${termData.term}`);
+
+        // Add unique ID for scrolling (for backlinks from glossar entries)
+        element.id = `glossar-term-${termData.id}`;
     }
 
     createModalContainer() {

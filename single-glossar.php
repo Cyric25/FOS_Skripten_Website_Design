@@ -45,7 +45,7 @@ get_header();
                         <ul class="usage-list">
                             <?php foreach ($term_usage as $usage_post) : ?>
                                 <li class="usage-item">
-                                    <a href="<?php echo esc_url(get_permalink($usage_post->ID)); ?>" class="usage-link">
+                                    <a href="<?php echo esc_url(get_permalink($usage_post->ID) . '#glossar-term-' . get_the_ID()); ?>" class="usage-link">
                                         <span class="usage-post-title"><?php echo esc_html($usage_post->post_title); ?></span>
                                         <span class="usage-post-type">
                                             <?php
