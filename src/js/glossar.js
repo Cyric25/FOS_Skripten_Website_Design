@@ -32,6 +32,19 @@ class GlossarSystem {
     }
 
     setupGlossar() {
+        // Enable debug mode via URL parameter ?glossarDebug=1
+        if (window.location.search.includes('glossarDebug=1')) {
+            window.glossarDebug = true;
+            console.log('Glossar: Debug-Modus aktiviert');
+            console.log('Glossar-Einstellungen:', {
+                modalType: this.modalType,
+                autoLink: this.autoLink,
+                firstOnly: this.firstOnly,
+                caseSensitive: this.caseSensitive,
+                totalTerms: this.terms.length
+            });
+        }
+
         // Process manually marked terms
         this.processMarkedTerms();
 
@@ -121,25 +134,51 @@ class GlossarSystem {
         this.terms.forEach(termData => {
             const term = termData.term;
 
-            // Skip if we should only link first occurrence and it's already linked
-            if (this.firstOnly && this.linkedTerms.has(term.toLowerCase())) {
-                return;
-            }
-
             // Create regex for term matching
             const variants = this.getTermVariants(term);
+
+            if (window.glossarDebug) {
+                console.log(`Glossar: Suche nach Varianten von "${term}" in:`, text.substring(0, 100) + '...');
+            }
+
+            let foundInThisNode = false;
+
             variants.forEach(variant => {
                 const flags = this.caseSensitive ? 'g' : 'gi';
                 const regex = new RegExp(`\\b(${this.escapeRegex(variant)})\\b`, flags);
 
                 let match;
                 while ((match = regex.exec(text)) !== null) {
+                    // Check firstOnly: Skip if this term was already linked in a previous node
+                    if (this.firstOnly && this.linkedTerms.has(term.toLowerCase())) {
+                        if (window.glossarDebug) {
+                            console.log(`Glossar: Überspringe "${match[0]}" (Begriff "${term}" bereits global verlinkt)`);
+                        }
+                        continue;
+                    }
+
+                    if (window.glossarDebug) {
+                        console.log(`Glossar: ✓ Match gefunden: "${match[0]}" (Variante: ${variant})`);
+                    }
+
                     replacements.push({
                         start: match.index,
                         end: match.index + match[0].length,
                         text: match[0],
                         termData: termData
                     });
+
+                    foundInThisNode = true;
+
+                    // If firstOnly is enabled, mark as linked after first match
+                    if (this.firstOnly) {
+                        this.linkedTerms.add(term.toLowerCase());
+                        if (window.glossarDebug) {
+                            console.log(`Glossar: Begriff "${term}" als verlinkt markiert`);
+                        }
+                        // Break out of variant loop - we found one match, don't need more
+                        return;
+                    }
                 }
             });
         });
@@ -175,10 +214,7 @@ class GlossarSystem {
             this.makeTermClickable(span, replacement.termData);
             fragment.insertBefore(span, fragment.firstChild);
 
-            // Mark as linked
-            if (this.firstOnly) {
-                this.linkedTerms.add(replacement.termData.term.toLowerCase());
-            }
+            // Note: linkedTerms.add() is now done earlier when match is found
 
             lastIndex = replacement.start;
         });
@@ -242,7 +278,14 @@ class GlossarSystem {
             variants.push(variant + 'es');
         });
 
-        return [...new Set(variants)]; // Remove duplicates
+        const uniqueVariants = [...new Set(variants)]; // Remove duplicates
+
+        // Debug logging (can be removed in production)
+        if (window.glossarDebug) {
+            console.log(`Glossar: Varianten für "${term}":`, uniqueVariants);
+        }
+
+        return uniqueVariants;
     }
 
     /**
