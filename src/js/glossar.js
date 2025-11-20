@@ -130,8 +130,16 @@ class GlossarSystem {
         let text = textNode.textContent;
         let replacements = [];
 
+        // Sort terms by word count (longest phrases first)
+        // This ensures "chemisches Gleichgewicht" is matched before "Gleichgewicht"
+        const sortedTerms = [...this.terms].sort((a, b) => {
+            const aWords = a.term.trim().split(/\s+/).length;
+            const bWords = b.term.trim().split(/\s+/).length;
+            return bWords - aWords; // Descending order
+        });
+
         // Find all terms in this text node
-        this.terms.forEach(termData => {
+        sortedTerms.forEach(termData => {
             const term = termData.term;
 
             // Create regex for term matching
@@ -332,12 +340,30 @@ class GlossarSystem {
 
     removeOverlaps(replacements) {
         const result = [];
-        let lastEnd = Infinity;
+        const usedRanges = [];
 
         replacements.forEach(replacement => {
-            if (replacement.end <= lastEnd) {
+            // Check if this replacement overlaps with any already accepted range
+            const overlaps = usedRanges.some(range => {
+                // Check for any overlap: start is within range, end is within range, or encompasses range
+                return (
+                    (replacement.start >= range.start && replacement.start < range.end) ||
+                    (replacement.end > range.start && replacement.end <= range.end) ||
+                    (replacement.start <= range.start && replacement.end >= range.end)
+                );
+            });
+
+            if (!overlaps) {
                 result.push(replacement);
-                lastEnd = replacement.start;
+                usedRanges.push({ start: replacement.start, end: replacement.end });
+
+                if (window.glossarDebug) {
+                    console.log(`Glossar: ✓ Akzeptiert: "${replacement.text}" (${replacement.start}-${replacement.end})`);
+                }
+            } else {
+                if (window.glossarDebug) {
+                    console.log(`Glossar: ✗ Überlappt: "${replacement.text}" (${replacement.start}-${replacement.end})`);
+                }
             }
         });
 

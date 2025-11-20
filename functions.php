@@ -522,6 +522,17 @@ function simple_clean_glossar_settings_page() {
     // Handle delete actions
     simple_clean_handle_glossar_delete_actions();
 
+    // Handle usage tracking rebuild
+    if (isset($_POST['rebuild_usage_tracking']) && check_admin_referer('glossar_rebuild_usage', 'glossar_rebuild_nonce')) {
+        $rebuilt_count = simple_clean_rebuild_usage_tracking();
+        add_action('admin_notices', function() use ($rebuilt_count) {
+            echo '<div class="notice notice-success is-dismissible">';
+            echo '<p><strong>✓ Usage-Tracking aktualisiert!</strong></p>';
+            echo '<p>' . $rebuilt_count . ' Seiten/Beiträge wurden analysiert und aktualisiert.</p>';
+            echo '</div>';
+        });
+    }
+
     // Get all glossar terms
     $glossar_posts = get_posts(array(
         'post_type' => 'glossar',
@@ -551,6 +562,24 @@ function simple_clean_glossar_settings_page() {
                 submit_button();
                 ?>
             </form>
+
+            <!-- Usage Tracking Rebuild -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">🔄 Usage-Tracking aktualisieren</h3>
+                <p>Analysiert alle veröffentlichten Seiten und Beiträge und aktualisiert die Information, wo welche Glossarbegriffe verwendet werden.</p>
+                <p><strong>Wann verwenden?</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Nach dem ersten Import von Glossarbegriffen</li>
+                    <li>Nach Bulk-Änderungen an Seiten/Beiträgen</li>
+                    <li>Wenn die Backlinks nicht korrekt angezeigt werden</li>
+                </ul>
+                <form method="post">
+                    <?php wp_nonce_field('glossar_rebuild_usage', 'glossar_rebuild_nonce'); ?>
+                    <button type="submit" name="rebuild_usage_tracking" class="button button-primary" value="1">
+                        ♻️ Alle Seiten jetzt analysieren
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- Manage Terms Tab -->
@@ -768,6 +797,11 @@ function simple_clean_glossar_assets() {
         return;
     }
 
+    // Enqueue dashicons for usage links icon
+    if (is_singular('glossar')) {
+        wp_enqueue_style('dashicons');
+    }
+
     // Enqueue glossar JavaScript
     $glossar_js = get_template_directory() . '/dist/js/glossar.js';
     if (file_exists($glossar_js)) {
@@ -823,6 +857,139 @@ function simple_clean_get_glossar_terms() {
     }
 
     return $terms;
+}
+
+// ===================================================================
+// GLOSSAR USAGE TRACKING (Wo wird Begriff verwendet)
+// ===================================================================
+
+/**
+ * Track glossar terms used in post content
+ * This runs when a post/page is viewed and stores which terms are used
+ */
+function simple_clean_track_glossar_usage($post_id = null) {
+    if (!$post_id) {
+        $post_id = get_the_ID();
+    }
+
+    if (!$post_id || get_post_type($post_id) === 'glossar') {
+        return; // Don't track usage in glossar posts themselves
+    }
+
+    $content = get_post_field('post_content', $post_id);
+    if (empty($content)) {
+        return;
+    }
+
+    // Get all glossar terms
+    $glossar_terms = simple_clean_get_glossar_terms();
+    if (empty($glossar_terms)) {
+        return;
+    }
+
+    // Sort terms by word count (longest first) to match multi-word terms first
+    usort($glossar_terms, function($a, $b) {
+        $a_words = count(explode(' ', trim($a['term'])));
+        $b_words = count(explode(' ', trim($b['term'])));
+        return $b_words - $a_words;
+    });
+
+    $used_terms = array();
+
+    // Check which terms appear in the content
+    foreach ($glossar_terms as $term_data) {
+        $term = $term_data['term'];
+        $term_id = $term_data['id'];
+
+        // Simple case-insensitive search
+        // Using word boundaries to avoid partial matches
+        $pattern = '/\b' . preg_quote($term, '/') . '\b/i';
+
+        if (preg_match($pattern, $content)) {
+            $used_terms[] = $term_id;
+        }
+    }
+
+    // Store used terms as post meta
+    if (!empty($used_terms)) {
+        update_post_meta($post_id, '_glossar_terms_used', array_unique($used_terms));
+    } else {
+        delete_post_meta($post_id, '_glossar_terms_used');
+    }
+}
+
+// Track usage when post is saved
+add_action('save_post', 'simple_clean_track_glossar_usage', 20, 1);
+
+// Track usage when post is viewed (with caching to avoid repeated processing)
+add_action('wp', function() {
+    if (is_singular() && !is_admin()) {
+        $post_id = get_the_ID();
+        $last_tracked = get_post_meta($post_id, '_glossar_last_tracked', true);
+        $post_modified = get_post_modified_time('U', false, $post_id);
+
+        // Only re-track if post was modified since last tracking
+        if (empty($last_tracked) || $post_modified > $last_tracked) {
+            simple_clean_track_glossar_usage($post_id);
+            update_post_meta($post_id, '_glossar_last_tracked', time());
+        }
+    }
+});
+
+/**
+ * Get all posts/pages that use a specific glossar term
+ *
+ * @param int $term_id The glossar term ID
+ * @return array Array of post objects
+ */
+function simple_clean_get_term_usage($term_id) {
+    global $wpdb;
+
+    // Query all posts that have this term ID in their _glossar_terms_used meta
+    $query = "
+        SELECT DISTINCT p.ID, p.post_title, p.post_type, p.post_date
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+        WHERE pm.meta_key = '_glossar_terms_used'
+        AND p.post_status = 'publish'
+        AND p.post_type IN ('post', 'page')
+        ORDER BY p.post_date DESC
+    ";
+
+    $results = $wpdb->get_results($query);
+
+    // Filter results to only include posts where our term_id is in the array
+    $matching_posts = array();
+    foreach ($results as $post) {
+        $used_terms = get_post_meta($post->ID, '_glossar_terms_used', true);
+        if (is_array($used_terms) && in_array($term_id, $used_terms)) {
+            $matching_posts[] = $post;
+        }
+    }
+
+    return $matching_posts;
+}
+
+/**
+ * Rebuild usage tracking for all posts/pages
+ * Useful after bulk changes or initial setup
+ */
+function simple_clean_rebuild_usage_tracking() {
+    $args = array(
+        'post_type' => array('post', 'page'),
+        'post_status' => 'publish',
+        'posts_per_page' => -1,
+    );
+
+    $posts = get_posts($args);
+    $count = 0;
+
+    foreach ($posts as $post) {
+        simple_clean_track_glossar_usage($post->ID);
+        $count++;
+    }
+
+    return $count;
 }
 
 // Enqueue Block Editor Assets

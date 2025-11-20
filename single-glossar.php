@@ -32,6 +32,44 @@ get_header();
                     ?>
                 </div>
 
+                <?php
+                // Display "Where is this term used?" section
+                $term_usage = simple_clean_get_term_usage(get_the_ID());
+                if (!empty($term_usage)) :
+                ?>
+                    <div class="glossar-term-usage">
+                        <h3 class="usage-title">
+                            <span class="dashicons dashicons-admin-links"></span>
+                            Dieser Begriff wird verwendet in:
+                        </h3>
+                        <ul class="usage-list">
+                            <?php foreach ($term_usage as $usage_post) : ?>
+                                <li class="usage-item">
+                                    <a href="<?php echo esc_url(get_permalink($usage_post->ID)); ?>" class="usage-link">
+                                        <span class="usage-post-title"><?php echo esc_html($usage_post->post_title); ?></span>
+                                        <span class="usage-post-type">
+                                            <?php
+                                            $type_label = $usage_post->post_type === 'page' ? 'Seite' : 'Beitrag';
+                                            echo esc_html($type_label);
+                                            ?>
+                                        </span>
+                                        <span class="usage-post-date"><?php echo date_i18n('d.m.Y', strtotime($usage_post->post_date)); ?></span>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <p class="usage-count">
+                            <?php
+                            $count = count($term_usage);
+                            printf(
+                                _n('Wird auf %d Seite verwendet', 'Wird auf %d Seiten verwendet', $count, 'simple-clean-theme'),
+                                $count
+                            );
+                            ?>
+                        </p>
+                    </div>
+                <?php endif; ?>
+
                 <footer class="entry-footer">
                     <div class="glossar-navigation">
                         <?php
@@ -136,6 +174,90 @@ get_header();
     height: auto;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Usage Section */
+.glossar-term-usage {
+    margin: 3rem 0 2rem;
+    padding: 2rem;
+    background: var(--color-ui-surface-light, #f5ede9);
+    border-left: 4px solid var(--color-ui-surface, #e24614);
+    border-radius: 8px;
+}
+
+.glossar-term-usage .usage-title {
+    margin: 0 0 1.5rem 0;
+    color: var(--color-special-text, #71230a);
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.glossar-term-usage .usage-title .dashicons {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.usage-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.usage-item {
+    margin-bottom: 0.75rem;
+}
+
+.usage-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--color-text-primary, #333);
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.usage-link:hover {
+    background: #fff;
+    border-color: var(--color-ui-surface, #e24614);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateX(4px);
+}
+
+.usage-post-title {
+    flex: 1;
+    font-weight: 500;
+    color: var(--color-ui-surface, #e24614);
+}
+
+.usage-post-type {
+    padding: 0.25rem 0.75rem;
+    background: var(--color-ui-surface, #e24614);
+    color: #fff;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.usage-post-date {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.usage-count {
+    margin: 1.5rem 0 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
 }
 
 /* Navigation */
