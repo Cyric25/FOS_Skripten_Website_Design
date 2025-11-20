@@ -619,6 +619,77 @@ function simple_clean_glossar_editor_assets() {
 }
 add_action('enqueue_block_editor_assets', 'simple_clean_glossar_editor_assets');
 
+// Prevent duplicate glossar terms in admin
+function simple_clean_prevent_duplicate_glossar_terms($post_id, $post, $update) {
+    // Only check for glossar post type
+    if ($post->post_type !== 'glossar') {
+        return;
+    }
+
+    // Skip for autosaves and revisions
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    // Skip if user doesn't have permission
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    // Check for duplicate title (case-insensitive)
+    global $wpdb;
+    $title = $post->post_title;
+
+    // Find existing posts with same title (excluding current post)
+    $duplicate_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $wpdb->posts
+         WHERE post_type = 'glossar'
+         AND post_status IN ('publish', 'draft', 'pending')
+         AND ID != %d
+         AND LOWER(post_title) = LOWER(%s)",
+        $post_id,
+        $title
+    ));
+
+    if ($duplicate_count > 0) {
+        // Remove the action to prevent infinite loop
+        remove_action('save_post', 'simple_clean_prevent_duplicate_glossar_terms', 10);
+
+        // Change post status to draft
+        wp_update_post(array(
+            'ID' => $post_id,
+            'post_status' => 'draft'
+        ));
+
+        // Add the action back
+        add_action('save_post', 'simple_clean_prevent_duplicate_glossar_terms', 10, 3);
+
+        // Set admin notice
+        set_transient('glossar_duplicate_error_' . get_current_user_id(), $title, 30);
+    }
+}
+add_action('save_post', 'simple_clean_prevent_duplicate_glossar_terms', 10, 3);
+
+// Display admin notice for duplicate glossar terms
+function simple_clean_glossar_duplicate_notice() {
+    $user_id = get_current_user_id();
+    $duplicate_title = get_transient('glossar_duplicate_error_' . $user_id);
+
+    if ($duplicate_title) {
+        delete_transient('glossar_duplicate_error_' . $user_id);
+        ?>
+        <div class="notice notice-error is-dismissible">
+            <p>
+                <strong>❌ Glossar-Begriff existiert bereits!</strong><br>
+                Der Begriff "<strong><?php echo esc_html($duplicate_title); ?></strong>" ist bereits im Glossar vorhanden.
+                Dieser Eintrag wurde als Entwurf gespeichert. Bitte wählen Sie einen anderen Begriff oder bearbeiten Sie den bestehenden Eintrag.
+            </p>
+        </div>
+        <?php
+    }
+}
+add_action('admin_notices', 'simple_clean_glossar_duplicate_notice');
+
 // Register Glossar Taxonomy (Categories)
 function simple_clean_register_glossar_taxonomy() {
     $labels = array(
@@ -710,6 +781,16 @@ function simple_clean_create_glossar_term($request) {
     $category = $request->get_param('category');
     $tags = $request->get_param('tags');
     $links = $request->get_param('links');
+
+    // Check if term already exists (prevent duplicates)
+    $existing_term = get_page_by_title($title, OBJECT, 'glossar');
+    if ($existing_term) {
+        return new WP_Error(
+            'duplicate_term',
+            sprintf('Der Begriff "%s" existiert bereits im Glossar.', $title),
+            array('status' => 409) // 409 Conflict
+        );
+    }
 
     // Create the post
     $post_data = array(

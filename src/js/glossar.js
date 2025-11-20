@@ -60,8 +60,12 @@ class GlossarSystem {
     }
 
     processAutoLinking() {
-        // Get all content areas (avoid navigation, sidebar, etc.)
-        const contentAreas = document.querySelectorAll('.entry-content, .page-content, article');
+        // Get all top-level content areas
+        // IMPORTANT: Include CDB Container Block content areas for compatibility
+        // The TreeWalker in linkTermsInElement() will recursively process all nested elements
+        const contentAreas = document.querySelectorAll(
+            '.entry-content, .page-content, article, .cbd-container-content'
+        );
 
         contentAreas.forEach(contentArea => {
             this.linkTermsInElement(contentArea);
@@ -194,19 +198,93 @@ class GlossarSystem {
     getTermVariants(term) {
         const variants = [term];
 
-        // Add singular/plural variants (German)
-        // Simple heuristics for German plurals
+        // German grammatical variants
+        // This covers most common German noun inflections
+
+        // 1. Plural forms
         if (term.endsWith('e')) {
-            variants.push(term + 'n'); // Atome -> Atomen
+            // Wörter auf -e: Atome -> Atomen (Dativ Plural)
+            variants.push(term + 'n');
+            variants.push(term + 's'); // Genitiv: Atomes
         } else if (term.endsWith('er')) {
-            variants.push(term); // Moleküler
+            // Wörter auf -er: Moleküler -> Molekülers, Molekülen
+            variants.push(term + 's');
+            variants.push(term + 'n');
+        } else if (term.endsWith('el')) {
+            // Wörter auf -el: Artikel -> Artikels, Artikeln
+            variants.push(term + 's');
+            variants.push(term + 'n');
+        } else if (term.endsWith('en')) {
+            // Wörter auf -en: System -> Systemen (already covered below)
+            variants.push(term + 's');
         } else {
-            variants.push(term + 'e'); // Atom -> Atome
-            variants.push(term + 's'); // Atom -> Atoms
-            variants.push(term + 'en'); // Atom -> Atomen
+            // Standard-Endungen für die meisten Substantive
+            variants.push(term + 'e');   // Plural: System -> Systeme
+            variants.push(term + 's');   // Genitiv: Systems
+            variants.push(term + 'es');  // Genitiv: Systemes
+            variants.push(term + 'en');  // Dativ/Akkusativ Plural: Systemen
         }
 
+        // 2. Dativ singular (dem/einem + Substantiv)
+        // Oft -e am Ende bei starken Maskulina/Neutra (veraltet, aber manchmal noch verwendet)
+        if (!term.endsWith('e') && !term.endsWith('en')) {
+            variants.push(term + 'e'); // dem Systeme (veraltet)
+        }
+
+        // 3. Umlaute für Pluralformen (häufige Muster)
+        // Dies ist eine Heuristik und deckt nicht alle Fälle ab
+        const withUmlaut = this.addUmlautVariants(term);
+        withUmlaut.forEach(variant => {
+            variants.push(variant);
+            variants.push(variant + 'e');
+            variants.push(variant + 'en');
+            variants.push(variant + 's');
+            variants.push(variant + 'es');
+        });
+
         return [...new Set(variants)]; // Remove duplicates
+    }
+
+    /**
+     * Generate umlaut variants for common German plural patterns
+     * e.g., Kraft -> Kräfte, Stoff -> Stoffe, Buch -> Bücher
+     */
+    addUmlautVariants(term) {
+        const variants = [];
+
+        // Only add umlaut variants if term contains a, o, u, or au
+        if (!/[aouäöü]|au/.test(term)) {
+            return variants;
+        }
+
+        // Common patterns: a -> ä, o -> ö, u -> ü, au -> äu
+        const umlautMap = {
+            'a': 'ä',
+            'o': 'ö',
+            'u': 'ü',
+            'au': 'äu'
+        };
+
+        // Try replacing vowels with umlauts (only once per word)
+        Object.keys(umlautMap).forEach(vowel => {
+            const umlaut = umlautMap[vowel];
+
+            // Find last occurrence of vowel (German plurals typically umlaut the last vowel)
+            const lastIndex = term.lastIndexOf(vowel);
+
+            if (lastIndex !== -1) {
+                const withUmlaut = term.substring(0, lastIndex) +
+                                  umlaut +
+                                  term.substring(lastIndex + vowel.length);
+
+                // Only add if it's different from original
+                if (withUmlaut !== term) {
+                    variants.push(withUmlaut);
+                }
+            }
+        });
+
+        return variants;
     }
 
     removeOverlaps(replacements) {
