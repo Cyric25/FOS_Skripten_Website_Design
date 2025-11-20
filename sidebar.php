@@ -157,12 +157,24 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
 <script>
 // Sidebar Navigation - Executed immediately after sidebar HTML is rendered
 (function() {
+  console.log('[Sidebar Debug] Script starting...');
+
   const sidebar = document.getElementById('sidebar');
   const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
   const sidebarToggleClose = document.getElementById('sidebar-toggle-close');
   const pageToggles = document.querySelectorAll('.page-toggle');
 
-  if (!sidebar || !sidebarToggleBtn) return; // Safety check
+  console.log('[Sidebar Debug] Elements found:', {
+    sidebar: sidebar ? 'YES' : 'NO',
+    sidebarToggleBtn: sidebarToggleBtn ? 'YES' : 'NO',
+    sidebarToggleClose: sidebarToggleClose ? 'YES' : 'NO',
+    pageToggles: pageToggles.length
+  });
+
+  if (!sidebar || !sidebarToggleBtn) {
+    console.error('[Sidebar Debug] Missing required elements! Aborting.');
+    return;
+  }
 
   // Detect if we're on mobile or desktop
   const isMobile = function() { return window.innerWidth <= 992; };
@@ -215,16 +227,25 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
   }
 
   // Sidebar toggle button - open/close
-  sidebarToggleBtn.addEventListener('click', function() {
+  sidebarToggleBtn.addEventListener('click', function(e) {
+    console.log('[Sidebar Debug] Toggle button clicked!');
+    console.log('[Sidebar Debug] isMobile():', isMobile());
+    console.log('[Sidebar Debug] window.innerWidth:', window.innerWidth);
+    console.log('[Sidebar Debug] Sidebar classes before:', sidebar.className);
+
     if (isMobile()) {
       // Mobile: use .active class
       sidebar.classList.add('active');
       sidebarToggleBtn.setAttribute('aria-expanded', 'true');
+      console.log('[Sidebar Debug] Mobile mode - added .active class');
     } else {
       // Desktop: remove .hidden class
       sidebar.classList.remove('hidden');
       sidebarToggleBtn.setAttribute('aria-expanded', 'true');
+      console.log('[Sidebar Debug] Desktop mode - removed .hidden class');
     }
+
+    console.log('[Sidebar Debug] Sidebar classes after:', sidebar.className);
 
     // Scroll to current page after opening
     scrollToCurrentPage();
@@ -328,6 +349,8 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
     });
   });
 
-  console.log('Sidebar initialized with', pageToggles.length, 'expandable items');
+  console.log('[Sidebar Debug] ✓ Sidebar initialized successfully!');
+  console.log('[Sidebar Debug] Page toggles:', pageToggles.length);
+  console.log('[Sidebar Debug] Event listener registered for toggle button');
 })();
 </script>
