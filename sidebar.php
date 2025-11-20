@@ -156,6 +156,7 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
 
 <script>
 // Sidebar Navigation - Executed immediately after sidebar HTML is rendered
+alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
 (function() {
   console.log('[Sidebar Debug] Script starting...');
 
