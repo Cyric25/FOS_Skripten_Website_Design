@@ -179,20 +179,31 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
   // Detect if we're on mobile or desktop
   const isMobile = function() { return window.innerWidth <= 992; };
 
+  // Initial cleanup: Remove .hidden if we're in mobile mode on page load
+  if (isMobile()) {
+    sidebar.classList.remove('hidden');
+    console.log('[Sidebar Debug] Initial load in mobile mode - removed .hidden class');
+  } else {
+    console.log('[Sidebar Debug] Initial load in desktop mode - keeping .hidden class');
+  }
+
   // Helper function to close sidebar
   function closeSidebar() {
     if (isMobile()) {
-      // Mobile: remove .active class
+      // Mobile: remove .active class (keep .hidden doesn't matter on mobile)
       sidebar.classList.remove('active');
       if (sidebarToggleBtn) {
         sidebarToggleBtn.setAttribute('aria-expanded', 'false');
       }
+      console.log('[Sidebar Debug] Closed sidebar (mobile mode)');
     } else {
-      // Desktop: add .hidden class
+      // Desktop: add .hidden class, remove .active
       sidebar.classList.add('hidden');
+      sidebar.classList.remove('active');
       if (sidebarToggleBtn) {
         sidebarToggleBtn.setAttribute('aria-expanded', 'false');
       }
+      console.log('[Sidebar Debug] Closed sidebar (desktop mode)');
     }
   }
 
@@ -234,15 +245,17 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
     console.log('[Sidebar Debug] Sidebar classes before:', sidebar.className);
 
     if (isMobile()) {
-      // Mobile: use .active class
+      // Mobile: use .active class AND remove .hidden class
+      sidebar.classList.remove('hidden');  // Remove desktop class!
       sidebar.classList.add('active');
       sidebarToggleBtn.setAttribute('aria-expanded', 'true');
-      console.log('[Sidebar Debug] Mobile mode - added .active class');
+      console.log('[Sidebar Debug] Mobile mode - removed .hidden, added .active');
     } else {
       // Desktop: remove .hidden class
       sidebar.classList.remove('hidden');
+      sidebar.classList.remove('active');  // Remove mobile class!
       sidebarToggleBtn.setAttribute('aria-expanded', 'true');
-      console.log('[Sidebar Debug] Desktop mode - removed .hidden class');
+      console.log('[Sidebar Debug] Desktop mode - removed .hidden and .active');
     }
 
     console.log('[Sidebar Debug] Sidebar classes after:', sidebar.className);
@@ -326,10 +339,16 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
   window.addEventListener('resize', function() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function() {
+      console.log('[Sidebar Debug] Window resized. New width:', window.innerWidth);
       if (isMobile()) {
+        // Switched to mobile: remove .hidden so mobile CSS rules work
         sidebar.classList.remove('hidden');
+        console.log('[Sidebar Debug] Resize: Switched to mobile mode, removed .hidden');
       } else {
+        // Switched to desktop: remove .active and add .hidden
         sidebar.classList.remove('active');
+        sidebar.classList.add('hidden');
+        console.log('[Sidebar Debug] Resize: Switched to desktop mode, removed .active, added .hidden');
       }
     }, 250);
   });
