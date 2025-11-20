@@ -156,26 +156,13 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
 
 <script>
 // Sidebar Navigation - Executed immediately after sidebar HTML is rendered
-alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
 (function() {
-  console.log('[Sidebar Debug] Script starting...');
-
   const sidebar = document.getElementById('sidebar');
   const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
   const sidebarToggleClose = document.getElementById('sidebar-toggle-close');
   const pageToggles = document.querySelectorAll('.page-toggle');
 
-  console.log('[Sidebar Debug] Elements found:', {
-    sidebar: sidebar ? 'YES' : 'NO',
-    sidebarToggleBtn: sidebarToggleBtn ? 'YES' : 'NO',
-    sidebarToggleClose: sidebarToggleClose ? 'YES' : 'NO',
-    pageToggles: pageToggles.length
-  });
-
-  if (!sidebar || !sidebarToggleBtn) {
-    console.error('[Sidebar Debug] Missing required elements! Aborting.');
-    return;
-  }
+  if (!sidebar || !sidebarToggleBtn) return;
 
   // Detect if we're on mobile or desktop
   const isMobile = function() { return window.innerWidth <= 992; };
@@ -183,20 +170,16 @@ alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
   // Initial cleanup: Remove .hidden if we're in mobile mode on page load
   if (isMobile()) {
     sidebar.classList.remove('hidden');
-    console.log('[Sidebar Debug] Initial load in mobile mode - removed .hidden class');
-  } else {
-    console.log('[Sidebar Debug] Initial load in desktop mode - keeping .hidden class');
   }
 
   // Helper function to close sidebar
   function closeSidebar() {
     if (isMobile()) {
-      // Mobile: remove .active class (keep .hidden doesn't matter on mobile)
+      // Mobile: remove .active class
       sidebar.classList.remove('active');
       if (sidebarToggleBtn) {
         sidebarToggleBtn.setAttribute('aria-expanded', 'false');
       }
-      console.log('[Sidebar Debug] Closed sidebar (mobile mode)');
     } else {
       // Desktop: add .hidden class, remove .active
       sidebar.classList.add('hidden');
@@ -204,7 +187,6 @@ alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
       if (sidebarToggleBtn) {
         sidebarToggleBtn.setAttribute('aria-expanded', 'false');
       }
-      console.log('[Sidebar Debug] Closed sidebar (desktop mode)');
     }
   }
 
@@ -239,27 +221,18 @@ alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
   }
 
   // Sidebar toggle button - open/close
-  sidebarToggleBtn.addEventListener('click', function(e) {
-    console.log('[Sidebar Debug] Toggle button clicked!');
-    console.log('[Sidebar Debug] isMobile():', isMobile());
-    console.log('[Sidebar Debug] window.innerWidth:', window.innerWidth);
-    console.log('[Sidebar Debug] Sidebar classes before:', sidebar.className);
-
+  sidebarToggleBtn.addEventListener('click', function() {
     if (isMobile()) {
       // Mobile: use .active class AND remove .hidden class
-      sidebar.classList.remove('hidden');  // Remove desktop class!
+      sidebar.classList.remove('hidden');
       sidebar.classList.add('active');
       sidebarToggleBtn.setAttribute('aria-expanded', 'true');
-      console.log('[Sidebar Debug] Mobile mode - removed .hidden, added .active');
     } else {
       // Desktop: remove .hidden class
       sidebar.classList.remove('hidden');
-      sidebar.classList.remove('active');  // Remove mobile class!
+      sidebar.classList.remove('active');
       sidebarToggleBtn.setAttribute('aria-expanded', 'true');
-      console.log('[Sidebar Debug] Desktop mode - removed .hidden and .active');
     }
-
-    console.log('[Sidebar Debug] Sidebar classes after:', sidebar.className);
 
     // Scroll to current page after opening
     scrollToCurrentPage();
@@ -340,16 +313,13 @@ alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
   window.addEventListener('resize', function() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function() {
-      console.log('[Sidebar Debug] Window resized. New width:', window.innerWidth);
       if (isMobile()) {
         // Switched to mobile: remove .hidden so mobile CSS rules work
         sidebar.classList.remove('hidden');
-        console.log('[Sidebar Debug] Resize: Switched to mobile mode, removed .hidden');
       } else {
         // Switched to desktop: remove .active and add .hidden
         sidebar.classList.remove('active');
         sidebar.classList.add('hidden');
-        console.log('[Sidebar Debug] Resize: Switched to desktop mode, removed .active, added .hidden');
       }
     }, 250);
   });
@@ -369,8 +339,5 @@ alert('SIDEBAR SCRIPT LOADED!'); // TEST: Wird dieses Popup angezeigt?
     });
   });
 
-  console.log('[Sidebar Debug] ✓ Sidebar initialized successfully!');
-  console.log('[Sidebar Debug] Page toggles:', pageToggles.length);
-  console.log('[Sidebar Debug] Event listener registered for toggle button');
 })();
 </script>
