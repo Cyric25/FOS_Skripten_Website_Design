@@ -2164,3 +2164,353 @@ function simple_clean_show_password_form() {
     </html>
     <?php
 }
+
+/**
+ * =============================================================================
+ * AI CRAWLER PROTECTION
+ * =============================================================================
+ * Protects the website from AI crawlers and automated bots.
+ * Includes robots.txt generation and User-Agent blocking.
+ */
+
+/**
+ * Add AI protection settings to the password protection page
+ */
+function simple_clean_ai_protection_settings_section() {
+    // Check if we're on the password protection page
+    if (!isset($_GET['page']) || $_GET['page'] !== 'website-password-protection') {
+        return;
+    }
+
+    // Save AI protection settings
+    if (isset($_POST['ai_protection_save']) && check_admin_referer('ai_protection_settings', 'ai_protection_nonce')) {
+        $enabled = isset($_POST['ai_protection_enabled']) ? '1' : '0';
+        $block_user_agents = isset($_POST['ai_protection_block_user_agents']) ? '1' : '0';
+
+        update_option('simple_clean_ai_protection_enabled', $enabled);
+        update_option('simple_clean_ai_protection_block_user_agents', $block_user_agents);
+
+        echo '<div class="notice notice-success"><p><strong>AI-Schutz-Einstellungen gespeichert!</strong></p></div>';
+    }
+
+    // Get current settings
+    $enabled = get_option('simple_clean_ai_protection_enabled', '0');
+    $block_user_agents = get_option('simple_clean_ai_protection_block_user_agents', '0');
+
+    ?>
+    <div class="wrap" style="margin-top: 40px;">
+        <h1>🤖 AI-Crawler Schutz</h1>
+
+        <div style="background: #fff; border: 1px solid #c3c4c7; padding: 20px; margin: 20px 0; border-left: 4px solid #2271b1;">
+            <h2 style="margin-top: 0;">ℹ️ Was macht der AI-Schutz?</h2>
+            <p>Schützt die Website vor KI-Crawlern, die Inhalte für Training von AI-Modellen sammeln:</p>
+            <ul style="list-style: disc; margin-left: 20px;">
+                <li><strong>robots.txt:</strong> Weist ehrliche AI-Crawler höflich ab (GPTBot, Claude-Web, etc.)</li>
+                <li><strong>User-Agent Blocking:</strong> Blockiert bekannte AI-Crawler programmatisch (403 Fehler)</li>
+                <li><strong>Standard-Suchmaschinen:</strong> Google, Bing, etc. bleiben erlaubt (wichtig für SEO)</li>
+                <li><strong>Kombiniert mit Passwortschutz:</strong> Maximaler Schutz vor unbefugtem Zugriff</li>
+            </ul>
+        </div>
+
+        <form method="post" action="">
+            <?php wp_nonce_field('ai_protection_settings', 'ai_protection_nonce'); ?>
+
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row">robots.txt AI-Blocking</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="ai_protection_enabled" value="1" <?php checked($enabled, '1'); ?>>
+                            AI-Crawler in robots.txt blockieren
+                        </label>
+                        <?php if ($enabled === '1'): ?>
+                            <p class="description" style="color: #00a32a; font-weight: 600;">
+                                ✅ <strong>robots.txt AI-Blocking ist AKTIV</strong> - Ehrliche AI-Crawler werden abgewiesen.
+                            </p>
+                        <?php else: ?>
+                            <p class="description">
+                                Fügt Regeln zu robots.txt hinzu, die AI-Crawler blockieren (GPTBot, Claude-Web, etc.).
+                            </p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">User-Agent Blocking (Server-seitig)</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="ai_protection_block_user_agents" value="1" <?php checked($block_user_agents, '1'); ?>>
+                            Bekannte AI-Crawler programmatisch blockieren (403 Fehler)
+                        </label>
+                        <?php if ($block_user_agents === '1'): ?>
+                            <p class="description" style="color: #00a32a; font-weight: 600;">
+                                ✅ <strong>User-Agent Blocking ist AKTIV</strong> - AI-Crawler erhalten 403 Forbidden.
+                            </p>
+                        <?php else: ?>
+                            <p class="description">
+                                Blockiert AI-Crawler auf Server-Ebene, auch wenn sie robots.txt ignorieren.
+                            </p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            </table>
+
+            <p class="submit">
+                <button type="submit" name="ai_protection_save" class="button button-primary">
+                    💾 AI-Schutz speichern
+                </button>
+            </p>
+        </form>
+
+        <div style="background: #fff; border: 1px solid #c3c4c7; padding: 20px; margin: 20px 0; border-left: 4px solid #d63638;">
+            <h2 style="margin-top: 0;">🛡️ Blockierte AI-Crawler</h2>
+            <p><strong>Die folgenden AI-Crawler werden blockiert, wenn der Schutz aktiviert ist:</strong></p>
+            <ul style="list-style: disc; margin-left: 20px; columns: 2; column-gap: 40px;">
+                <li>GPTBot (OpenAI ChatGPT)</li>
+                <li>ChatGPT-User (OpenAI)</li>
+                <li>Claude-Web (Anthropic)</li>
+                <li>anthropic-ai (Anthropic)</li>
+                <li>Google-Extended (Google Bard/Gemini)</li>
+                <li>PerplexityBot (Perplexity AI)</li>
+                <li>CCBot (Common Crawl)</li>
+                <li>FacebookBot (Meta AI)</li>
+                <li>Meta-ExternalAgent (Meta AI)</li>
+                <li>Applebot-Extended (Apple AI)</li>
+                <li>Bytespider (TikTok/Bytedance)</li>
+                <li>Amazonbot (Amazon AI)</li>
+                <li>cohere-ai (Cohere)</li>
+                <li>Diffbot (Diffbot)</li>
+                <li>Omgilibot / Omgili</li>
+                <li>ai2bot (Allen Institute)</li>
+                <li>Scrapy, curl, wget, python-requests</li>
+            </ul>
+            <p style="margin-top: 15px;"><strong>Standard-Suchmaschinen bleiben ERLAUBT:</strong> Googlebot, Bingbot, DuckDuckBot, Yahoo Slurp (wichtig für SEO)</p>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #c3c4c7; padding: 20px; margin: 20px 0; border-left: 4px solid #d63638;">
+            <h2 style="margin-top: 0;">⚠️ Wichtige Hinweise</h2>
+            <ul style="list-style: disc; margin-left: 20px;">
+                <li><strong>robots.txt:</strong> Nur ehrliche Crawler respektieren diese Regeln. Manche Bots ignorieren robots.txt.</li>
+                <li><strong>User-Agent Blocking:</strong> Schwieriger zu umgehen, aber User-Agents können theoretisch gefälscht werden.</li>
+                <li><strong>Kombination empfohlen:</strong> Aktiviere BEIDE Optionen für maximalen Schutz.</li>
+                <li><strong>SEO sicher:</strong> Standard-Suchmaschinen (Google, Bing) werden NICHT blockiert.</li>
+                <li><strong>Passwortschutz:</strong> Kombiniere mit dem Website-Passwortschutz oben für maximale Sicherheit.</li>
+                <li><strong>100% Schutz gibt es nicht:</strong> Fortgeschrittene Angreifer können diese Maßnahmen umgehen, aber sie schrecken 95%+ der automatisierten Zugriffe ab.</li>
+            </ul>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #c3c4c7; padding: 20px; margin: 20px 0; border-left: 4px solid #00a32a;">
+            <h2 style="margin-top: 0;">✅ Empfohlene Konfiguration</h2>
+            <p><strong>Für maximalen Copyright-Schutz empfehlen wir:</strong></p>
+            <ol style="margin-left: 20px;">
+                <li>✅ <strong>Passwortschutz aktivieren</strong> (oben)</li>
+                <li>✅ <strong>robots.txt AI-Blocking aktivieren</strong></li>
+                <li>✅ <strong>User-Agent Blocking aktivieren</strong></li>
+            </ol>
+            <p style="margin-top: 15px; font-weight: 600; color: #00a32a;">
+                🔒 Diese Kombination bietet den besten Schutz vor unbefugtem Zugriff und AI-Training mit Ihren Inhalten.
+            </p>
+        </div>
+    </div>
+    <?php
+}
+add_action('admin_notices', 'simple_clean_ai_protection_settings_section');
+
+/**
+ * Generate dynamic robots.txt with AI protection
+ */
+function simple_clean_generate_robots_txt($output, $public) {
+    // If AI protection is disabled, return default WordPress robots.txt
+    if (get_option('simple_clean_ai_protection_enabled', '0') !== '1') {
+        return $output;
+    }
+
+    // Generate robots.txt with AI crawler blocking
+    $robots_txt = "# robots.txt - AI Crawler Protection\n";
+    $robots_txt .= "# Generated by WordPress Theme\n\n";
+
+    $robots_txt .= "# =============================================================================\n";
+    $robots_txt .= "# AI CRAWLERS - BLOCKED\n";
+    $robots_txt .= "# =============================================================================\n\n";
+
+    // List of AI crawlers to block
+    $ai_crawlers = array(
+        'GPTBot',
+        'ChatGPT-User',
+        'ChatGPT',
+        'Claude-Web',
+        'anthropic-ai',
+        'ClaudeBot',
+        'Google-Extended',
+        'PerplexityBot',
+        'Omgilibot',
+        'Omgili',
+        'FacebookBot',
+        'Meta-ExternalAgent',
+        'Applebot-Extended',
+        'Bytespider',
+        'Amazonbot',
+        'cohere-ai',
+        'ai2bot',
+        'Diffbot',
+        'CCBot',
+        'Scrapy',
+        'python-requests',
+        'curl',
+        'wget',
+    );
+
+    foreach ($ai_crawlers as $crawler) {
+        $robots_txt .= "User-agent: {$crawler}\n";
+        $robots_txt .= "Disallow: /\n\n";
+    }
+
+    $robots_txt .= "# =============================================================================\n";
+    $robots_txt .= "# STANDARD SEARCH ENGINES - ALLOWED (SEO)\n";
+    $robots_txt .= "# =============================================================================\n\n";
+
+    $robots_txt .= "User-agent: Googlebot\n";
+    $robots_txt .= "Allow: /\n\n";
+
+    $robots_txt .= "User-agent: Bingbot\n";
+    $robots_txt .= "Allow: /\n\n";
+
+    $robots_txt .= "User-agent: Slurp\n";
+    $robots_txt .= "Allow: /\n\n";
+
+    $robots_txt .= "User-agent: DuckDuckBot\n";
+    $robots_txt .= "Allow: /\n\n";
+
+    $robots_txt .= "# =============================================================================\n";
+    $robots_txt .= "# DEFAULT RULE\n";
+    $robots_txt .= "# =============================================================================\n\n";
+
+    $robots_txt .= "User-agent: *\n";
+    $robots_txt .= "Allow: /\n";
+
+    return $robots_txt;
+}
+add_filter('robots_txt', 'simple_clean_generate_robots_txt', 10, 2);
+
+/**
+ * Block AI crawlers via User-Agent (server-side)
+ */
+function simple_clean_block_ai_user_agents() {
+    // Skip if User-Agent blocking is disabled
+    if (get_option('simple_clean_ai_protection_block_user_agents', '0') !== '1') {
+        return;
+    }
+
+    // Skip for admin area
+    if (is_admin()) {
+        return;
+    }
+
+    // Get the User-Agent
+    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
+
+    if (empty($user_agent)) {
+        return;
+    }
+
+    // List of blocked AI crawler patterns
+    $blocked_patterns = array(
+        'gptbot',
+        'chatgpt-user',
+        'chatgpt',
+        'claude-web',
+        'anthropic-ai',
+        'claudebot',
+        'google-extended',
+        'perplexitybot',
+        'omgilibot',
+        'omgili',
+        'facebookbot',
+        'meta-externalagent',
+        'applebot-extended',
+        'bytespider',
+        'amazonbot',
+        'cohere-ai',
+        'ai2bot',
+        'diffbot',
+        'ccbot',
+        'scrapy',
+        'python-requests',
+        'curl/',
+        'wget/',
+    );
+
+    // Check if User-Agent matches any blocked pattern
+    foreach ($blocked_patterns as $pattern) {
+        if (strpos($user_agent, $pattern) !== false) {
+            // Log the blocked attempt (optional)
+            error_log("AI Crawler blocked: {$user_agent}");
+
+            // Send 403 Forbidden header
+            header('HTTP/1.1 403 Forbidden');
+            echo '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>403 Forbidden - AI Crawler Blocked</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        h1 {
+            font-size: 72px;
+            margin: 0 0 20px 0;
+        }
+        h2 {
+            color: #333;
+            margin: 0 0 15px 0;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚫</h1>
+        <h2>403 Forbidden</h2>
+        <p><strong>AI Crawler Blocked</strong></p>
+        <p>This website does not allow automated AI crawlers to access its content.</p>
+        <p>If you believe this is an error, please contact the website administrator.</p>
+        <div class="code">
+            User-Agent: ' . esc_html($user_agent) . '
+        </div>
+    </div>
+</body>
+</html>';
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'simple_clean_block_ai_user_agents', 1); // Priority 1 = runs before password protection
