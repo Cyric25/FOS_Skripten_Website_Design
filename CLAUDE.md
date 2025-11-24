@@ -82,6 +82,8 @@ The theme uses **Vite 5** for JavaScript bundling, providing:
 
 ### Build Commands
 
+**CRITICAL: Always run syntax check before creating ZIP!**
+
 ```bash
 # Install dependencies
 npm install
@@ -90,7 +92,8 @@ npm install
 npm run dev
 
 # Production build (minified, optimized) + create ZIP
-npm run build
+# IMPORTANT: Always run syntax check first!
+for file in *.php; do php -l "$file" || exit 1; done && npm run build
 
 # Build JavaScript only (no ZIP)
 npm run build:js
@@ -109,6 +112,46 @@ npm run zip:force
 ```
 
 **IMPORTANT:** `npm run build` now automatically creates a distributable ZIP file in `dist/` after building JavaScript.
+
+### Syntax Check (MANDATORY before ZIP creation)
+
+**Always run before creating distribution ZIP:**
+
+```bash
+# Check all PHP files for syntax errors
+for file in *.php; do echo "Checking $file..."; php -l "$file" || exit 1; done
+```
+
+**Complete workflow (recommended):**
+
+```bash
+# 1. Syntax check all PHP files
+for file in *.php; do php -l "$file" || exit 1; done
+
+# 2. If no errors: Build and create ZIP
+npm run build
+
+# 3. Commit and push
+git add .
+git commit -m "Your commit message"
+git push origin main
+```
+
+**Why this matters:**
+- Prevents distributing broken PHP code
+- Catches syntax errors early
+- Ensures WordPress won't show fatal errors
+- Required before every ZIP creation
+
+**What gets checked:**
+- All `*.php` files in theme root
+- Syntax validation via `php -l`
+- Exit immediately on first error (`|| exit 1`)
+
+**If syntax error found:**
+- Fix the error
+- Re-run syntax check
+- Only then create ZIP
 
 ### Build Output
 
