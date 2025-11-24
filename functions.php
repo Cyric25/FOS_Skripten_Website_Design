@@ -951,6 +951,110 @@ function simple_clean_handle_glossar_export() {
     fclose($output);
 }
 
+// Helper function: Check if term or variation already exists
+function simple_clean_glossar_term_exists_or_similar($term) {
+    // Normalize the input term
+    $normalized_term = simple_clean_normalize_glossar_term($term);
+
+    // Get all existing glossar terms
+    $existing_posts = get_posts(array(
+        'post_type' => 'glossar',
+        'posts_per_page' => -1,
+        'post_status' => array('publish', 'draft', 'pending'),
+    ));
+
+    foreach ($existing_posts as $post) {
+        $existing_normalized = simple_clean_normalize_glossar_term($post->post_title);
+
+        // Check for exact match (normalized)
+        if ($normalized_term === $existing_normalized) {
+            return array(
+                'exists' => true,
+                'post' => $post,
+                'reason' => 'Exakte Übereinstimmung'
+            );
+        }
+
+        // Check for variations (one contains the other)
+        if (strlen($normalized_term) > 3 && strlen($existing_normalized) > 3) {
+            if (strpos($existing_normalized, $normalized_term) !== false) {
+                return array(
+                    'exists' => true,
+                    'post' => $post,
+                    'reason' => "Variation gefunden: '{$post->post_title}'"
+                );
+            }
+            if (strpos($normalized_term, $existing_normalized) !== false) {
+                return array(
+                    'exists' => true,
+                    'post' => $post,
+                    'reason' => "Variation gefunden: '{$post->post_title}'"
+                );
+            }
+        }
+
+        // Check for singular/plural variations
+        if (simple_clean_glossar_terms_are_similar($normalized_term, $existing_normalized)) {
+            return array(
+                'exists' => true,
+                'post' => $post,
+                'reason' => "Ähnliche Form gefunden: '{$post->post_title}'"
+            );
+        }
+    }
+
+    return array('exists' => false);
+}
+
+// Helper function: Normalize term for comparison
+function simple_clean_normalize_glossar_term($term) {
+    // Convert to lowercase
+    $term = mb_strtolower(trim($term), 'UTF-8');
+
+    // Remove common articles (German)
+    $articles = array('der ', 'die ', 'das ', 'ein ', 'eine ', 'eines ', 'einem ', 'einen ');
+    foreach ($articles as $article) {
+        if (strpos($term, $article) === 0) {
+            $term = substr($term, strlen($article));
+        }
+    }
+
+    // Remove special characters and extra spaces
+    $term = preg_replace('/[^\p{L}\p{N}\s]/u', '', $term);
+    $term = preg_replace('/\s+/', ' ', $term);
+
+    return trim($term);
+}
+
+// Helper function: Check if terms are similar (singular/plural)
+function simple_clean_glossar_terms_are_similar($term1, $term2) {
+    // If terms are very short, don't check similarity
+    if (strlen($term1) < 4 || strlen($term2) < 4) {
+        return false;
+    }
+
+    // Check if one is just plural of the other (simple heuristic)
+    // German plural often: -e, -en, -er, -s
+    $endings = array('e', 'en', 'er', 's', 'n');
+
+    foreach ($endings as $ending) {
+        // Check if term1 = term2 + ending
+        if ($term1 === $term2 . $ending || $term2 === $term1 . $ending) {
+            return true;
+        }
+    }
+
+    // Check Levenshtein distance (max 2 character difference for similar terms)
+    if (strlen($term1) > 5 && strlen($term2) > 5) {
+        $distance = levenshtein($term1, $term2);
+        if ($distance > 0 && $distance <= 2) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Handle Glossar CSV Import
 function simple_clean_handle_glossar_import() {
     // Check permissions
@@ -1040,12 +1144,16 @@ function simple_clean_handle_glossar_import() {
             $status = 'publish';
         }
 
-        // Check if term already exists by slug
-        $existing_post = get_page_by_path($slug, OBJECT, 'glossar');
+        // Check if term or variation already exists
+        $exists_check = simple_clean_glossar_term_exists_or_similar($term);
 
-        if ($existing_post) {
-            if ($overwrite) {
-                // Update existing post
+        if ($exists_check['exists']) {
+            // Term or variation already exists
+            $existing_post = $exists_check['post'];
+
+            // Check if it's an exact slug match AND overwrite is enabled
+            if ($overwrite && $existing_post->post_name === $slug) {
+                // Only update if exact slug match AND overwrite enabled
                 $post_id = wp_update_post(array(
                     'ID' => $existing_post->ID,
                     'post_title' => $term,
@@ -1061,7 +1169,8 @@ function simple_clean_handle_glossar_import() {
                     $updated++;
                 }
             } else {
-                // Skip if overwrite is disabled
+                // Skip: either overwrite disabled or it's a variation
+                $errors[] = "Zeile $row_number: Begriff übersprungen: '$term' - {$exists_check['reason']}";
                 $skipped++;
             }
         } else {
