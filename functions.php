@@ -522,6 +522,39 @@ function simple_clean_glossar_settings_page() {
     // Handle delete actions
     simple_clean_handle_glossar_delete_actions();
 
+    // Handle export
+    if (isset($_POST['glossar_export']) && check_admin_referer('glossar_export', 'glossar_export_nonce')) {
+        simple_clean_handle_glossar_export();
+        exit; // Stop execution after export
+    }
+
+    // Handle import
+    if (isset($_POST['glossar_import']) && check_admin_referer('glossar_import', 'glossar_import_nonce')) {
+        $result = simple_clean_handle_glossar_import();
+        if ($result['success']) {
+            add_action('admin_notices', function() use ($result) {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>✓ Import erfolgreich!</strong></p>';
+                echo '<p>' . $result['imported'] . ' Begriffe importiert, ' . $result['updated'] . ' aktualisiert, ' . $result['skipped'] . ' übersprungen.</p>';
+                if (!empty($result['errors'])) {
+                    echo '<p><strong>Fehler:</strong></p><ul>';
+                    foreach ($result['errors'] as $error) {
+                        echo '<li>' . esc_html($error) . '</li>';
+                    }
+                    echo '</ul>';
+                }
+                echo '</div>';
+            });
+        } else {
+            add_action('admin_notices', function() use ($result) {
+                echo '<div class="notice notice-error is-dismissible">';
+                echo '<p><strong>❌ Import fehlgeschlagen!</strong></p>';
+                echo '<p>' . esc_html($result['message']) . '</p>';
+                echo '</div>';
+            });
+        }
+    }
+
     // Handle usage tracking rebuild
     if (isset($_POST['rebuild_usage_tracking']) && check_admin_referer('glossar_rebuild_usage', 'glossar_rebuild_nonce')) {
         $rebuilt_count = simple_clean_rebuild_usage_tracking();
@@ -551,6 +584,7 @@ function simple_clean_glossar_settings_page() {
         <h2 class="nav-tab-wrapper">
             <a href="#settings" class="nav-tab nav-tab-active" onclick="switchTab(event, 'settings')">Einstellungen</a>
             <a href="#manage" class="nav-tab" onclick="switchTab(event, 'manage')">Begriffe verwalten (<?php echo $total_terms; ?>)</a>
+            <a href="#importexport" class="nav-tab" onclick="switchTab(event, 'importexport')">📥 Import/Export</a>
         </h2>
 
         <!-- Settings Tab -->
@@ -660,6 +694,69 @@ function simple_clean_glossar_settings_page() {
                     <p>Es wurden noch keine Glossar-Begriffe erstellt. Erstellen Sie neue Begriffe unter <a href="<?php echo admin_url('post-new.php?post_type=glossar'); ?>">Glossar → Begriff hinzufügen</a>.</p>
                 </div>
             <?php endif; ?>
+        </div>
+
+        <!-- Import/Export Tab -->
+        <div id="importexport-tab" class="glossar-tab-content" style="display: none;">
+            <h2>Glossar Import & Export</h2>
+
+            <!-- Export Section -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #00a32a; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">📤 Export</h3>
+                <p>Exportiere alle Glossar-Begriffe als CSV-Datei. Diese Datei kann in Excel, Google Sheets oder von KI-Tools bearbeitet werden.</p>
+                <p><strong>CSV-Format:</strong> Begriff, Definition, Slug, Status</p>
+                <form method="post">
+                    <?php wp_nonce_field('glossar_export', 'glossar_export_nonce'); ?>
+                    <button type="submit" name="glossar_export" class="button button-primary" value="1">
+                        📥 Als CSV herunterladen (<?php echo $total_terms; ?> Begriffe)
+                    </button>
+                </form>
+            </div>
+
+            <!-- Import Section -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">📥 Import</h3>
+                <p>Importiere Glossar-Begriffe aus einer CSV-Datei. Die CSV-Datei muss folgende Spalten enthalten:</p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Begriff</strong> (Pflichtfeld) - Der Glossarbegriff</li>
+                    <li><strong>Definition</strong> (Pflichtfeld) - Die Erklärung des Begriffs</li>
+                    <li><strong>Slug</strong> (optional) - URL-freundlicher Name (wird automatisch generiert, wenn leer)</li>
+                    <li><strong>Status</strong> (optional) - "publish", "draft" oder "pending" (Standard: publish)</li>
+                </ul>
+
+                <p><strong>📋 CSV-Template für KI:</strong></p>
+                <code style="display: block; background: #f6f7f7; padding: 10px; margin: 10px 0; font-size: 12px;">
+Begriff,Definition,Slug,Status<br>
+Atom,"Ein Atom ist das kleinste Teilchen eines chemischen Elements.",atom,publish<br>
+Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen.",molekuel,publish
+                </code>
+
+                <form method="post" enctype="multipart/form-data">
+                    <?php wp_nonce_field('glossar_import', 'glossar_import_nonce'); ?>
+                    <p>
+                        <input type="file" name="glossar_csv" accept=".csv" required style="margin-right: 10px;">
+                        <label>
+                            <input type="checkbox" name="glossar_import_overwrite" value="1">
+                            Bestehende Begriffe überschreiben (gleicher Slug)
+                        </label>
+                    </p>
+                    <button type="submit" name="glossar_import" class="button button-primary" value="1">
+                        📤 CSV-Datei importieren
+                    </button>
+                </form>
+            </div>
+
+            <!-- Info Section -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #72aee6; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">ℹ️ Hinweise</h3>
+                <ul style="margin-left: 20px;">
+                    <li><strong>CSV-Encoding:</strong> Verwende UTF-8 für Umlaute (ä, ö, ü)</li>
+                    <li><strong>Trennzeichen:</strong> Komma (,) - Excel/Google Sheets kompatibel</li>
+                    <li><strong>KI-Unterstützung:</strong> Das CSV-Format kann von ChatGPT, Claude oder anderen KI-Tools ausgefüllt werden</li>
+                    <li><strong>Bulk-Bearbeitung:</strong> Exportiere, bearbeite in Excel/Sheets, importiere zurück</li>
+                    <li><strong>Nach dem Import:</strong> Verwende den Button "Usage-Tracking aktualisieren" im Tab "Einstellungen"</li>
+                </ul>
+            </div>
         </div>
 
         <!-- Tab Switching Script -->
@@ -788,6 +885,194 @@ function simple_clean_handle_glossar_delete_actions() {
             });
         }
     }
+}
+
+// Handle Glossar CSV Export
+function simple_clean_handle_glossar_export() {
+    // Check permissions
+    if (!current_user_can('manage_options')) {
+        wp_die('Sie haben keine Berechtigung, diese Aktion auszuführen.');
+    }
+
+    // Get all glossar posts
+    $glossar_posts = get_posts(array(
+        'post_type' => 'glossar',
+        'posts_per_page' => -1,
+        'post_status' => array('publish', 'draft', 'pending'),
+        'orderby' => 'title',
+        'order' => 'ASC',
+    ));
+
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="glossar-export-' . date('Y-m-d') . '.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    // Create output stream
+    $output = fopen('php://output', 'w');
+
+    // Add BOM for Excel UTF-8 compatibility
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+    // Write CSV header
+    fputcsv($output, array('Begriff', 'Definition', 'Slug', 'Status'));
+
+    // Write data
+    foreach ($glossar_posts as $post) {
+        $row = array(
+            $post->post_title,
+            wp_strip_all_tags($post->post_content), // Remove HTML tags from definition
+            $post->post_name,
+            $post->post_status
+        );
+        fputcsv($output, $row);
+    }
+
+    fclose($output);
+}
+
+// Handle Glossar CSV Import
+function simple_clean_handle_glossar_import() {
+    // Check permissions
+    if (!current_user_can('manage_options')) {
+        return array(
+            'success' => false,
+            'message' => 'Sie haben keine Berechtigung, diese Aktion auszuführen.'
+        );
+    }
+
+    // Check if file was uploaded
+    if (!isset($_FILES['glossar_csv']) || $_FILES['glossar_csv']['error'] !== UPLOAD_ERR_OK) {
+        return array(
+            'success' => false,
+            'message' => 'Keine Datei hochgeladen oder Upload-Fehler.'
+        );
+    }
+
+    // Check file type
+    $file_info = pathinfo($_FILES['glossar_csv']['name']);
+    if (strtolower($file_info['extension']) !== 'csv') {
+        return array(
+            'success' => false,
+            'message' => 'Ungültiges Dateiformat. Nur CSV-Dateien sind erlaubt.'
+        );
+    }
+
+    // Get overwrite setting
+    $overwrite = isset($_POST['glossar_import_overwrite']) && $_POST['glossar_import_overwrite'] === '1';
+
+    // Read CSV file
+    $file = fopen($_FILES['glossar_csv']['tmp_name'], 'r');
+    if (!$file) {
+        return array(
+            'success' => false,
+            'message' => 'Fehler beim Öffnen der CSV-Datei.'
+        );
+    }
+
+    $imported = 0;
+    $updated = 0;
+    $skipped = 0;
+    $errors = array();
+    $row_number = 0;
+
+    while (($data = fgetcsv($file, 10000, ',')) !== false) {
+        $row_number++;
+
+        // Skip header row
+        if ($row_number === 1 && ($data[0] === 'Begriff' || $data[0] === 'Term')) {
+            continue;
+        }
+
+        // Validate row has at least 2 columns (Begriff and Definition)
+        if (count($data) < 2) {
+            $errors[] = "Zeile $row_number: Zu wenige Spalten (mindestens 2 erforderlich)";
+            $skipped++;
+            continue;
+        }
+
+        // Extract data
+        $term = trim($data[0]);
+        $definition = trim($data[1]);
+        $slug = isset($data[2]) ? sanitize_title(trim($data[2])) : '';
+        $status = isset($data[3]) ? trim($data[3]) : 'publish';
+
+        // Validate required fields
+        if (empty($term)) {
+            $errors[] = "Zeile $row_number: Begriff ist leer";
+            $skipped++;
+            continue;
+        }
+
+        if (empty($definition)) {
+            $errors[] = "Zeile $row_number: Definition ist leer für '$term'";
+            $skipped++;
+            continue;
+        }
+
+        // Generate slug if empty
+        if (empty($slug)) {
+            $slug = sanitize_title($term);
+        }
+
+        // Validate status
+        if (!in_array($status, array('publish', 'draft', 'pending'))) {
+            $status = 'publish';
+        }
+
+        // Check if term already exists by slug
+        $existing_post = get_page_by_path($slug, OBJECT, 'glossar');
+
+        if ($existing_post) {
+            if ($overwrite) {
+                // Update existing post
+                $post_id = wp_update_post(array(
+                    'ID' => $existing_post->ID,
+                    'post_title' => $term,
+                    'post_content' => $definition,
+                    'post_status' => $status,
+                    'post_type' => 'glossar',
+                ));
+
+                if (is_wp_error($post_id)) {
+                    $errors[] = "Zeile $row_number: Fehler beim Aktualisieren von '$term': " . $post_id->get_error_message();
+                    $skipped++;
+                } else {
+                    $updated++;
+                }
+            } else {
+                // Skip if overwrite is disabled
+                $skipped++;
+            }
+        } else {
+            // Create new post
+            $post_id = wp_insert_post(array(
+                'post_title' => $term,
+                'post_content' => $definition,
+                'post_status' => $status,
+                'post_type' => 'glossar',
+                'post_name' => $slug,
+            ));
+
+            if (is_wp_error($post_id)) {
+                $errors[] = "Zeile $row_number: Fehler beim Erstellen von '$term': " . $post_id->get_error_message();
+                $skipped++;
+            } else {
+                $imported++;
+            }
+        }
+    }
+
+    fclose($file);
+
+    return array(
+        'success' => true,
+        'imported' => $imported,
+        'updated' => $updated,
+        'skipped' => $skipped,
+        'errors' => $errors
+    );
 }
 
 // Enqueue Glossar Assets
