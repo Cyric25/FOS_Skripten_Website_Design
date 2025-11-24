@@ -522,11 +522,7 @@ function simple_clean_glossar_settings_page() {
     // Handle delete actions
     simple_clean_handle_glossar_delete_actions();
 
-    // Handle export
-    if (isset($_POST['glossar_export']) && check_admin_referer('glossar_export', 'glossar_export_nonce')) {
-        simple_clean_handle_glossar_export();
-        exit; // Stop execution after export
-    }
+    // Note: Export is handled in admin_init hook (before any output)
 
     // Handle import
     if (isset($_POST['glossar_import']) && check_admin_referer('glossar_import', 'glossar_import_nonce')) {
@@ -887,13 +883,36 @@ function simple_clean_handle_glossar_delete_actions() {
     }
 }
 
-// Handle Glossar CSV Export
-function simple_clean_handle_glossar_export() {
+// Early hook to handle export before any output
+function simple_clean_handle_glossar_export_early() {
+    // Only on admin pages
+    if (!is_admin()) {
+        return;
+    }
+
+    // Check if this is an export request
+    if (!isset($_POST['glossar_export']) || $_POST['glossar_export'] !== '1') {
+        return;
+    }
+
+    // Verify nonce
+    if (!isset($_POST['glossar_export_nonce']) || !wp_verify_nonce($_POST['glossar_export_nonce'], 'glossar_export')) {
+        return;
+    }
+
     // Check permissions
     if (!current_user_can('manage_options')) {
         wp_die('Sie haben keine Berechtigung, diese Aktion auszuführen.');
     }
 
+    // Call the actual export function
+    simple_clean_handle_glossar_export();
+    exit; // Important: Stop all further execution
+}
+add_action('admin_init', 'simple_clean_handle_glossar_export_early');
+
+// Handle Glossar CSV Export
+function simple_clean_handle_glossar_export() {
     // Get all glossar posts
     $glossar_posts = get_posts(array(
         'post_type' => 'glossar',
