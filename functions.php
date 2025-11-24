@@ -1639,3 +1639,528 @@ function simple_clean_create_glossar_term($request) {
         'message' => 'Glossar-Eintrag erfolgreich erstellt!',
     ));
 }
+
+/**
+ * =============================================================================
+ * WEBSITE PASSWORD PROTECTION
+ * =============================================================================
+ * Protects the entire website with a password unless user is logged in.
+ * Prevents copyright violations by requiring authentication or password entry.
+ */
+
+/**
+ * Add admin menu for password protection settings
+ */
+function simple_clean_password_protection_menu() {
+    add_options_page(
+        'Website-Passwortschutz',
+        'Passwortschutz',
+        'manage_options',
+        'website-password-protection',
+        'simple_clean_password_protection_page'
+    );
+}
+add_action('admin_menu', 'simple_clean_password_protection_menu');
+
+/**
+ * Render the password protection settings page
+ */
+function simple_clean_password_protection_page() {
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_die('Sie haben keine Berechtigung, auf diese Seite zuzugreifen.');
+    }
+
+    // Save settings
+    if (isset($_POST['password_protection_save']) && check_admin_referer('password_protection_settings', 'password_protection_nonce')) {
+        $enabled = isset($_POST['password_protection_enabled']) ? '1' : '0';
+        $password = sanitize_text_field($_POST['password_protection_password']);
+
+        // Save settings
+        update_option('simple_clean_password_protection_enabled', $enabled);
+
+        // Only update password if a new one is provided
+        if (!empty($password)) {
+            // Hash the password for security
+            update_option('simple_clean_password_protection_password', wp_hash_password($password));
+            echo '<div class="notice notice-success"><p><strong>Einstellungen gespeichert!</strong> Passwort wurde aktualisiert.</p></div>';
+        } else {
+            echo '<div class="notice notice-success"><p><strong>Einstellungen gespeichert!</strong></p></div>';
+        }
+    }
+
+    // Get current settings
+    $enabled = get_option('simple_clean_password_protection_enabled', '0');
+    $has_password = !empty(get_option('simple_clean_password_protection_password'));
+
+    ?>
+    <div class="wrap">
+        <h1>🔒 Website-Passwortschutz</h1>
+
+        <div style="background: #fff; border: 1px solid #c3c4c7; padding: 20px; margin: 20px 0; border-left: 4px solid #2271b1;">
+            <h2 style="margin-top: 0;">ℹ️ Funktionsweise</h2>
+            <p>Wenn der Passwortschutz aktiviert ist:</p>
+            <ul style="list-style: disc; margin-left: 20px;">
+                <li><strong>Eingeloggte Benutzer:</strong> Können die Website ohne Passwort-Eingabe nutzen</li>
+                <li><strong>Nicht-eingeloggte Besucher:</strong> Müssen das Passwort eingeben oder sich anmelden</li>
+                <li><strong>Alle Seiten geschützt:</strong> Das Passwort wird bei JEDER Seite der Website abgefragt</li>
+                <li><strong>Copyright-Schutz:</strong> Verhindert unbefugten Zugriff auf geschützte Inhalte</li>
+            </ul>
+        </div>
+
+        <form method="post" action="">
+            <?php wp_nonce_field('password_protection_settings', 'password_protection_nonce'); ?>
+
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row">Passwortschutz aktivieren</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="password_protection_enabled" value="1" <?php checked($enabled, '1'); ?>>
+                            Website mit Passwort schützen
+                        </label>
+                        <?php if ($enabled === '1'): ?>
+                            <p class="description" style="color: #d63638; font-weight: 600;">
+                                ⚠️ <strong>Passwortschutz ist AKTIV</strong> - Besucher benötigen das Passwort oder müssen angemeldet sein.
+                            </p>
+                        <?php else: ?>
+                            <p class="description">
+                                Wenn aktiviert, müssen Besucher das Passwort eingeben oder sich anmelden.
+                            </p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="password_protection_password">Website-Passwort</label>
+                    </th>
+                    <td>
+                        <input
+                            type="text"
+                            id="password_protection_password"
+                            name="password_protection_password"
+                            class="regular-text"
+                            placeholder="<?php echo $has_password ? 'Aktuelles Passwort beibehalten' : 'Neues Passwort eingeben'; ?>"
+                            autocomplete="off"
+                        >
+                        <?php if ($has_password): ?>
+                            <p class="description">
+                                ✅ Ein Passwort ist gesetzt. Lassen Sie dieses Feld leer, um das aktuelle Passwort beizubehalten.
+                            </p>
+                        <?php else: ?>
+                            <p class="description">
+                                ⚠️ Kein Passwort gesetzt. Bitte ein Passwort eingeben, bevor Sie den Schutz aktivieren.
+                            </p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            </table>
+
+            <p class="submit">
+                <button type="submit" name="password_protection_save" class="button button-primary">
+                    💾 Einstellungen speichern
+                </button>
+            </p>
+        </form>
+
+        <div style="background: #fff; border: 1px solid #c3c4c7; padding: 20px; margin: 20px 0; border-left: 4px solid #d63638;">
+            <h2 style="margin-top: 0;">⚠️ Wichtige Hinweise</h2>
+            <ul style="list-style: disc; margin-left: 20px;">
+                <li><strong>Sicherheit:</strong> Das Passwort wird verschlüsselt gespeichert.</li>
+                <li><strong>Cookies:</strong> Nach erfolgreicher Passwort-Eingabe wird ein Cookie gesetzt (gültig für 30 Tage).</li>
+                <li><strong>Admin-Zugang:</strong> Administratoren können sich jederzeit über /wp-admin anmelden.</li>
+                <li><strong>Session:</strong> Besucher müssen das Passwort auf jedem Gerät/Browser einzeln eingeben.</li>
+                <li><strong>Logout:</strong> Cookie wird automatisch nach 30 Tagen gelöscht oder bei Browser-Neustart (je nach Browser-Einstellung).</li>
+            </ul>
+        </div>
+    </div>
+    <?php
+}
+
+/**
+ * Check if password protection is enabled
+ */
+function simple_clean_is_password_protection_enabled() {
+    return get_option('simple_clean_password_protection_enabled', '0') === '1';
+}
+
+/**
+ * Check if user has valid access (logged in OR correct password entered)
+ */
+function simple_clean_has_valid_access() {
+    // Logged-in users always have access
+    if (is_user_logged_in()) {
+        return true;
+    }
+
+    // Check if password cookie is set and valid
+    if (isset($_COOKIE['simple_clean_password_granted'])) {
+        $cookie_value = $_COOKIE['simple_clean_password_granted'];
+        $stored_hash = get_option('simple_clean_password_protection_password');
+
+        // Verify cookie matches current password hash
+        if (wp_check_password($cookie_value, $stored_hash)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Handle password form submission
+ */
+function simple_clean_handle_password_submission() {
+    if (!isset($_POST['website_password_submit']) || !isset($_POST['website_password'])) {
+        return false;
+    }
+
+    // Verify nonce
+    if (!isset($_POST['website_password_nonce']) || !wp_verify_nonce($_POST['website_password_nonce'], 'website_password_check')) {
+        return false;
+    }
+
+    $submitted_password = $_POST['website_password'];
+    $stored_hash = get_option('simple_clean_password_protection_password');
+
+    // Check password
+    if (wp_check_password($submitted_password, $stored_hash)) {
+        // Set cookie for 30 days
+        setcookie(
+            'simple_clean_password_granted',
+            $submitted_password, // Store plain password for cookie verification
+            time() + (30 * DAY_IN_SECONDS),
+            COOKIEPATH,
+            COOKIE_DOMAIN,
+            is_ssl(),
+            true // HTTP only
+        );
+
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Template redirect - check password protection
+ */
+function simple_clean_password_protection_check() {
+    // Skip if password protection is disabled
+    if (!simple_clean_is_password_protection_enabled()) {
+        return;
+    }
+
+    // Skip for admin pages
+    if (is_admin()) {
+        return;
+    }
+
+    // Skip for login/register pages
+    if (in_array($GLOBALS['pagenow'], array('wp-login.php', 'wp-register.php'))) {
+        return;
+    }
+
+    // Handle password form submission
+    if (simple_clean_handle_password_submission()) {
+        // Password correct - reload page to show content
+        wp_redirect($_SERVER['REQUEST_URI']);
+        exit;
+    }
+
+    // Check if user has valid access
+    if (simple_clean_has_valid_access()) {
+        return;
+    }
+
+    // No valid access - show password form
+    simple_clean_show_password_form();
+    exit;
+}
+add_action('template_redirect', 'simple_clean_password_protection_check');
+
+/**
+ * Display password protection form
+ */
+function simple_clean_show_password_form() {
+    $error = isset($_POST['website_password_submit']) ? true : false;
+    $site_name = get_bloginfo('name');
+    $login_url = wp_login_url($_SERVER['REQUEST_URI']);
+
+    ?>
+    <!DOCTYPE html>
+    <html <?php language_attributes(); ?>>
+    <head>
+        <meta charset="<?php bloginfo('charset'); ?>">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Passwortgeschützt - <?php echo esc_html($site_name); ?></title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+
+            .password-container {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                padding: 40px;
+                max-width: 450px;
+                width: 100%;
+                animation: slideUp 0.4s ease-out;
+            }
+
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .lock-icon {
+                font-size: 64px;
+                text-align: center;
+                margin-bottom: 20px;
+                animation: lockPulse 2s ease-in-out infinite;
+            }
+
+            @keyframes lockPulse {
+                0%, 100% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.05);
+                }
+            }
+
+            h1 {
+                font-size: 28px;
+                color: #333;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+
+            .subtitle {
+                text-align: center;
+                color: #666;
+                margin-bottom: 30px;
+                font-size: 14px;
+            }
+
+            .info-box {
+                background: #f0f4ff;
+                border-left: 4px solid #667eea;
+                padding: 15px;
+                margin-bottom: 25px;
+                border-radius: 4px;
+                font-size: 14px;
+                color: #555;
+            }
+
+            .info-box strong {
+                color: #333;
+            }
+
+            .error-message {
+                background: #fee;
+                border-left: 4px solid #d63638;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+                color: #d63638;
+                font-weight: 600;
+                animation: shake 0.4s ease-in-out;
+            }
+
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px); }
+                75% { transform: translateX(10px); }
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 8px;
+                color: #333;
+                font-weight: 600;
+                font-size: 14px;
+            }
+
+            input[type="password"] {
+                width: 100%;
+                padding: 14px 16px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 16px;
+                transition: all 0.3s ease;
+            }
+
+            input[type="password"]:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+            .submit-button {
+                width: 100%;
+                padding: 14px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-bottom: 15px;
+            }
+
+            .submit-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            }
+
+            .submit-button:active {
+                transform: translateY(0);
+            }
+
+            .divider {
+                text-align: center;
+                margin: 20px 0;
+                position: relative;
+                color: #999;
+                font-size: 14px;
+            }
+
+            .divider::before,
+            .divider::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                width: 40%;
+                height: 1px;
+                background: #e0e0e0;
+            }
+
+            .divider::before {
+                left: 0;
+            }
+
+            .divider::after {
+                right: 0;
+            }
+
+            .login-link {
+                display: block;
+                text-align: center;
+                padding: 12px;
+                background: #f8f9fa;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                color: #667eea;
+                text-decoration: none;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+
+            .login-link:hover {
+                background: #e9ecef;
+                border-color: #667eea;
+            }
+
+            .footer-note {
+                text-align: center;
+                margin-top: 25px;
+                padding-top: 20px;
+                border-top: 1px solid #e0e0e0;
+                color: #999;
+                font-size: 12px;
+            }
+
+            @media (max-width: 480px) {
+                .password-container {
+                    padding: 30px 20px;
+                }
+
+                h1 {
+                    font-size: 24px;
+                }
+
+                .lock-icon {
+                    font-size: 48px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="password-container">
+            <div class="lock-icon">🔒</div>
+            <h1>Geschützter Bereich</h1>
+            <p class="subtitle"><?php echo esc_html($site_name); ?></p>
+
+            <div class="info-box">
+                <strong>📋 Diese Website ist passwortgeschützt.</strong><br>
+                Bitte geben Sie das Passwort ein oder melden Sie sich an, um auf die Inhalte zuzugreifen.
+            </div>
+
+            <?php if ($error): ?>
+                <div class="error-message">
+                    ❌ <strong>Falsches Passwort!</strong> Bitte versuchen Sie es erneut.
+                </div>
+            <?php endif; ?>
+
+            <form method="post">
+                <?php wp_nonce_field('website_password_check', 'website_password_nonce'); ?>
+
+                <div class="form-group">
+                    <label for="website_password">🔑 Passwort eingeben</label>
+                    <input
+                        type="password"
+                        id="website_password"
+                        name="website_password"
+                        placeholder="Passwort..."
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <button type="submit" name="website_password_submit" class="submit-button">
+                    🚀 Zugang erhalten
+                </button>
+            </form>
+
+            <div class="divider">ODER</div>
+
+            <a href="<?php echo esc_url($login_url); ?>" class="login-link">
+                👤 Als Benutzer anmelden
+            </a>
+
+            <div class="footer-note">
+                🔐 Copyright-geschützte Inhalte<br>
+                Zugriff nur für autorisierte Personen
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+}
