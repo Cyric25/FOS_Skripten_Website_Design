@@ -173,9 +173,147 @@ body {
     margin-bottom: var(--space-md);
 }
 
-.entry-content img {
+/* ===========================
+   Responsive Media Styles
+   =========================== */
+
+/* Base image styles */
+.entry-content img,
+.page-content img,
+img {
     max-width: 100%;
     height: auto;
+    display: block;
+    border-radius: 4px;
+}
+
+/* WordPress image blocks */
+.wp-block-image {
+    margin: 1.5rem 0;
+}
+
+.wp-block-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* Image alignment */
+.wp-block-image.alignleft,
+.alignleft {
+    float: left;
+    margin: 0.5rem 1.5rem 1rem 0;
+    max-width: 50%;
+}
+
+.wp-block-image.alignright,
+.alignright {
+    float: right;
+    margin: 0.5rem 0 1rem 1.5rem;
+    max-width: 50%;
+}
+
+.wp-block-image.aligncenter,
+.aligncenter {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.wp-block-image.alignfull,
+.alignfull {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+}
+
+.wp-block-image.alignwide,
+.alignwide {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Figure elements (images with captions) */
+figure {
+    margin: 1.5rem 0;
+}
+
+figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Video elements */
+.entry-content video,
+.page-content video,
+video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+}
+
+/* WordPress video blocks */
+.wp-block-video {
+    margin: 1.5rem 0;
+}
+
+.wp-block-video video {
+    width: 100%;
+    height: auto;
+}
+
+/* Responsive iframe containers (YouTube, Vimeo, etc.) */
+.wp-block-embed,
+.wp-block-embed__wrapper {
+    position: relative;
+    width: 100%;
+    margin: 1.5rem 0;
+}
+
+/* Responsive 16:9 aspect ratio for video embeds */
+.wp-block-embed.is-type-video iframe,
+.wp-block-embed iframe,
+.entry-content iframe[src*="youtube"],
+.entry-content iframe[src*="vimeo"],
+.entry-content iframe[src*="dailymotion"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 4px;
+}
+
+/* Create aspect ratio container */
+.wp-block-embed.is-type-video .wp-block-embed__wrapper,
+.entry-content .video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+}
+
+/* Responsive styles for small screens */
+@media (max-width: 768px) {
+    .wp-block-image.alignleft,
+    .wp-block-image.alignright,
+    .alignleft,
+    .alignright {
+        float: none;
+        max-width: 100%;
+        margin: 1rem auto;
+    }
+
+    figure {
+        margin: 1rem 0;
+    }
 }
 
 /* Listen im Content-Bereich */
