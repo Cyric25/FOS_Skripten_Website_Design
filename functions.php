@@ -1238,6 +1238,23 @@ function simple_clean_glossar_assets() {
         wp_enqueue_style('dashicons');
     }
 
+    // Enqueue glossar CSS (always load for styling)
+    $glossar_css = get_template_directory() . '/dist/css/glossar-style.css';
+    if (file_exists($glossar_css)) {
+        wp_enqueue_style(
+            'simple-clean-glossar-style',
+            get_template_directory_uri() . '/dist/css/glossar-style.css',
+            array(),
+            filemtime($glossar_css)
+        );
+    }
+
+    // Only load JavaScript and terms if auto-linking is enabled or on glossar archive
+    $auto_link = get_option('glossar_auto_link', '1');
+    if ($auto_link !== '1' && !is_post_type_archive('glossar') && !is_singular('glossar')) {
+        return; // Skip loading terms if not needed
+    }
+
     // Enqueue glossar JavaScript
     $glossar_js = get_template_directory() . '/dist/js/glossar.js';
     if (file_exists($glossar_js)) {
@@ -1253,31 +1270,21 @@ function simple_clean_glossar_assets() {
         $glossar_terms = simple_clean_get_glossar_terms();
         wp_localize_script('simple-clean-glossar', 'glossarData', array(
             'modalType' => get_option('glossar_modal_type', 'tooltip'),
-            'autoLink' => get_option('glossar_auto_link', '1'),
+            'autoLink' => $auto_link,
             'firstOnly' => get_option('glossar_first_only', '1'),
             'caseSensitive' => get_option('glossar_case_sensitive', '0'),
             'terms' => $glossar_terms,
         ));
     }
-
-    // Enqueue glossar CSS
-    $glossar_css = get_template_directory() . '/dist/css/glossar-style.css';
-    if (file_exists($glossar_css)) {
-        wp_enqueue_style(
-            'simple-clean-glossar-style',
-            get_template_directory_uri() . '/dist/css/glossar-style.css',
-            array(),
-            filemtime($glossar_css)
-        );
-    }
 }
 add_action('wp_enqueue_scripts', 'simple_clean_glossar_assets');
 
-// Get all glossar terms (with transient caching for performance)
+// Get all glossar terms (with optimized caching for performance)
 function simple_clean_get_glossar_terms() {
-    // Try to get cached terms
-    $cache_key = 'simple_clean_glossar_terms_cache';
-    $cached_terms = get_transient($cache_key);
+    // Try to get cached terms from object cache (faster than transients)
+    $cache_key = 'glossar_terms';
+    $cache_group = 'simple_clean_glossar';
+    $cached_terms = wp_cache_get($cache_key, $cache_group);
 
     // Return cached data if available
     if ($cached_terms !== false) {
@@ -1302,8 +1309,8 @@ function simple_clean_get_glossar_terms() {
         );
     }
 
-    // Cache the results for 1 hour (3600 seconds)
-    set_transient($cache_key, $terms, HOUR_IN_SECONDS);
+    // Cache the results (object cache is faster than transients for per-request caching)
+    wp_cache_set($cache_key, $terms, $cache_group, HOUR_IN_SECONDS);
 
     return $terms;
 }
@@ -1315,8 +1322,8 @@ function simple_clean_clear_glossar_cache($post_id, $post = null) {
         return;
     }
 
-    // Clear the transient cache
-    delete_transient('simple_clean_glossar_terms_cache');
+    // Clear the object cache
+    wp_cache_delete('glossar_terms', 'simple_clean_glossar');
 }
 add_action('save_post', 'simple_clean_clear_glossar_cache', 10, 2);
 add_action('delete_post', 'simple_clean_clear_glossar_cache', 10, 2);
