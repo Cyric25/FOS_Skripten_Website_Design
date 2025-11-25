@@ -1273,8 +1273,18 @@ function simple_clean_glossar_assets() {
 }
 add_action('wp_enqueue_scripts', 'simple_clean_glossar_assets');
 
-// Get all glossar terms
+// Get all glossar terms (with transient caching for performance)
 function simple_clean_get_glossar_terms() {
+    // Try to get cached terms
+    $cache_key = 'simple_clean_glossar_terms_cache';
+    $cached_terms = get_transient($cache_key);
+
+    // Return cached data if available
+    if ($cached_terms !== false) {
+        return $cached_terms;
+    }
+
+    // No cache found, fetch from database
     $terms = array();
 
     $glossar_posts = get_posts(array(
@@ -1292,8 +1302,26 @@ function simple_clean_get_glossar_terms() {
         );
     }
 
+    // Cache the results for 1 hour (3600 seconds)
+    set_transient($cache_key, $terms, HOUR_IN_SECONDS);
+
     return $terms;
 }
+
+// Clear glossar terms cache when terms are modified
+function simple_clean_clear_glossar_cache($post_id, $post = null) {
+    // Only clear cache for glossar post type
+    if ($post && get_post_type($post) !== 'glossar') {
+        return;
+    }
+
+    // Clear the transient cache
+    delete_transient('simple_clean_glossar_terms_cache');
+}
+add_action('save_post', 'simple_clean_clear_glossar_cache', 10, 2);
+add_action('delete_post', 'simple_clean_clear_glossar_cache', 10, 2);
+add_action('wp_trash_post', 'simple_clean_clear_glossar_cache', 10, 1);
+add_action('untrash_post', 'simple_clean_clear_glossar_cache', 10, 1);
 
 // ===================================================================
 // GLOSSAR USAGE TRACKING (Wo wird Begriff verwendet)
