@@ -1249,13 +1249,7 @@ function simple_clean_glossar_assets() {
         );
     }
 
-    // Only load JavaScript and terms if auto-linking is enabled or on glossar archive
-    $auto_link = get_option('glossar_auto_link', '1');
-    if ($auto_link !== '1' && !is_post_type_archive('glossar') && !is_singular('glossar')) {
-        return; // Skip loading terms if not needed
-    }
-
-    // Enqueue glossar JavaScript
+    // Enqueue glossar JavaScript (only for modals, NOT for auto-linking)
     $glossar_js = get_template_directory() . '/dist/js/glossar.js';
     if (file_exists($glossar_js)) {
         wp_enqueue_script(
@@ -1266,18 +1260,135 @@ function simple_clean_glossar_assets() {
             true
         );
 
-        // Pass settings and terms to JavaScript
-        $glossar_terms = simple_clean_get_glossar_terms();
+        // Pass settings to JavaScript (terms are now handled server-side)
         wp_localize_script('simple-clean-glossar', 'glossarData', array(
             'modalType' => get_option('glossar_modal_type', 'tooltip'),
-            'autoLink' => $auto_link,
+            'autoLink' => '0', // Disabled, handled server-side now
             'firstOnly' => get_option('glossar_first_only', '1'),
             'caseSensitive' => get_option('glossar_case_sensitive', '0'),
-            'terms' => $glossar_terms,
+            'terms' => simple_clean_get_glossar_terms(), // Still needed for modal display
         ));
     }
 }
 add_action('wp_enqueue_scripts', 'simple_clean_glossar_assets');
+
+// Server-Side Glossar Auto-Linking (much faster than JavaScript)
+function simple_clean_glossar_auto_link_content($content) {
+    // Skip if in admin, feed, or auto-linking is disabled
+    if (is_admin() || is_feed() || get_option('glossar_auto_link', '1') !== '1') {
+        return $content;
+    }
+
+    // Skip if this is a glossar post itself
+    if (is_singular('glossar')) {
+        return $content;
+    }
+
+    // Get all glossar terms (cached)
+    $terms = simple_clean_get_glossar_terms();
+    if (empty($terms)) {
+        return $content;
+    }
+
+    // Sort terms by length (longest first) to avoid partial matches
+    usort($terms, function($a, $b) {
+        return mb_strlen($b['term']) - mb_strlen($a['term']);
+    });
+
+    $first_only = get_option('glossar_first_only', '1') === '1';
+    $case_sensitive = get_option('glossar_case_sensitive', '0') === '1';
+    $linked_terms = array();
+
+    // Split content into HTML tags and text
+    $parts = preg_split('/(<[^>]+>)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    $result = '';
+    $in_link = false;
+    $in_script = false;
+
+    foreach ($parts as $part) {
+        // Check if this is an HTML tag
+        if (preg_match('/^<[^>]+>$/', $part)) {
+            // Track if we're inside a link or script tag
+            if (preg_match('/^<a\b/i', $part)) {
+                $in_link = true;
+            } elseif (preg_match('/^<\/a>/i', $part)) {
+                $in_link = false;
+            } elseif (preg_match('/^<(script|style|code|pre)\b/i', $part)) {
+                $in_script = true;
+            } elseif (preg_match('/^<\/(script|style|code|pre)>/i', $part)) {
+                $in_script = false;
+            }
+
+            $result .= $part;
+            continue;
+        }
+
+        // Skip processing if we're inside a link, script, or if already a glossar term
+        if ($in_link || $in_script || strpos($part, 'glossar-term') !== false) {
+            $result .= $part;
+            continue;
+        }
+
+        // Process this text part
+        $processed_part = $part;
+
+        foreach ($terms as $term_data) {
+            $term = $term_data['term'];
+
+            // Skip if first_only is enabled and term already linked globally
+            if ($first_only && in_array(strtolower($term), $linked_terms)) {
+                continue;
+            }
+
+            // Get all variants of this term
+            $variants = simple_clean_get_glossar_term_variants($term);
+
+            // Process each variant
+            foreach ($variants as $variant) {
+                // Build regex pattern with word boundaries
+                $pattern = $case_sensitive ?
+                    '/\b(' . preg_quote($variant, '/') . ')\b/' :
+                    '/\b(' . preg_quote($variant, '/') . ')\b/iu';
+
+                // Check if variant exists in this part
+                if (!preg_match($pattern, $processed_part)) {
+                    continue;
+                }
+
+                // Replace callback
+                $processed_part = preg_replace_callback($pattern, function($matches) use ($term_data, &$linked_terms, $first_only, $term) {
+                    // Create the glossar link
+                    $replacement = '<span class="glossar-term glossar-clickable" ' .
+                                  'data-glossar-id="' . esc_attr($term_data['id']) . '" ' .
+                                  'id="glossar-term-' . esc_attr($term_data['id']) . '" ' .
+                                  'role="button" tabindex="0" ' .
+                                  'aria-label="Glossar-Begriff: ' . esc_attr($term_data['term']) . '">' .
+                                  $matches[1] . '</span>';
+
+                    // Mark term as linked if first_only is enabled
+                    if ($first_only) {
+                        $linked_terms[] = strtolower($term);
+                    }
+
+                    return $replacement;
+                }, $processed_part, $first_only ? 1 : -1);
+
+                // If first_only and term was linked, break variant loop
+                if ($first_only && in_array(strtolower($term), $linked_terms)) {
+                    break 2; // Break both variant and term loop
+                }
+            }
+        }
+
+        $result .= $processed_part;
+    }
+
+    return $result;
+}
+
+// Use priority 20 to run after other content filters
+add_filter('the_content', 'simple_clean_glossar_auto_link_content', 20);
 
 // Get all glossar terms (with optimized caching for performance)
 function simple_clean_get_glossar_terms() {
