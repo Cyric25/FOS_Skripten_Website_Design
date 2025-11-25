@@ -1492,7 +1492,10 @@ function simple_clean_track_glossar_usage($post_id = null) {
         $found = false;
         foreach ($variants as $variant) {
             // Case-insensitive search with word boundaries
-            $pattern = '/\b' . preg_quote($variant, '/') . '\b/i';
+            // Using negative lookbehind/lookahead to support terms with special characters (e.g., parentheses)
+            // (?<!\w) = no word character before
+            // (?!\w) = no word character after
+            $pattern = '/(?<!\w)' . preg_quote($variant, '/') . '(?!\w)/iu';
 
             if (preg_match($pattern, $content)) {
                 $used_terms[] = $term_id;

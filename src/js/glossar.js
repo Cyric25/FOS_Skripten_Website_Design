@@ -191,7 +191,10 @@ class GlossarSystem {
 
             variants.forEach(variant => {
                 const flags = this.caseSensitive ? 'g' : 'gi';
-                const regex = new RegExp(`\\b(${this.escapeRegex(variant)})\\b`, flags);
+                // Using negative lookbehind/lookahead to support terms with special characters (e.g., parentheses)
+                // (?<!\w) = no word character before
+                // (?!\w) = no word character after
+                const regex = new RegExp(`(?<!\\w)(${this.escapeRegex(variant)})(?!\\w)`, flags);
 
                 let match;
                 while ((match = regex.exec(text)) !== null) {
