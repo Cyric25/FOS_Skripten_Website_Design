@@ -415,6 +415,7 @@ function simple_clean_glossar_settings_init() {
     register_setting('simple_clean_glossar', 'glossar_auto_link');
     register_setting('simple_clean_glossar', 'glossar_first_only');
     register_setting('simple_clean_glossar', 'glossar_case_sensitive');
+    register_setting('simple_clean_glossar', 'glossar_auto_rebuild');
 
     add_settings_section(
         'glossar_settings_section',
@@ -451,6 +452,14 @@ function simple_clean_glossar_settings_init() {
         'glossar_case_sensitive',
         'Groß-/Kleinschreibung',
         'simple_clean_glossar_case_sensitive_cb',
+        'simple_clean_glossar',
+        'glossar_settings_section'
+    );
+
+    add_settings_field(
+        'glossar_auto_rebuild',
+        'Automatische Seitenerkennung',
+        'simple_clean_glossar_auto_rebuild_cb',
         'simple_clean_glossar',
         'glossar_settings_section'
     );
@@ -502,6 +511,20 @@ function simple_clean_glossar_case_sensitive_cb() {
         Groß-/Kleinschreibung beachten
     </label>
     <p class="description">Wenn deaktiviert, wird "Atom" und "atom" als gleich erkannt.</p>
+    <?php
+}
+
+function simple_clean_glossar_auto_rebuild_cb() {
+    $value = get_option('glossar_auto_rebuild', '0');
+    ?>
+    <label>
+        <input type="checkbox" name="glossar_auto_rebuild" value="1" <?php checked($value, '1'); ?>>
+        Seiten automatisch analysieren bei neuen Begriffen
+    </label>
+    <p class="description">
+        <strong>Aktiviert:</strong> Alle Seiten werden sofort analysiert, wenn Sie einen neuen Glossarbegriff veröffentlichen (kann 5-10 Sekunden dauern).<br>
+        <strong>Deaktiviert:</strong> Seiten werden beim nächsten Aufruf automatisch analysiert, oder Sie nutzen den manuellen Button "Alle Seiten jetzt analysieren".
+    </p>
     <?php
 }
 
@@ -1524,12 +1547,19 @@ add_action('save_post_glossar', function($post_id, $post, $update) {
         return;
     }
 
-    // Update timestamp to trigger re-tracking on next page view
+    // Update timestamp to trigger re-tracking on next page view (lazy rebuild)
     update_option('_glossar_last_change', time());
 
-    // Optional: Immediately rebuild all tracking (can be slow on large sites)
-    // Uncomment the next line if you want immediate rebuild instead of lazy rebuild
-    // simple_clean_rebuild_usage_tracking();
+    // Check if auto-rebuild is enabled in settings
+    $auto_rebuild = get_option('glossar_auto_rebuild', '0');
+
+    if ($auto_rebuild === '1') {
+        // Immediately rebuild all tracking (can take a few seconds)
+        simple_clean_rebuild_usage_tracking();
+
+        // Set a transient to show success message
+        set_transient('glossar_auto_rebuild_done', true, 30);
+    }
 }, 10, 3);
 
 /**
@@ -1674,6 +1704,19 @@ function simple_clean_glossar_duplicate_notice() {
                 <strong>❌ Glossar-Begriff existiert bereits!</strong><br>
                 Der Begriff "<strong><?php echo esc_html($duplicate_title); ?></strong>" ist bereits im Glossar vorhanden.
                 Dieser Eintrag wurde als Entwurf gespeichert. Bitte wählen Sie einen anderen Begriff oder bearbeiten Sie den bestehenden Eintrag.
+            </p>
+        </div>
+        <?php
+    }
+
+    // Show notice when auto-rebuild was performed
+    if (get_transient('glossar_auto_rebuild_done')) {
+        delete_transient('glossar_auto_rebuild_done');
+        ?>
+        <div class="notice notice-success is-dismissible">
+            <p>
+                <strong>✓ Glossar-Begriff gespeichert!</strong><br>
+                Alle Seiten wurden automatisch analysiert. Die Verwendung des Begriffs ist jetzt sofort sichtbar.
             </p>
         </div>
         <?php
