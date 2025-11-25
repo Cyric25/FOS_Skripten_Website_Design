@@ -1277,8 +1277,157 @@ function simple_clean_get_glossar_terms() {
 // ===================================================================
 
 /**
+ * Generate variants of a glossar term (German declensions)
+ * Matches the logic from glossar.js frontend
+ */
+function simple_clean_get_glossar_term_variants($term) {
+    $variants = array($term);
+
+    // Check if multi-word term
+    $words = preg_split('/\s+/', trim($term));
+
+    if (count($words) > 1) {
+        // Multi-word term: handle adjective + noun combinations
+        $noun = end($words);
+        $adjective = $words[0];
+
+        $noun_variants = simple_clean_get_noun_variants($noun);
+        $adjective_variants = simple_clean_get_adjective_variants($adjective);
+
+        // Combine adjective and noun variants
+        foreach ($adjective_variants as $adj) {
+            foreach ($noun_variants as $noun_var) {
+                if (count($words) === 2) {
+                    $variants[] = $adj . ' ' . $noun_var;
+                } else {
+                    // Keep middle words unchanged
+                    $middle = implode(' ', array_slice($words, 1, -1));
+                    $variants[] = $adj . ' ' . $middle . ' ' . $noun_var;
+                }
+            }
+        }
+    } else {
+        // Single word: apply noun variant generation
+        $noun_variants = simple_clean_get_noun_variants($term);
+        $variants = array_merge($variants, $noun_variants);
+    }
+
+    return array_unique($variants);
+}
+
+/**
+ * Generate noun variants (German noun inflections)
+ */
+function simple_clean_get_noun_variants($noun) {
+    $variants = array($noun);
+
+    // German noun inflections
+    if (mb_substr($noun, -1) === 'e') {
+        // Words ending in -e: Atome -> Atomen (Dativ Plural)
+        $variants[] = $noun . 'n';
+        $variants[] = $noun . 's';
+    } elseif (mb_substr($noun, -2) === 'er') {
+        // Words ending in -er
+        $variants[] = $noun . 's';
+        $variants[] = $noun . 'n';
+    } elseif (mb_substr($noun, -2) === 'el') {
+        // Words ending in -el
+        $variants[] = $noun . 's';
+        $variants[] = $noun . 'n';
+    } elseif (mb_substr($noun, -2) === 'en') {
+        // Words ending in -en
+        $variants[] = $noun . 's';
+    } else {
+        // Standard endings for most nouns
+        $variants[] = $noun . 'e';   // Plural: System -> Systeme
+        $variants[] = $noun . 's';   // Genitiv: Systems
+        $variants[] = $noun . 'es';  // Genitiv: Systemes
+        $variants[] = $noun . 'en';  // Dativ/Akkusativ Plural: Systemen
+    }
+
+    // Umlaut variants for plurals
+    $umlaut_variants = simple_clean_add_umlaut_variants($noun);
+    foreach ($umlaut_variants as $variant) {
+        $variants[] = $variant;
+        $variants[] = $variant . 'e';
+        $variants[] = $variant . 'en';
+        $variants[] = $variant . 's';
+        $variants[] = $variant . 'es';
+    }
+
+    return $variants;
+}
+
+/**
+ * Generate adjective variants (German adjective declension)
+ */
+function simple_clean_get_adjective_variants($adjective) {
+    $variants = array($adjective);
+
+    // Remove existing ending if present
+    $stem = $adjective;
+    $common_endings = array('es', 'er', 'en', 'em', 'e');
+
+    foreach ($common_endings as $ending) {
+        if (mb_strlen($adjective) > mb_strlen($ending) + 2 && mb_substr($adjective, -mb_strlen($ending)) === $ending) {
+            $stem = mb_substr($adjective, 0, -mb_strlen($ending));
+            break;
+        }
+    }
+
+    // Generate all common declension forms
+    $endings = array('e', 'es', 'er', 'en', 'em');
+    foreach ($endings as $ending) {
+        $variants[] = $stem . $ending;
+    }
+
+    // Also include the stem without ending
+    $variants[] = $stem;
+
+    return $variants;
+}
+
+/**
+ * Generate umlaut variants for common German plural patterns
+ */
+function simple_clean_add_umlaut_variants($term) {
+    $variants = array();
+
+    // Only add umlaut variants if term contains a, o, u, or au
+    if (!preg_match('/[aouäöü]|au/', $term)) {
+        return $variants;
+    }
+
+    // Common patterns: a -> ä, o -> ö, u -> ü, au -> äu
+    $umlaut_map = array(
+        'a' => 'ä',
+        'o' => 'ö',
+        'u' => 'ü',
+        'au' => 'äu'
+    );
+
+    // Try replacing vowels with umlauts (only once per word)
+    foreach ($umlaut_map as $vowel => $umlaut) {
+        // Find last occurrence of vowel
+        $last_pos = mb_strrpos($term, $vowel);
+
+        if ($last_pos !== false) {
+            $with_umlaut = mb_substr($term, 0, $last_pos) . $umlaut . mb_substr($term, $last_pos + mb_strlen($vowel));
+
+            // Only add if different from original
+            if ($with_umlaut !== $term) {
+                $variants[] = $with_umlaut;
+            }
+        }
+    }
+
+    return $variants;
+}
+
+/**
  * Track glossar terms used in post content
  * This runs when a post/page is viewed and stores which terms are used
+ * IMPROVED: Now uses the same term variant logic as frontend JavaScript
  */
 function simple_clean_track_glossar_usage($post_id = null) {
     if (!$post_id) {
@@ -1314,12 +1463,19 @@ function simple_clean_track_glossar_usage($post_id = null) {
         $term = $term_data['term'];
         $term_id = $term_data['id'];
 
-        // Simple case-insensitive search
-        // Using word boundaries to avoid partial matches
-        $pattern = '/\b' . preg_quote($term, '/') . '\b/i';
+        // IMPROVED: Generate all variants (like frontend JavaScript)
+        $variants = simple_clean_get_glossar_term_variants($term);
 
-        if (preg_match($pattern, $content)) {
-            $used_terms[] = $term_id;
+        $found = false;
+        foreach ($variants as $variant) {
+            // Case-insensitive search with word boundaries
+            $pattern = '/\b' . preg_quote($variant, '/') . '\b/i';
+
+            if (preg_match($pattern, $content)) {
+                $used_terms[] = $term_id;
+                $found = true;
+                break; // Found a match, no need to check other variants
+            }
         }
     }
 
@@ -1340,14 +1496,41 @@ add_action('wp', function() {
         $post_id = get_the_ID();
         $last_tracked = get_post_meta($post_id, '_glossar_last_tracked', true);
         $post_modified = get_post_modified_time('U', false, $post_id);
+        $last_glossar_change = get_option('_glossar_last_change', 0);
 
-        // Only re-track if post was modified since last tracking
-        if (empty($last_tracked) || $post_modified > $last_tracked) {
+        // Re-track if:
+        // 1. Never tracked before, OR
+        // 2. Post was modified since last tracking, OR
+        // 3. A glossar term was added/modified since last tracking
+        if (empty($last_tracked) || $post_modified > $last_tracked || $last_glossar_change > $last_tracked) {
             simple_clean_track_glossar_usage($post_id);
             update_post_meta($post_id, '_glossar_last_tracked', time());
         }
     }
 });
+
+/**
+ * When a glossar term is published or updated, trigger re-tracking of all pages
+ * This ensures new terms are immediately detected across the site
+ */
+add_action('save_post_glossar', function($post_id, $post, $update) {
+    // Only trigger for published posts (not drafts)
+    if ($post->post_status !== 'publish') {
+        return;
+    }
+
+    // Skip autosaves and revisions
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    // Update timestamp to trigger re-tracking on next page view
+    update_option('_glossar_last_change', time());
+
+    // Optional: Immediately rebuild all tracking (can be slow on large sites)
+    // Uncomment the next line if you want immediate rebuild instead of lazy rebuild
+    // simple_clean_rebuild_usage_tracking();
+}, 10, 3);
 
 /**
  * Get all posts/pages that use a specific glossar term
