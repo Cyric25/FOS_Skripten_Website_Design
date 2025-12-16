@@ -697,12 +697,12 @@ function simple_clean_glossar_settings_page() {
 
                 <p><strong>Wie funktioniert der Cache? (Lazy Frontend Caching)</strong></p>
                 <ul style="margin-left: 20px;">
-                    <li>✅ <strong>Container-Block-kompatibel:</strong> Cache wird erst NACH vollständigem Block-Rendering angelegt</li>
+                    <li>✅ <strong>Container-Block-kompatibel:</strong> Glossar-Filter läuft bei Priorität 10000 (NACH CDB LaTeX Parser bei 999)</li>
                     <li>Bei jedem Seitenaufruf wird zuerst der Cache geprüft (sehr schnell)</li>
                     <li>Bei Cache-HIT: Seite wird sofort angezeigt (&lt;5ms)</li>
-                    <li>Bei Cache-MISS: Container-Blöcke werden gerendert → Glossar-Links hinzugefügt → Gecacht</li>
+                    <li>Bei Cache-MISS: Container-Blöcke werden gerendert → LaTeX verarbeitet → Glossar-Links hinzugefügt → Gecacht</li>
                     <li>Cache wird automatisch ungültig bei Änderungen an Glossar-Begriffen oder Seiten</li>
-                    <li>Keine Pre-Generation: Cache entsteht nur bei echten Seitenaufrufen (verhindert Rendering-Probleme)</li>
+                    <li>Keine Pre-Generation: Cache entsteht nur bei echten Seitenaufrufen</li>
                 </ul>
             </div>
         </div>
@@ -1459,10 +1459,10 @@ function simple_clean_glossar_auto_link_content($content) {
     return $result;
 }
 
-// Use priority 20 to run after other content filters
-// FIXED: Using cached version with lazy frontend caching (no pre-generation)
-// This ensures Container Blocks are fully rendered before caching
-add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
+// Use priority 10000 to run AFTER all other content filters
+// CDB-Designer LaTeX Parser runs at priority 999
+// This ensures Container Blocks are FULLY rendered before caching
+add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 10000);
 
 // Get all glossar terms (with optimized caching for performance)
 function simple_clean_get_glossar_terms() {
