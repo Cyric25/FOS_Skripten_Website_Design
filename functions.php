@@ -1457,8 +1457,9 @@ function simple_clean_glossar_auto_link_content($content) {
 }
 
 // Use priority 20 to run after other content filters
-// UPDATED: Using cached version for better performance
-add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
+// TEMPORARILY DISABLED: Cached version - causes issues with Container Blocks
+// add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
+add_filter('the_content', 'simple_clean_glossar_auto_link_content', 20);
 
 // Get all glossar terms (with optimized caching for performance)
 function simple_clean_get_glossar_terms() {
