@@ -682,8 +682,8 @@ function simple_clean_glossar_settings_page() {
 
                     <form method="post" style="display: inline-block;">
                         <?php wp_nonce_field('glossar_cache_rebuild', 'glossar_cache_rebuild_nonce'); ?>
-                        <button type="submit" name="rebuild_glossar_cache" class="button button-primary" value="1">
-                            ♻️ Alle Seiten neu cachen
+                        <button type="submit" name="rebuild_glossar_cache" class="button" value="1">
+                            ♻️ Cache leeren (Lazy Rebuild)
                         </button>
                     </form>
                 </div>
@@ -692,14 +692,17 @@ function simple_clean_glossar_settings_page() {
                 <ul style="margin-left: 20px;">
                     <li>Bei Problemen mit veralteten Glossar-Links</li>
                     <li>Nach manuellen Änderungen an der Datenbank</li>
+                    <li>Nach Theme-Updates</li>
                 </ul>
 
-                <p><strong>Wie funktioniert der Cache?</strong></p>
+                <p><strong>Wie funktioniert der Cache? (Lazy Frontend Caching)</strong></p>
                 <ul style="margin-left: 20px;">
+                    <li>✅ <strong>Container-Block-kompatibel:</strong> Cache wird erst NACH vollständigem Block-Rendering angelegt</li>
                     <li>Bei jedem Seitenaufruf wird zuerst der Cache geprüft (sehr schnell)</li>
                     <li>Bei Cache-HIT: Seite wird sofort angezeigt (&lt;5ms)</li>
-                    <li>Bei Cache-MISS: Glossar-Links werden generiert und gecacht</li>
+                    <li>Bei Cache-MISS: Container-Blöcke werden gerendert → Glossar-Links hinzugefügt → Gecacht</li>
                     <li>Cache wird automatisch ungültig bei Änderungen an Glossar-Begriffen oder Seiten</li>
+                    <li>Keine Pre-Generation: Cache entsteht nur bei echten Seitenaufrufen (verhindert Rendering-Probleme)</li>
                 </ul>
             </div>
         </div>
@@ -1457,9 +1460,9 @@ function simple_clean_glossar_auto_link_content($content) {
 }
 
 // Use priority 20 to run after other content filters
-// TEMPORARILY DISABLED: Cached version - causes issues with Container Blocks
-// add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
-add_filter('the_content', 'simple_clean_glossar_auto_link_content', 20);
+// FIXED: Using cached version with lazy frontend caching (no pre-generation)
+// This ensures Container Blocks are fully rendered before caching
+add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
 
 // Get all glossar terms (with optimized caching for performance)
 function simple_clean_get_glossar_terms() {
@@ -1805,10 +1808,9 @@ function simple_clean_invalidate_glossar_content_cache($post_id, $post, $update)
     wp_cache_delete('glossar_combined_pattern', 'simple_clean_glossar');
     wp_cache_delete('glossar_terms', 'simple_clean_glossar');
 
-    // If auto-rebuild is enabled, regenerate all caches
-    if (get_option('glossar_auto_rebuild', '0') === '1') {
-        simple_clean_rebuild_all_content_caches();
-    }
+    // Note: glossar_auto_rebuild setting is NOT used for content cache
+    // Content cache is always lazy (rebuilt on next page view)
+    // This prevents issues with Container Blocks not being rendered correctly
 }
 add_action('save_post_glossar', 'simple_clean_invalidate_glossar_content_cache', 10, 3);
 add_action('delete_post', function($post_id) {
@@ -1847,61 +1849,23 @@ function simple_clean_clear_post_content_cache($post_id, $post, $update) {
 add_action('save_post', 'simple_clean_clear_post_content_cache', 15, 3);
 
 /**
- * Rebuild all content caches for all posts
- * Used when glossar_auto_rebuild is enabled
+ * Clear all content caches
+ * Used for manual cache clearing via admin UI
+ * NOTE: Cache is automatically rebuilt on next page view (lazy)
  */
 function simple_clean_rebuild_all_content_caches() {
-    $args = array(
-        'post_type' => array('post', 'page'),
-        'post_status' => 'publish',
-        'posts_per_page' => -1,
-        'fields' => 'ids'
-    );
-
-    $post_ids = get_posts($args);
-
-    foreach ($post_ids as $post_id) {
-        // Regenerate cache for this post
-        simple_clean_generate_single_post_cache($post_id);
-    }
-
-    // Show admin notice
-    add_action('admin_notices', function() {
-        echo '<div class="notice notice-success is-dismissible">';
-        echo '<p>Glossar-Cache wurde für alle Seiten aktualisiert.</p>';
-        echo '</div>';
-    });
-}
-
-/**
- * Generate cache for a single post
- */
-function simple_clean_generate_single_post_cache($post_id) {
-    $content = get_post_field('post_content', $post_id);
-    if (empty($content)) {
-        return;
-    }
-
-    // Apply other content filters (but not glossar filter to avoid recursion)
-    remove_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
-    $content = apply_filters('the_content', $content);
-    add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 20);
-
-    // Process glossar links
-    $processed = simple_clean_process_glossar_links($content);
-
-    // Store in cache
     global $wpdb;
     $table_name = $wpdb->prefix . 'glossar_content_cache';
-    $glossar_version = (int) get_option('_glossar_version', 1);
+    $deleted = $wpdb->query("DELETE FROM $table_name");
 
-    $wpdb->replace($table_name, array(
-        'post_id' => $post_id,
-        'glossar_version' => $glossar_version,
-        'cached_content' => $processed['content'],
-        'terms_linked' => json_encode($processed['terms_found']),
-        'created_at' => current_time('mysql')
-    ), array('%d', '%d', '%s', '%s', '%s'));
+    // Show admin notice
+    add_action('admin_notices', function() use ($deleted) {
+        echo '<div class="notice notice-success is-dismissible">';
+        echo '<p><strong>✓ Glossar-Cache geleert!</strong></p>';
+        echo '<p>Cache wird bei den nächsten Seitenaufrufen automatisch neu aufgebaut (lazy rebuild).</p>';
+        echo '<p>' . $deleted . ' Cache-Einträge wurden gelöscht.</p>';
+        echo '</div>';
+    });
 }
 
 // ===================================================================
