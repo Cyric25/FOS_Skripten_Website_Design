@@ -3744,3 +3744,298 @@ function simple_clean_block_ai_user_agents() {
     }
 }
 add_action('template_redirect', 'simple_clean_block_ai_user_agents', 1); // Priority 1 = runs before password protection
+
+// ===================================================================
+// GLOSSAR ADMIN SETTINGS - BULK SCAN
+// ===================================================================
+
+/**
+ * Add admin menu for Glossar settings
+ */
+function simple_clean_glossar_admin_menu() {
+    add_submenu_page(
+        'edit.php?post_type=glossar',
+        'Glossar Einstellungen',
+        'Einstellungen',
+        'manage_options',
+        'glossar-settings',
+        'simple_clean_glossar_settings_page'
+    );
+}
+add_action('admin_menu', 'simple_clean_glossar_admin_menu');
+
+/**
+ * Glossar settings page with bulk scan functionality
+ */
+function simple_clean_glossar_settings_page() {
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    // Get statistics
+    global $wpdb;
+    $total_posts = $wpdb->get_var("
+        SELECT COUNT(*)
+        FROM {$wpdb->posts}
+        WHERE post_type IN ('post', 'page')
+        AND post_status IN ('publish', 'draft', 'pending')
+    ");
+
+    $posts_with_candidates = $wpdb->get_var("
+        SELECT COUNT(DISTINCT post_id)
+        FROM {$wpdb->postmeta}
+        WHERE meta_key = '_glossar_term_candidates'
+    ");
+
+    $posts_without_candidates = $total_posts - $posts_with_candidates;
+    $total_glossar_terms = wp_count_posts('glossar')->publish;
+
+    ?>
+    <div class="wrap">
+        <h1>📚 Glossar Einstellungen</h1>
+
+        <div class="card" style="max-width: 800px; margin-top: 20px;">
+            <h2>Statistiken</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">Glossar-Begriffe:</th>
+                    <td><strong><?php echo esc_html($total_glossar_terms); ?></strong> Begriffe</td>
+                </tr>
+                <tr>
+                    <th scope="row">Posts/Seiten gesamt:</th>
+                    <td><strong><?php echo esc_html($total_posts); ?></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">Mit Kandidatenliste:</th>
+                    <td><strong style="color: green;"><?php echo esc_html($posts_with_candidates); ?></strong> (optimiert)</td>
+                </tr>
+                <tr>
+                    <th scope="row">Ohne Kandidatenliste:</th>
+                    <td><strong style="color: orange;"><?php echo esc_html($posts_without_candidates); ?></strong> (Fallback)</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card" style="max-width: 800px; margin-top: 20px;">
+            <h2>🔄 Alle Seiten scannen</h2>
+            <p>
+                Dieser Vorgang scannt alle Posts und Seiten und erstellt für jeden eine optimierte Kandidatenliste.
+                <br>
+                <strong>Dadurch wird die Performance des Glossars deutlich verbessert!</strong>
+            </p>
+
+            <p style="background: #fff3cd; padding: 12px; border-left: 4px solid #ffc107; margin: 15px 0;">
+                <strong>ℹ️ Hinweis:</strong><br>
+                • Posts MIT Kandidatenliste: ~15-25ms (sehr schnell)<br>
+                • Posts OHNE Kandidatenliste: ~1200-1800ms (langsam, Fallback)<br>
+                • Der Scan kann je nach Anzahl der Posts einige Minuten dauern
+            </p>
+
+            <div id="bulk-scan-controls">
+                <button type="button" id="start-bulk-scan" class="button button-primary button-hero" style="margin-top: 10px;">
+                    🚀 Alle Seiten jetzt scannen
+                </button>
+            </div>
+
+            <div id="bulk-scan-progress" style="display: none; margin-top: 20px;">
+                <h3>Scan läuft...</h3>
+                <div style="background: #f0f0f0; border-radius: 8px; height: 30px; position: relative; overflow: hidden;">
+                    <div id="progress-bar" style="background: linear-gradient(90deg, #0073aa, #00a0d2); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    <div id="progress-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: #333;"></div>
+                </div>
+                <p id="progress-status" style="margin-top: 10px; color: #666;"></p>
+            </div>
+
+            <div id="bulk-scan-result" style="display: none; margin-top: 20px;">
+                <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; border-radius: 4px;">
+                    <h3 style="margin-top: 0; color: #155724;">✅ Scan abgeschlossen!</h3>
+                    <p id="result-message" style="color: #155724; margin: 0;"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    jQuery(document).ready(function($) {
+        let totalPosts = 0;
+        let processedPosts = 0;
+        let isCancelled = false;
+
+        $('#start-bulk-scan').on('click', function() {
+            if (!confirm('Möchten Sie wirklich alle Posts und Seiten scannen? Dies kann einige Minuten dauern.')) {
+                return;
+            }
+
+            // Reset
+            processedPosts = 0;
+            isCancelled = false;
+
+            // UI anpassen
+            $('#bulk-scan-controls').hide();
+            $('#bulk-scan-progress').show();
+            $('#bulk-scan-result').hide();
+            $('#progress-bar').css('width', '0%');
+
+            // Start scan
+            startBulkScan();
+        });
+
+        function startBulkScan() {
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'glossar_bulk_scan',
+                    nonce: '<?php echo wp_create_nonce('glossar_bulk_scan'); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        totalPosts = response.data.total;
+                        processBatch(0);
+                    } else {
+                        alert('Fehler: ' + response.data.message);
+                        resetUI();
+                    }
+                },
+                error: function() {
+                    alert('Fehler beim Starten des Scans.');
+                    resetUI();
+                }
+            });
+        }
+
+        function processBatch(offset) {
+            if (isCancelled) {
+                resetUI();
+                return;
+            }
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'glossar_bulk_scan_batch',
+                    nonce: '<?php echo wp_create_nonce('glossar_bulk_scan'); ?>',
+                    offset: offset
+                },
+                success: function(response) {
+                    if (response.success) {
+                        processedPosts += response.data.processed;
+
+                        // Update progress
+                        let percent = Math.round((processedPosts / totalPosts) * 100);
+                        $('#progress-bar').css('width', percent + '%');
+                        $('#progress-text').text(percent + '%');
+                        $('#progress-status').text('Verarbeitet: ' + processedPosts + ' von ' + totalPosts + ' Posts');
+
+                        // Continue or finish
+                        if (response.data.has_more) {
+                            processBatch(offset + response.data.processed);
+                        } else {
+                            showResult(processedPosts);
+                        }
+                    } else {
+                        alert('Fehler: ' + response.data.message);
+                        resetUI();
+                    }
+                },
+                error: function() {
+                    alert('Fehler während des Scans.');
+                    resetUI();
+                }
+            });
+        }
+
+        function showResult(count) {
+            $('#bulk-scan-progress').hide();
+            $('#bulk-scan-result').show();
+            $('#result-message').text(count + ' Posts und Seiten wurden erfolgreich gescannt!');
+
+            // Reload page after 3 seconds to update statistics
+            setTimeout(function() {
+                location.reload();
+            }, 3000);
+        }
+
+        function resetUI() {
+            $('#bulk-scan-controls').show();
+            $('#bulk-scan-progress').hide();
+        }
+    });
+    </script>
+
+    <style>
+        .card h2 {
+            margin-top: 0;
+        }
+        #bulk-scan-progress h3 {
+            margin-top: 0;
+            color: #0073aa;
+        }
+    </style>
+    <?php
+}
+
+/**
+ * AJAX handler: Start bulk scan (get total count)
+ */
+function simple_clean_glossar_bulk_scan_ajax() {
+    check_ajax_referer('glossar_bulk_scan', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Keine Berechtigung.']);
+    }
+
+    global $wpdb;
+    $total = $wpdb->get_var("
+        SELECT COUNT(*)
+        FROM {$wpdb->posts}
+        WHERE post_type IN ('post', 'page')
+        AND post_status IN ('publish', 'draft', 'pending')
+    ");
+
+    wp_send_json_success([
+        'total' => (int)$total
+    ]);
+}
+add_action('wp_ajax_glossar_bulk_scan', 'simple_clean_glossar_bulk_scan_ajax');
+
+/**
+ * AJAX handler: Process batch
+ */
+function simple_clean_glossar_bulk_scan_batch_ajax() {
+    check_ajax_referer('glossar_bulk_scan', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Keine Berechtigung.']);
+    }
+
+    $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
+    $batch_size = 10; // Process 10 posts per batch
+
+    global $wpdb;
+    $posts = $wpdb->get_results($wpdb->prepare("
+        SELECT ID, post_content
+        FROM {$wpdb->posts}
+        WHERE post_type IN ('post', 'page')
+        AND post_status IN ('publish', 'draft', 'pending')
+        ORDER BY ID ASC
+        LIMIT %d OFFSET %d
+    ", $batch_size, $offset), ARRAY_A);
+
+    $processed = 0;
+    foreach ($posts as $post) {
+        // Use existing scan function
+        simple_clean_scan_glossar_candidates($post['ID']);
+        $processed++;
+    }
+
+    $has_more = count($posts) === $batch_size;
+
+    wp_send_json_success([
+        'processed' => $processed,
+        'has_more' => $has_more
+    ]);
+}
+add_action('wp_ajax_glossar_bulk_scan_batch', 'simple_clean_glossar_bulk_scan_batch_ajax');
