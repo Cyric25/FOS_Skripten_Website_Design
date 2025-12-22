@@ -1946,19 +1946,24 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
 
     // Fallback: Keine Kandidaten gefunden
     // Dies kann passieren wenn Post noch nicht gescannt wurde
-    // In diesem Fall: Kein Glossar-Linking (Post muss gespeichert werden)
+    // In diesem Fall: Verwende ALLE Begriffe als Fallback (langsamer aber funktioniert)
     if (empty($candidates) || !is_array($candidates)) {
         // Log für Debugging
         if (defined('GLOSSAR_DEBUG') && GLOSSAR_DEBUG) {
             error_log(sprintf(
-                'Glossar: Post %d hat keine Kandidaten - speichere den Post um Kandidaten zu generieren',
+                'Glossar: Post %d hat keine Kandidaten - verwende alle Begriffe als Fallback',
                 $post_id
             ));
         }
 
-        // Kein Linking ohne Kandidaten
-        // User muss den Post einmal speichern damit Kandidaten generiert werden
-        return $content;
+        // Fallback: Verwende alle Glossar-Begriffe
+        $all_terms = simple_clean_get_glossar_terms();
+        if (empty($all_terms)) {
+            return $content; // Keine Begriffe vorhanden
+        }
+
+        // Extrahiere nur die IDs für die Verarbeitung
+        $candidates = array_keys($all_terms);
     }
 
     // Optimierte Verarbeitung mit nur relevanten Begriffen
