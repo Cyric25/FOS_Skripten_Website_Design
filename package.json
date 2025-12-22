@@ -1,11 +1,11 @@
 {
   "name": "fos-online-schulbuch",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run zip",
+    "build": "node backup-and-build.js",
     "build:js": "vite build",
     "watch": "vite build --watch",
     "preview": "vite preview",

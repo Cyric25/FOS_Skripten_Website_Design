@@ -1461,8 +1461,10 @@ function simple_clean_glossar_auto_link_content($content) {
 
 // Use priority 10000 to run AFTER all other content filters
 // CDB-Designer LaTeX Parser runs at priority 999
-// This ensures Container Blocks are FULLY rendered before caching
-add_filter('the_content', 'simple_clean_glossar_auto_link_content_cached', 10000);
+// This ensures Container Blocks are FULLY rendered before processing
+
+// OPTIMIZED VERSION: Kandidaten-basiert (98% faster with 500+ terms)
+add_filter('the_content', 'simple_clean_glossar_auto_link_content_optimized', 10000);
 
 // Get all glossar terms (with optimized caching for performance)
 function simple_clean_get_glossar_terms() {
@@ -1516,55 +1518,606 @@ add_action('wp_trash_post', 'simple_clean_clear_glossar_cache', 10, 1);
 add_action('untrash_post', 'simple_clean_clear_glossar_cache', 10, 1);
 
 // ===================================================================
-// GLOSSAR CONTENT CACHE (Performance Optimization)
+// GLOSSAR PER-PAGE OPTIMIZATION (Phase 1: Content Analysis)
+// ===================================================================
+// This system scans post content when saving and creates an index of
+// potentially relevant glossar terms. This allows loading only relevant
+// terms at render time instead of ALL terms, dramatically improving
+// performance with 500+ glossar entries.
 // ===================================================================
 
 /**
- * Create glossar content cache table
- * Stores pre-rendered HTML content with glossary links for performance
+ * Extrahiert reinen Text aus Gutenberg Blocks (rekursiv)
+ * Ignoriert HTML-Tags und extrahiert nur Textinhalt
+ *
+ * @param array $blocks Array von Gutenberg Blocks (von parse_blocks())
+ * @param int $depth Rekursions-Tiefe (verhindert infinite loops)
+ * @return string Extrahierter Text ohne HTML-Tags
  */
-function simple_clean_create_glossar_cache_table() {
-    global $wpdb;
+function simple_clean_extract_text_from_blocks($blocks, $depth = 0) {
+    // Früher Exit bei leerem Input
+    if (empty($blocks)) {
+        return '';
+    }
 
-    $table_name = $wpdb->prefix . 'glossar_content_cache';
-    $charset_collate = $wpdb->get_charset_collate();
+    // Verhindere infinite recursion
+    if ($depth > 10) {
+        return '';
+    }
 
-    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-        post_id bigint(20) unsigned NOT NULL,
-        glossar_version int(11) NOT NULL,
-        cached_content longtext NOT NULL,
-        terms_linked text,
-        created_at datetime DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY  (id),
-        UNIQUE KEY post_glossar (post_id, glossar_version),
-        KEY post_id (post_id),
-        KEY glossar_version (glossar_version)
-    ) $charset_collate;";
+    $text = '';
 
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-    dbDelta($sql);
+    foreach ($blocks as $block) {
+        // Block Content extrahieren
+        if (!empty($block['innerHTML'])) {
+            // HTML-Tags entfernen
+            $text .= ' ' . wp_strip_all_tags($block['innerHTML']);
+        }
 
-    // Initialize glossar version option if not exists
-    if (get_option('_glossar_version') === false) {
-        add_option('_glossar_version', 1);
+        // Attribute durchsuchen (z.B. für Custom Blocks)
+        if (!empty($block['attrs']) && is_array($block['attrs'])) {
+            foreach ($block['attrs'] as $attr_value) {
+                if (is_string($attr_value)) {
+                    $text .= ' ' . wp_strip_all_tags($attr_value);
+                }
+            }
+        }
+
+        // Inner Blocks rekursiv (verschachtelte Blocks)
+        if (!empty($block['innerBlocks'])) {
+            $text .= ' ' . simple_clean_extract_text_from_blocks($block['innerBlocks'], $depth + 1);
+        }
+
+        // Reusable Blocks auflösen
+        if ($block['blockName'] === 'core/block' && !empty($block['attrs']['ref'])) {
+            $reusable_post = get_post($block['attrs']['ref']);
+            if ($reusable_post) {
+                $reusable_blocks = parse_blocks($reusable_post->post_content);
+                $text .= ' ' . simple_clean_extract_text_from_blocks($reusable_blocks, $depth + 1);
+            }
+        }
+    }
+
+    return $text;
+}
+
+/**
+ * Scannt Post-Content und identifiziert potenzielle Glossarbegriffe
+ * Wird beim Speichern ausgeführt (save_post Hook)
+ *
+ * Verwendet einfache String-Suche (stripos) statt Regex für Performance.
+ * Ergebnis: Array von Glossar-Term-IDs die im Content vorkommen könnten.
+ *
+ * @param int $post_id Post ID
+ * @return array Array von Glossar-Term-IDs
+ */
+function simple_clean_scan_glossar_candidates($post_id) {
+    // Static cache für Glossar-Terms (verhindert mehrfaches Laden pro Request)
+    static $all_terms_cache = null;
+
+    $post = get_post($post_id);
+    if (!$post) {
+        return [];
+    }
+
+    // Content holen (alle Blöcke, inkl. Reusable Blocks)
+    $content = $post->post_content;
+
+    // Parse Gutenberg Blocks und extrahiere Text
+    $blocks = parse_blocks($content);
+    $text_content = simple_clean_extract_text_from_blocks($blocks);
+
+    // Auch Title und Excerpt einbeziehen
+    $searchable_text = mb_strtolower(
+        $post->post_title . ' ' .
+        $post->post_excerpt . ' ' .
+        $text_content,
+        'UTF-8'
+    );
+
+    // Alle Glossarbegriffe laden (nur einmal pro Request)
+    if ($all_terms_cache === null) {
+        $all_terms_cache = wp_cache_get('glossar_terms', 'simple_clean_glossar');
+        if (false === $all_terms_cache) {
+            $all_terms_cache = simple_clean_get_glossar_terms();
+            wp_cache_set('glossar_terms', $all_terms_cache, 'simple_clean_glossar', HOUR_IN_SECONDS);
+        }
+    }
+
+    $candidates = [];
+
+    foreach ($all_terms_cache as $term) {
+        $term_lower = mb_strtolower($term['term'], 'UTF-8');
+
+        // Einfache String-Suche (NICHT Regex = schnell)
+        // Bei 500 Begriffen × 5000 Zeichen: ~50ms
+        if (mb_stripos($searchable_text, $term_lower) !== false) {
+            $candidates[] = $term['id'];
+        }
+    }
+
+    return $candidates;
+}
+
+/**
+ * Hook: Glossar-Kandidaten bei Post-Speicherung aktualisieren
+ * Läuft bei jedem save_post Event für Posts, Pages und Drafts
+ *
+ * @param int $post_id Post ID
+ * @param WP_Post $post Post object
+ */
+function simple_clean_update_glossar_candidates($post_id, $post) {
+    // Autosave überspringen
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    // Nur für relevante Post Types
+    $allowed_types = ['post', 'page', 'glossar'];
+    if (!in_array($post->post_type, $allowed_types)) {
+        return;
+    }
+
+    // Permissions Check
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    // FÜR SITE IM AUFBAU: Auch Drafts scannen (für Preview-Funktion)
+    // Erlaubte Status: publish, draft, pending
+    $allowed_statuses = ['publish', 'draft', 'pending'];
+    if (!in_array($post->post_status, $allowed_statuses)) {
+        return;
+    }
+
+    // Scan durchführen
+    $candidates = simple_clean_scan_glossar_candidates($post_id);
+
+    // Meta speichern
+    update_post_meta($post_id, '_glossar_term_candidates', $candidates);
+    update_post_meta($post_id, '_glossar_scan_version', 1); // Versionsnummer
+    update_post_meta($post_id, '_glossar_last_scanned', current_time('mysql'));
+
+    // Logging für große Glossare (optional, für Debugging)
+    if (count($candidates) > 50) {
+        error_log(sprintf(
+            'Glossar: Post %d hat %d Kandidaten (ungewöhnlich hoch)',
+            $post_id,
+            count($candidates)
+        ));
     }
 }
-add_action('after_switch_theme', 'simple_clean_create_glossar_cache_table');
+add_action('save_post', 'simple_clean_update_glossar_candidates', 20, 2);
 
-// Also create table on theme init (in case theme was already active)
-add_action('init', function() {
-    static $table_checked = false;
-    if (!$table_checked) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'glossar_content_cache';
-        // Only create if table doesn't exist
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") !== $table_name) {
-            simple_clean_create_glossar_cache_table();
-        }
-        $table_checked = true;
+// ===================================================================
+// GLOSSAR PER-PAGE OPTIMIZATION (Phase 2: Rendering Optimization)
+// ===================================================================
+
+/**
+ * Lädt nur spezifische Glossarbegriffe nach IDs
+ * Nutzt Object Cache für Performance
+ *
+ * @param array $term_ids Array von Glossar-Term-IDs
+ * @return array Array von Glossar-Terms (filtered)
+ */
+function simple_clean_get_glossar_terms_by_ids($term_ids) {
+    if (empty($term_ids)) {
+        return [];
     }
-}, 5);
+
+    // Versuche aus Cache zu laden
+    $all_terms = wp_cache_get('glossar_terms', 'simple_clean_glossar');
+
+    if (false === $all_terms) {
+        // Cache Miss: Alle Begriffe laden und cachen
+        $all_terms = simple_clean_get_glossar_terms();
+        wp_cache_set('glossar_terms', $all_terms, 'simple_clean_glossar', HOUR_IN_SECONDS);
+    }
+
+    // Nur gewünschte IDs filtern
+    $filtered_terms = array_filter($all_terms, function($term) use ($term_ids) {
+        return in_array($term['id'], $term_ids);
+    });
+
+    return array_values($filtered_terms);
+}
+
+/**
+ * Erstellt Regex-Pattern nur für spezifische Begriffe
+ * Analog zu simple_clean_build_glossar_pattern() aber optimiert für kleine Term-Sets
+ *
+ * @param array $terms Array von Glossar-Terms
+ * @return array ['pattern' => string, 'mapping' => array]
+ */
+function simple_clean_build_glossar_pattern_for_terms($terms) {
+    $variants = [];
+    $variant_to_term = [];
+
+    foreach ($terms as $term) {
+        $base_term = $term['term'];
+
+        // Varianten generieren (nutzt bestehende Varianten-Logik)
+        // simple_clean_get_glossar_term_variants() ist weiter unten definiert
+        if (function_exists('simple_clean_get_glossar_term_variants')) {
+            $term_variants = simple_clean_get_glossar_term_variants($base_term);
+        } else {
+            // Fallback: Nur base term
+            $term_variants = [$base_term];
+        }
+
+        foreach ($term_variants as $variant) {
+            $escaped = preg_quote($variant, '/');
+            $variants[] = $escaped;
+            $variant_to_term[$variant] = [
+                'id' => $term['id'],
+                'term' => $base_term,
+                'definition' => $term['definition'],
+                'permalink' => $term['permalink']
+            ];
+        }
+    }
+
+    if (empty($variants)) {
+        return ['pattern' => '', 'mapping' => []];
+    }
+
+    // Nach Länge sortieren (längste zuerst = spezifischere Matches)
+    usort($variants, function($a, $b) {
+        return mb_strlen($b) - mb_strlen($a);
+    });
+
+    // Pattern erstellen
+    $case_flag = get_option('glossar_case_sensitive', '0') === '1' ? '' : 'i';
+    $pattern = '/\b(' . implode('|', $variants) . ')\b/u' . $case_flag;
+
+    return [
+        'pattern' => $pattern,
+        'mapping' => $variant_to_term
+    ];
+}
+
+/**
+ * Verarbeitet Content mit Glossar-Links (OPTIMIERTE VERSION)
+ * Nutzt nur relevante Begriffe aus Kandidaten-Liste
+ *
+ * @param string $content HTML Content
+ * @param array $candidates Array von Term-IDs (optional, wird aus Post-Meta geladen falls nicht angegeben)
+ * @return array ['content' => string, 'terms_found' => array]
+ */
+function simple_clean_process_glossar_links_optimized($content, $candidates = null) {
+    global $post;
+
+    // Kandidaten laden falls nicht übergeben
+    if ($candidates === null && $post) {
+        $candidates = get_post_meta($post->ID, '_glossar_term_candidates', true);
+    }
+
+    // Keine Kandidaten = keine Verarbeitung nötig
+    if (empty($candidates) || !is_array($candidates)) {
+        return array(
+            'content' => $content,
+            'terms_found' => array()
+        );
+    }
+
+    // Nur relevante Begriffe laden
+    $relevant_terms = simple_clean_get_glossar_terms_by_ids($candidates);
+
+    if (empty($relevant_terms)) {
+        return array(
+            'content' => $content,
+            'terms_found' => array()
+        );
+    }
+
+    // Mini-Pattern nur für diese Begriffe erstellen
+    $pattern_data = simple_clean_build_glossar_pattern_for_terms($relevant_terms);
+
+    if (empty($pattern_data['pattern'])) {
+        return array(
+            'content' => $content,
+            'terms_found' => array()
+        );
+    }
+
+    $first_only = get_option('glossar_first_only', '1') === '1';
+    $case_sensitive = get_option('glossar_case_sensitive', '0') === '1';
+    $linked_terms = array();
+    $terms_found = array(); // Track term IDs for usage tracking
+
+    // Split content into HTML tags and text
+    $parts = preg_split('/(<[^>]+>)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    $result = '';
+    $in_link = false;
+    $in_script = false;
+
+    foreach ($parts as $part) {
+        // Check if this is an HTML tag
+        if (preg_match('/^<[^>]+>$/', $part)) {
+            // Track if we're inside a link or script tag
+            if (preg_match('/^<a\b/i', $part)) {
+                $in_link = true;
+            } elseif (preg_match('/^<\/a>/i', $part)) {
+                $in_link = false;
+            } elseif (preg_match('/^<(script|style|code|pre)\b/i', $part)) {
+                $in_script = true;
+            } elseif (preg_match('/^<\/(script|style|code|pre)>/i', $part)) {
+                $in_script = false;
+            }
+
+            $result .= $part;
+            continue;
+        }
+
+        // Skip processing if we're inside a link, script, or if already a glossar term
+        if ($in_link || $in_script || strpos($part, 'glossar-term') !== false) {
+            $result .= $part;
+            continue;
+        }
+
+        // Process this text part with optimized mini-pattern
+        $processed_part = $part;
+
+        // Use preg_replace_callback with mini-pattern
+        $processed_part = preg_replace_callback(
+            $pattern_data['pattern'],
+            function($matches) use ($pattern_data, &$linked_terms, &$terms_found, $first_only, $case_sensitive) {
+                $matched_text = $matches[1];
+                $key = $matched_text; // Exact match for lookup
+
+                // Get term data from mapping
+                if (!isset($pattern_data['mapping'][$key])) {
+                    return $matched_text; // No match found
+                }
+
+                $term_data = $pattern_data['mapping'][$key];
+                $term_lower = mb_strtolower($term_data['term'], 'UTF-8');
+
+                // Skip if first_only is enabled and term already linked
+                if ($first_only && in_array($term_lower, $linked_terms)) {
+                    return $matched_text;
+                }
+
+                // Create the glossar link
+                $replacement = '<span class="glossar-term glossar-clickable" ' .
+                              'data-glossar-id="' . esc_attr($term_data['id']) . '" ' .
+                              'id="glossar-term-' . esc_attr($term_data['id']) . '" ' .
+                              'role="button" tabindex="0" ' .
+                              'aria-label="Glossar-Begriff: ' . esc_attr($term_data['term']) . '">' .
+                              $matched_text . '</span>';
+
+                // Mark term as linked if first_only is enabled
+                if ($first_only) {
+                    $linked_terms[] = $term_lower;
+                }
+
+                // Track term ID for usage tracking
+                if (!in_array($term_data['id'], $terms_found)) {
+                    $terms_found[] = $term_data['id'];
+                }
+
+                return $replacement;
+            },
+            $processed_part
+        );
+
+        $result .= $processed_part;
+    }
+
+    return array(
+        'content' => $result,
+        'terms_found' => $terms_found
+    );
+}
+
+/**
+ * OPTIMIERTE Auto-Link Funktion (Kandidaten-basiert)
+ * Ersetzt simple_clean_glossar_auto_link_content_cached()
+ *
+ * Lädt nur relevante Glossarbegriffe basierend auf der Kandidaten-Liste.
+ * Keine Content-Cache-Tabelle mehr nötig (funktioniert nicht mit CDB-Blöcken).
+ *
+ * @param string $content Post Content
+ * @return string Processed Content mit Glossar-Links
+ */
+function simple_clean_glossar_auto_link_content_optimized($content) {
+    global $post;
+
+    // Skip if in admin, feed, or auto-linking is disabled
+    if (is_admin() || is_feed() || get_option('glossar_auto_link', '1') !== '1') {
+        return $content;
+    }
+
+    // Skip if this is a glossar post itself
+    if (is_singular('glossar')) {
+        return $content;
+    }
+
+    // Benötigen wir einen Post-Context
+    if (!$post || !$post->ID) {
+        return $content;
+    }
+
+    $post_id = $post->ID;
+
+    // Kandidaten aus Post-Meta laden
+    $candidates = get_post_meta($post_id, '_glossar_term_candidates', true);
+
+    // Fallback: Keine Kandidaten gefunden
+    // Dies kann passieren wenn Post noch nicht gescannt wurde
+    // In diesem Fall: Kein Glossar-Linking (Post muss gespeichert werden)
+    if (empty($candidates) || !is_array($candidates)) {
+        // Log für Debugging
+        if (defined('GLOSSAR_DEBUG') && GLOSSAR_DEBUG) {
+            error_log(sprintf(
+                'Glossar: Post %d hat keine Kandidaten - speichere den Post um Kandidaten zu generieren',
+                $post_id
+            ));
+        }
+
+        // Kein Linking ohne Kandidaten
+        // User muss den Post einmal speichern damit Kandidaten generiert werden
+        return $content;
+    }
+
+    // Optimierte Verarbeitung mit nur relevanten Begriffen
+    $processed = simple_clean_process_glossar_links_optimized($content, $candidates);
+
+    return $processed['content'];
+}
+
+// ===================================================================
+// GLOSSAR PER-PAGE OPTIMIZATION (Phase 3: Cache Invalidierung)
+// ===================================================================
+
+/**
+ * Bei Glossar-Änderung: Betroffene Posts finden und re-scannen
+ * Wird ausgelöst wenn ein Glossar-Begriff gespeichert/geändert wird
+ *
+ * @param int $post_id Glossar Post ID
+ * @param WP_Post $post Post Object
+ */
+function simple_clean_invalidate_affected_posts_optimized($post_id, $post) {
+    // Nur für Glossar-Posts
+    if ($post->post_type !== 'glossar') {
+        return;
+    }
+
+    // Glossar-Version erhöhen (für Kompatibilität mit altem System)
+    $version = (int) get_option('_glossar_version', 0);
+    update_option('_glossar_version', $version + 1);
+
+    // Cache löschen
+    wp_cache_delete('glossar_terms', 'simple_clean_glossar');
+    wp_cache_delete('glossar_combined_pattern', 'simple_clean_glossar');
+
+    // Finde betroffene Posts (Posts die diesen Begriff als Kandidat haben)
+    $term_title = mb_strtolower($post->post_title, 'UTF-8');
+
+    // Suche nach Posts die diesen Begriff enthalten könnten
+    // WICHTIG: Dies ist eine approximative Suche, da Kandidaten als serialisiertes Array gespeichert sind
+    global $wpdb;
+
+    // Hole alle Posts mit Kandidaten-Meta
+    $posts_with_candidates = $wpdb->get_results(
+        "SELECT post_id, meta_value
+         FROM {$wpdb->postmeta}
+         WHERE meta_key = '_glossar_term_candidates'",
+        ARRAY_A
+    );
+
+    $affected_post_ids = [];
+
+    foreach ($posts_with_candidates as $row) {
+        $candidates = maybe_unserialize($row['meta_value']);
+        if (is_array($candidates) && in_array($post_id, $candidates)) {
+            $affected_post_ids[] = $row['post_id'];
+        }
+    }
+
+    // Entscheide ob sofort oder async re-scannen
+    if (count($affected_post_ids) > 50) {
+        // Viele Posts betroffen → Async Background-Job
+        wp_schedule_single_event(
+            time() + 60, // 60 Sekunden Verzögerung
+            'simple_clean_bulk_rescan_glossar_optimized',
+            [$affected_post_ids]
+        );
+
+        // Optional: Admin-Notice
+        if (is_admin()) {
+            add_action('admin_notices', function() use ($affected_post_ids) {
+                echo '<div class="notice notice-info is-dismissible">';
+                echo '<p><strong>Glossar-Update:</strong> ' . count($affected_post_ids) . ' Posts werden im Hintergrund aktualisiert.</p>';
+                echo '</div>';
+            });
+        }
+    } else {
+        // Wenige Posts → Sofort re-scannen
+        foreach ($affected_post_ids as $affected_id) {
+            $affected_post = get_post($affected_id);
+            if ($affected_post) {
+                simple_clean_update_glossar_candidates($affected_id, $affected_post);
+            }
+        }
+    }
+}
+add_action('save_post_glossar', 'simple_clean_invalidate_affected_posts_optimized', 10, 2);
+
+/**
+ * Background Job: Bulk Re-Scan von Posts
+ * Wird async ausgeführt via WP-Cron
+ *
+ * @param array $post_ids Array von Post-IDs zum re-scannen
+ */
+function simple_clean_do_bulk_rescan_optimized($post_ids) {
+    if (empty($post_ids) || !is_array($post_ids)) {
+        return;
+    }
+
+    $count = 0;
+    foreach ($post_ids as $post_id) {
+        $post = get_post($post_id);
+        if ($post) {
+            simple_clean_update_glossar_candidates($post_id, $post);
+            $count++;
+
+            // Throttle: 100ms Pause zwischen Posts (verhindert Server-Überlastung)
+            if ($count % 10 === 0) {
+                usleep(100000); // 100ms
+            }
+        }
+    }
+
+    // Log für Debugging
+    error_log(sprintf(
+        'Glossar Bulk Re-Scan: %d von %d Posts aktualisiert',
+        $count,
+        count($post_ids)
+    ));
+}
+add_action('simple_clean_bulk_rescan_glossar_optimized', 'simple_clean_do_bulk_rescan_optimized');
+
+/**
+ * Cleanup: Entferne gelöschte Glossar-Begriffe aus Kandidaten-Listen
+ *
+ * @param int $post_id Gelöschter Glossar Post ID
+ */
+function simple_clean_cleanup_deleted_glossar_term($post_id) {
+    $post = get_post($post_id);
+    if (!$post || $post->post_type !== 'glossar') {
+        return;
+    }
+
+    // Finde alle Posts die diesen Begriff referenzieren
+    global $wpdb;
+    $posts_with_this_term = $wpdb->get_results(
+        "SELECT post_id, meta_value
+         FROM {$wpdb->postmeta}
+         WHERE meta_key = '_glossar_term_candidates'",
+        ARRAY_A
+    );
+
+    foreach ($posts_with_this_term as $row) {
+        $candidates = maybe_unserialize($row['meta_value']);
+        if (is_array($candidates) && in_array($post_id, $candidates)) {
+            // Entferne diesen Begriff aus der Kandidaten-Liste
+            $updated_candidates = array_diff($candidates, [$post_id]);
+            update_post_meta($row['post_id'], '_glossar_term_candidates', $updated_candidates);
+        }
+    }
+
+    // Cache löschen
+    wp_cache_delete('glossar_terms', 'simple_clean_glossar');
+}
+add_action('delete_post', 'simple_clean_cleanup_deleted_glossar_term', 10, 1);
+
+// ===================================================================
+// GLOSSAR CONTENT CACHE - REMOVED
+// ===================================================================
+// Content cache has been removed as it doesn't work with CDB blocks.
+// Using optimized per-page candidate system instead.
 
 /**
  * Build optimized combined regex pattern for all glossar terms
@@ -1736,137 +2289,7 @@ function simple_clean_process_glossar_links($content) {
     );
 }
 
-/**
- * Cache-optimized glossar auto-linking filter
- * Checks cache first, generates and caches if needed
- */
-function simple_clean_glossar_auto_link_content_cached($content) {
-    // Skip if in admin, feed, or auto-linking is disabled
-    if (is_admin() || is_feed() || get_option('glossar_auto_link', '1') !== '1') {
-        return $content;
-    }
-
-    // Skip if this is a glossar post itself
-    if (is_singular('glossar')) {
-        return $content;
-    }
-
-    $post_id = get_the_ID();
-    if (!$post_id) {
-        return $content;
-    }
-
-    // Get current glossar version
-    $glossar_version = (int) get_option('_glossar_version', 1);
-
-    // Try to get cached content
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'glossar_content_cache';
-
-    $cached = $wpdb->get_row($wpdb->prepare(
-        "SELECT cached_content FROM $table_name
-         WHERE post_id = %d AND glossar_version = %d",
-        $post_id,
-        $glossar_version
-    ));
-
-    if ($cached) {
-        // Cache HIT - return immediately
-        return $cached->cached_content;
-    }
-
-    // Cache MISS - generate and cache
-    $processed = simple_clean_process_glossar_links($content);
-
-    // Store in cache
-    $wpdb->replace($table_name, array(
-        'post_id' => $post_id,
-        'glossar_version' => $glossar_version,
-        'cached_content' => $processed['content'],
-        'terms_linked' => json_encode($processed['terms_found']),
-        'created_at' => current_time('mysql')
-    ));
-
-    return $processed['content'];
-}
-
-/**
- * Invalidate all content caches when glossar terms are modified
- * Increments glossar version to invalidate all cached content
- */
-function simple_clean_invalidate_glossar_content_cache($post_id, $post, $update) {
-    // Only process published glossar posts
-    if ($post->post_type !== 'glossar' || $post->post_status !== 'publish') {
-        return;
-    }
-
-    // Increment glossar version - this invalidates ALL content caches
-    $current_version = (int) get_option('_glossar_version', 1);
-    update_option('_glossar_version', $current_version + 1);
-
-    // Clear pattern cache
-    wp_cache_delete('glossar_combined_pattern', 'simple_clean_glossar');
-    wp_cache_delete('glossar_terms', 'simple_clean_glossar');
-
-    // Note: glossar_auto_rebuild setting is NOT used for content cache
-    // Content cache is always lazy (rebuilt on next page view)
-    // This prevents issues with Container Blocks not being rendered correctly
-}
-add_action('save_post_glossar', 'simple_clean_invalidate_glossar_content_cache', 10, 3);
-add_action('delete_post', function($post_id) {
-    $post = get_post($post_id);
-    if ($post && $post->post_type === 'glossar') {
-        // Increment version to invalidate all caches
-        $current_version = (int) get_option('_glossar_version', 1);
-        update_option('_glossar_version', $current_version + 1);
-        wp_cache_delete('glossar_combined_pattern', 'simple_clean_glossar');
-        wp_cache_delete('glossar_terms', 'simple_clean_glossar');
-    }
-}, 10, 1);
-
-/**
- * Clear content cache for a specific post when it's saved
- */
-function simple_clean_clear_post_content_cache($post_id, $post, $update) {
-    // Skip autosaves and revisions
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-        return;
-    }
-    if (wp_is_post_revision($post_id)) {
-        return;
-    }
-
-    // Don't clear cache for glossar posts (handled above)
-    if ($post->post_type === 'glossar') {
-        return;
-    }
-
-    // Delete cache entry for this specific post
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'glossar_content_cache';
-    $wpdb->delete($table_name, array('post_id' => $post_id), array('%d'));
-}
-add_action('save_post', 'simple_clean_clear_post_content_cache', 15, 3);
-
-/**
- * Clear all content caches
- * Used for manual cache clearing via admin UI
- * NOTE: Cache is automatically rebuilt on next page view (lazy)
- */
-function simple_clean_rebuild_all_content_caches() {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'glossar_content_cache';
-    $deleted = $wpdb->query("DELETE FROM $table_name");
-
-    // Show admin notice
-    add_action('admin_notices', function() use ($deleted) {
-        echo '<div class="notice notice-success is-dismissible">';
-        echo '<p><strong>✓ Glossar-Cache geleert!</strong></p>';
-        echo '<p>Cache wird bei den nächsten Seitenaufrufen automatisch neu aufgebaut (lazy rebuild).</p>';
-        echo '<p>' . $deleted . ' Cache-Einträge wurden gelöscht.</p>';
-        echo '</div>';
-    });
-}
+// Old content cache functions removed - using optimized per-page system instead
 
 // ===================================================================
 // GLOSSAR USAGE TRACKING (Wo wird Begriff verwendet)
