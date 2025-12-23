@@ -20,23 +20,13 @@
 
                 <nav class="main-navigation" id="main-navigation">
                     <?php
-                    if (has_nav_menu('primary')) {
-                        wp_nav_menu(array(
-                            'theme_location' => 'primary',
-                            'container' => false,
-                            'menu_class' => 'primary-menu',
-                            'fallback_cb' => false
-                        ));
-                    } else {
-                        echo '<ul class="primary-menu">';
-                        echo '<li><a href="' . esc_url(home_url('/')) . '">Home</a></li>';
-                        wp_list_pages(array(
-                            'title_li' => '',
-                            'container' => false,
-                            'depth' => 1  // Only show top-level pages
-                        ));
-                        echo '</ul>';
-                    }
+                    // Always try to display the menu first
+                    wp_nav_menu(array(
+                        'theme_location' => 'primary',
+                        'container' => false,
+                        'menu_class' => 'primary-menu',
+                        'fallback_cb' => 'simple_clean_fallback_menu'
+                    ));
                     ?>
                 </nav>
             </div>

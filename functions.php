@@ -25,6 +25,18 @@ function simple_clean_theme_setup() {
 }
 add_action('after_setup_theme', 'simple_clean_theme_setup');
 
+// Fallback menu if no menu is assigned
+function simple_clean_fallback_menu() {
+    echo '<ul class="primary-menu">';
+    echo '<li><a href="' . esc_url(home_url('/')) . '">Home</a></li>';
+    wp_list_pages(array(
+        'title_li' => '',
+        'container' => false,
+        'depth' => 1
+    ));
+    echo '</ul>';
+}
+
 // Enqueue Styles and Scripts
 function simple_clean_theme_assets() {
     // Enqueue main stylesheet
