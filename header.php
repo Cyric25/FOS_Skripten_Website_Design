@@ -32,7 +32,8 @@
                         echo '<li><a href="' . esc_url(home_url('/')) . '">Home</a></li>';
                         wp_list_pages(array(
                             'title_li' => '',
-                            'container' => false
+                            'container' => false,
+                            'depth' => 1  // Only show top-level pages
                         ));
                         echo '</ul>';
                     }
