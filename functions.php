@@ -3748,10 +3748,10 @@ add_action('template_redirect', 'simple_clean_block_ai_user_agents', 1); // Prio
 // ===================================================================
 // GLOSSAR ADMIN SETTINGS - BULK SCAN
 // ===================================================================
+// TEMPORARILY DISABLED DUE TO CRITICAL ERROR
+// Will be re-enabled after debugging
 
-/**
- * Add admin menu for Glossar settings
- */
+/*
 function simple_clean_glossar_admin_menu() {
     add_submenu_page(
         'edit.php?post_type=glossar',
@@ -4042,3 +4042,4 @@ function simple_clean_glossar_bulk_scan_batch_ajax() {
     ]);
 }
 add_action('wp_ajax_glossar_bulk_scan_batch', 'simple_clean_glossar_bulk_scan_batch_ajax');
+*/
