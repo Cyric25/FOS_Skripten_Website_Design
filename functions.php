@@ -3722,9 +3722,15 @@ function simple_clean_glossar_bulk_scan_batch_ajax() {
     ", $batch_size, $offset), ARRAY_A);
 
     $processed = 0;
-    foreach ($posts as $post) {
-        // Use existing scan function
-        simple_clean_scan_glossar_candidates($post['ID']);
+    foreach ($posts as $post_data) {
+        // Scan and get candidates
+        $candidates = simple_clean_scan_glossar_candidates($post_data['ID']);
+
+        // Save to post meta
+        update_post_meta($post_data['ID'], '_glossar_term_candidates', $candidates);
+        update_post_meta($post_data['ID'], '_glossar_scan_version', 1);
+        update_post_meta($post_data['ID'], '_glossar_last_scanned', current_time('mysql'));
+
         $processed++;
     }
 
