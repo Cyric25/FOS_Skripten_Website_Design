@@ -528,6 +528,366 @@ function simple_clean_glossar_auto_rebuild_cb() {
     <?php
 }
 
+// Add Settings Menu
+function simple_clean_glossar_settings_menu() {
+    add_submenu_page(
+        'edit.php?post_type=glossar',
+        'Glossar Einstellungen',
+        'Einstellungen',
+        'manage_options',
+        'glossar-settings',
+        'simple_clean_glossar_settings_page'
+    );
+}
+add_action('admin_menu', 'simple_clean_glossar_settings_menu');
+
+function simple_clean_glossar_settings_page() {
+    // Handle delete actions
+    simple_clean_handle_glossar_delete_actions();
+
+    // Note: Export is handled in admin_init hook (before any output)
+
+    // Handle cache clear
+    if (isset($_POST['clear_glossar_cache']) && check_admin_referer('glossar_cache_clear', 'glossar_cache_nonce')) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'glossar_content_cache';
+        $deleted = $wpdb->query("DELETE FROM $table_name");
+        add_action('admin_notices', function() use ($deleted) {
+            echo '<div class="notice notice-success is-dismissible">';
+            echo '<p><strong>✓ Cache geleert!</strong></p>';
+            echo '<p>' . $deleted . ' Cache-Einträge wurden gelöscht.</p>';
+            echo '</div>';
+        });
+    }
+
+    // Handle cache rebuild
+    if (isset($_POST['rebuild_glossar_cache']) && check_admin_referer('glossar_cache_rebuild', 'glossar_cache_rebuild_nonce')) {
+        simple_clean_rebuild_all_content_caches();
+    }
+
+    // Handle import
+    if (isset($_POST['glossar_import']) && check_admin_referer('glossar_import', 'glossar_import_nonce')) {
+        $result = simple_clean_handle_glossar_import();
+        if ($result['success']) {
+            add_action('admin_notices', function() use ($result) {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>✓ Import erfolgreich!</strong></p>';
+                echo '<p>' . $result['imported'] . ' Begriffe importiert, ' . $result['updated'] . ' aktualisiert, ' . $result['skipped'] . ' übersprungen.</p>';
+                if (!empty($result['errors'])) {
+                    echo '<p><strong>Fehler:</strong></p><ul>';
+                    foreach ($result['errors'] as $error) {
+                        echo '<li>' . esc_html($error) . '</li>';
+                    }
+                    echo '</ul>';
+                }
+                echo '</div>';
+            });
+        } else {
+            add_action('admin_notices', function() use ($result) {
+                echo '<div class="notice notice-error is-dismissible">';
+                echo '<p><strong>❌ Import fehlgeschlagen!</strong></p>';
+                echo '<p>' . esc_html($result['message']) . '</p>';
+                echo '</div>';
+            });
+        }
+    }
+
+    // Handle usage tracking rebuild
+    if (isset($_POST['rebuild_usage_tracking']) && check_admin_referer('glossar_rebuild_usage', 'glossar_rebuild_nonce')) {
+        $rebuilt_count = simple_clean_rebuild_usage_tracking();
+        add_action('admin_notices', function() use ($rebuilt_count) {
+            echo '<div class="notice notice-success is-dismissible">';
+            echo '<p><strong>✓ Usage-Tracking aktualisiert!</strong></p>';
+            echo '<p>' . $rebuilt_count . ' Seiten/Beiträge wurden analysiert und aktualisiert.</p>';
+            echo '</div>';
+        });
+    }
+
+    // Get all glossar terms
+    $glossar_posts = get_posts(array(
+        'post_type' => 'glossar',
+        'posts_per_page' => -1,
+        'post_status' => array('publish', 'draft', 'pending'),
+        'orderby' => 'title',
+        'order' => 'ASC',
+    ));
+
+    $total_terms = count($glossar_posts);
+    ?>
+    <div class="wrap">
+        <h1>Glossar Einstellungen</h1>
+
+        <!-- Settings Form -->
+        <h2 class="nav-tab-wrapper">
+            <a href="#settings" class="nav-tab nav-tab-active" onclick="switchTab(event, 'settings')">Einstellungen</a>
+            <a href="#manage" class="nav-tab" onclick="switchTab(event, 'manage')">Begriffe verwalten (<?php echo $total_terms; ?>)</a>
+            <a href="#importexport" class="nav-tab" onclick="switchTab(event, 'importexport')">📥 Import/Export</a>
+        </h2>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="glossar-tab-content">
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('simple_clean_glossar');
+                do_settings_sections('simple_clean_glossar');
+                submit_button();
+                ?>
+            </form>
+
+            <!-- Usage Tracking Rebuild -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">🔄 Usage-Tracking aktualisieren</h3>
+                <p>Analysiert alle veröffentlichten Seiten und Beiträge und aktualisiert die Information, wo welche Glossarbegriffe verwendet werden.</p>
+                <p><strong>Wann verwenden?</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Nach dem ersten Import von Glossarbegriffen</li>
+                    <li>Nach Bulk-Änderungen an Seiten/Beiträgen</li>
+                    <li>Wenn die Backlinks nicht korrekt angezeigt werden</li>
+                </ul>
+                <form method="post">
+                    <?php wp_nonce_field('glossar_rebuild_usage', 'glossar_rebuild_nonce'); ?>
+                    <button type="submit" name="rebuild_usage_tracking" class="button button-primary" value="1">
+                        ♻️ Alle Seiten jetzt analysieren
+                    </button>
+                </form>
+            </div>
+
+            <!-- Cache Management -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #00a32a; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">🚀 Performance: Cache-Verwaltung</h3>
+                <p>Der Glossar-Cache speichert vorab verarbeitete Seiten für schnellere Ladezeiten.</p>
+
+                <?php
+                global $wpdb;
+                $table_name = $wpdb->prefix . 'glossar_content_cache';
+                $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+                $glossar_version = get_option('_glossar_version', 1);
+                ?>
+
+                <p><strong>Cache-Statistiken:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Gecachte Seiten: <?php echo $cache_count; ?></li>
+                    <li>Glossar-Version: <?php echo $glossar_version; ?></li>
+                    <li>Automatische Seitenerkennung: <?php echo get_option('glossar_auto_rebuild', '0') === '1' ? '<span style="color: #00a32a;">✓ Aktiviert</span>' : '<span style="color: #666;">○ Deaktiviert (Lazy)</span>'; ?></li>
+                </ul>
+
+                <p><strong>Cache-Aktionen:</strong></p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <form method="post" style="display: inline-block;">
+                        <?php wp_nonce_field('glossar_cache_clear', 'glossar_cache_nonce'); ?>
+                        <button type="submit" name="clear_glossar_cache" class="button" value="1">
+                            🗑️ Cache leeren
+                        </button>
+                    </form>
+
+                    <form method="post" style="display: inline-block;">
+                        <?php wp_nonce_field('glossar_cache_rebuild', 'glossar_cache_rebuild_nonce'); ?>
+                        <button type="submit" name="rebuild_glossar_cache" class="button" value="1">
+                            ♻️ Cache leeren (Lazy Rebuild)
+                        </button>
+                    </form>
+                </div>
+
+                <p style="margin-top: 15px;"><strong>Wann Cache leeren?</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Bei Problemen mit veralteten Glossar-Links</li>
+                    <li>Nach manuellen Änderungen an der Datenbank</li>
+                    <li>Nach Theme-Updates</li>
+                </ul>
+
+                <p><strong>Wie funktioniert der Cache? (Lazy Frontend Caching)</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>✅ <strong>Container-Block-kompatibel:</strong> Glossar-Filter läuft bei Priorität 10000 (NACH CDB LaTeX Parser bei 999)</li>
+                    <li>Bei jedem Seitenaufruf wird zuerst der Cache geprüft (sehr schnell)</li>
+                    <li>Bei Cache-HIT: Seite wird sofort angezeigt (&lt;5ms)</li>
+                    <li>Bei Cache-MISS: Container-Blöcke werden gerendert → LaTeX verarbeitet → Glossar-Links hinzugefügt → Gecacht</li>
+                    <li>Cache wird automatisch ungültig bei Änderungen an Glossar-Begriffen oder Seiten</li>
+                    <li>Keine Pre-Generation: Cache entsteht nur bei echten Seitenaufrufen</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Manage Terms Tab -->
+        <div id="manage-tab" class="glossar-tab-content" style="display: none;">
+            <h2>Glossar-Begriffe verwalten</h2>
+
+            <?php if ($total_terms > 0): ?>
+                <!-- Bulk Delete Section -->
+                <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #d63638; padding: 15px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">⚠️ Gefahr: Alle Begriffe löschen</h3>
+                    <p>Diese Aktion löscht <strong>alle <?php echo $total_terms; ?> Glossar-Begriffe</strong> dauerhaft aus der Datenbank.</p>
+                    <p><strong>Diese Aktion kann nicht rückgängig gemacht werden!</strong></p>
+                    <form method="post" onsubmit="return confirm('ACHTUNG: Möchten Sie wirklich ALLE <?php echo $total_terms; ?> Glossar-Begriffe unwiderruflich löschen? Diese Aktion kann nicht rückgängig gemacht werden!');">
+                        <?php wp_nonce_field('glossar_bulk_delete', 'glossar_bulk_delete_nonce'); ?>
+                        <input type="hidden" name="glossar_action" value="bulk_delete">
+                        <button type="submit" class="button button-danger" style="background: #d63638; color: white; border-color: #d63638;">
+                            🗑️ Alle <?php echo $total_terms; ?> Begriffe unwiderruflich löschen
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Terms List -->
+                <div style="background: #fff; border: 1px solid #c3c4c7; padding: 15px; margin: 20px 0;">
+                    <h3>Einzelne Begriffe verwalten</h3>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th style="width: 40%;">Begriff</th>
+                                <th style="width: 15%;">Status</th>
+                                <th style="width: 20%;">Erstellt</th>
+                                <th style="width: 25%;">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($glossar_posts as $post): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?php echo esc_html($post->post_title); ?></strong>
+                                        <?php if (!empty($post->post_content)): ?>
+                                            <br><small style="color: #666;"><?php echo esc_html(wp_trim_words($post->post_content, 15)); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $status_labels = array(
+                                            'publish' => '<span style="color: #00a32a;">✓ Veröffentlicht</span>',
+                                            'draft' => '<span style="color: #dba617;">📝 Entwurf</span>',
+                                            'pending' => '<span style="color: #996800;">⏳ Ausstehend</span>',
+                                        );
+                                        echo $status_labels[$post->post_status] ?? esc_html($post->post_status);
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php echo date_i18n('d.m.Y H:i', strtotime($post->post_date)); ?>
+                                    </td>
+                                    <td>
+                                        <a href="<?php echo get_edit_post_link($post->ID); ?>" class="button button-small">
+                                            ✏️ Bearbeiten
+                                        </a>
+                                        <form method="post" style="display: inline-block; margin-left: 5px;" onsubmit="return confirm('Begriff \'<?php echo esc_js($post->post_title); ?>\' wirklich löschen?');">
+                                            <?php wp_nonce_field('glossar_delete_' . $post->ID, 'glossar_delete_nonce'); ?>
+                                            <input type="hidden" name="glossar_action" value="delete_single">
+                                            <input type="hidden" name="glossar_post_id" value="<?php echo $post->ID; ?>">
+                                            <button type="submit" class="button button-small" style="color: #d63638;">
+                                                🗑️ Löschen
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+            <?php else: ?>
+                <div class="notice notice-info" style="margin: 20px 0;">
+                    <p><strong>ℹ️ Keine Glossar-Begriffe vorhanden</strong></p>
+                    <p>Es wurden noch keine Glossar-Begriffe erstellt. Erstellen Sie neue Begriffe unter <a href="<?php echo admin_url('post-new.php?post_type=glossar'); ?>">Glossar → Begriff hinzufügen</a>.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Import/Export Tab -->
+        <div id="importexport-tab" class="glossar-tab-content" style="display: none;">
+            <h2>Glossar Import & Export</h2>
+
+            <!-- Export Section -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #00a32a; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">📤 Export</h3>
+                <p>Exportiere alle Glossar-Begriffe als CSV-Datei. Diese Datei kann in Excel, Google Sheets oder von KI-Tools bearbeitet werden.</p>
+                <p><strong>CSV-Format:</strong> Begriff, Definition, Slug, Status</p>
+                <form method="post">
+                    <?php wp_nonce_field('glossar_export', 'glossar_export_nonce'); ?>
+                    <button type="submit" name="glossar_export" class="button button-primary" value="1">
+                        📥 Als CSV herunterladen (<?php echo $total_terms; ?> Begriffe)
+                    </button>
+                </form>
+            </div>
+
+            <!-- Import Section -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">📥 Import</h3>
+                <p>Importiere Glossar-Begriffe aus einer CSV-Datei. Die CSV-Datei muss folgende Spalten enthalten:</p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Begriff</strong> (Pflichtfeld) - Der Glossarbegriff</li>
+                    <li><strong>Definition</strong> (Pflichtfeld) - Die Erklärung des Begriffs</li>
+                    <li><strong>Slug</strong> (optional) - URL-freundlicher Name (wird automatisch generiert, wenn leer)</li>
+                    <li><strong>Status</strong> (optional) - "publish", "draft" oder "pending" (Standard: publish)</li>
+                </ul>
+
+                <p><strong>📋 CSV-Template für KI:</strong></p>
+                <code style="display: block; background: #f6f7f7; padding: 10px; margin: 10px 0; font-size: 12px;">
+Begriff,Definition,Slug,Status<br>
+Atom,"Ein Atom ist das kleinste Teilchen eines chemischen Elements.",atom,publish<br>
+Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen.",molekuel,publish
+                </code>
+
+                <form method="post" enctype="multipart/form-data">
+                    <?php wp_nonce_field('glossar_import', 'glossar_import_nonce'); ?>
+                    <p>
+                        <input type="file" name="glossar_csv" accept=".csv" required style="margin-right: 10px;">
+                        <label>
+                            <input type="checkbox" name="glossar_import_overwrite" value="1">
+                            Bestehende Begriffe überschreiben (gleicher Slug)
+                        </label>
+                    </p>
+                    <button type="submit" name="glossar_import" class="button button-primary" value="1">
+                        📤 CSV-Datei importieren
+                    </button>
+                </form>
+            </div>
+
+            <!-- Info Section -->
+            <div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #72aee6; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">ℹ️ Hinweise</h3>
+                <ul style="margin-left: 20px;">
+                    <li><strong>CSV-Encoding:</strong> Verwende UTF-8 für Umlaute (ä, ö, ü)</li>
+                    <li><strong>Trennzeichen:</strong> Komma (,) - Excel/Google Sheets kompatibel</li>
+                    <li><strong>KI-Unterstützung:</strong> Das CSV-Format kann von ChatGPT, Claude oder anderen KI-Tools ausgefüllt werden</li>
+                    <li><strong>Bulk-Bearbeitung:</strong> Exportiere, bearbeite in Excel/Sheets, importiere zurück</li>
+                    <li><strong>Nach dem Import:</strong> Verwende den Button "Usage-Tracking aktualisieren" im Tab "Einstellungen"</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab Switching Script -->
+        <script>
+        function switchTab(event, tabName) {
+            event.preventDefault();
+
+            // Hide all tabs
+            document.querySelectorAll('.glossar-tab-content').forEach(function(tab) {
+                tab.style.display = 'none';
+            });
+
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(function(navTab) {
+                navTab.classList.remove('nav-tab-active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            event.target.classList.add('nav-tab-active');
+        }
+        </script>
+
+        <!-- Custom Styles -->
+        <style>
+        .glossar-tab-content {
+            background: white;
+            padding: 20px;
+            border: 1px solid #c3c4c7;
+            border-top: none;
+            margin-bottom: 20px;
+        }
+        .button-danger:hover {
+            background: #b32d2e !important;
+            border-color: #b32d2e !important;
+        }
+        </style>
+    </div>
+    <?php
+}
 
 // Handle glossar delete actions
 function simple_clean_handle_glossar_delete_actions() {
@@ -3388,6 +3748,10 @@ add_action('template_redirect', 'simple_clean_block_ai_user_agents', 1); // Prio
 // ===================================================================
 // GLOSSAR ADMIN SETTINGS - BULK SCAN
 // ===================================================================
+// TEMPORARILY DISABLED DUE TO CRITICAL ERROR
+// Will be re-enabled after debugging
+
+/*
 function simple_clean_glossar_admin_menu() {
     add_submenu_page(
         'edit.php?post_type=glossar',
@@ -3678,3 +4042,4 @@ function simple_clean_glossar_bulk_scan_batch_ajax() {
     ]);
 }
 add_action('wp_ajax_glossar_bulk_scan_batch', 'simple_clean_glossar_bulk_scan_batch_ajax');
+*/
