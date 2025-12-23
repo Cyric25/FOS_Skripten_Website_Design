@@ -3402,16 +3402,6 @@ add_action('template_redirect', 'simple_clean_block_ai_user_agents', 1); // Prio
 // ===================================================================
 
 /**
- * Register glossar settings
- */
-function simple_clean_glossar_settings_init() {
-    register_setting('simple_clean_glossar', 'glossar_auto_link');
-    register_setting('simple_clean_glossar', 'glossar_first_only');
-    register_setting('simple_clean_glossar', 'glossar_case_sensitive');
-}
-add_action('admin_init', 'simple_clean_glossar_settings_init');
-
-/**
  * Add admin menu for Glossar settings
  */
 function simple_clean_glossar_admin_menu() {
