@@ -3775,21 +3775,24 @@ function simple_clean_glossar_settings_page() {
 
     // Get statistics
     global $wpdb;
-    $total_posts = $wpdb->get_var("
+    $total_posts = (int) $wpdb->get_var("
         SELECT COUNT(*)
         FROM {$wpdb->posts}
         WHERE post_type IN ('post', 'page')
         AND post_status IN ('publish', 'draft', 'pending')
     ");
 
-    $posts_with_candidates = $wpdb->get_var("
+    $posts_with_candidates = (int) $wpdb->get_var("
         SELECT COUNT(DISTINCT post_id)
         FROM {$wpdb->postmeta}
         WHERE meta_key = '_glossar_term_candidates'
     ");
 
-    $posts_without_candidates = $total_posts - $posts_with_candidates;
-    $total_glossar_terms = wp_count_posts('glossar')->publish;
+    $posts_without_candidates = max(0, $total_posts - $posts_with_candidates);
+
+    // Safely get glossar term count
+    $glossar_count = wp_count_posts('glossar');
+    $total_glossar_terms = isset($glossar_count->publish) ? $glossar_count->publish : 0;
 
     ?>
     <div class="wrap">
