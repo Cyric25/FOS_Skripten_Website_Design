@@ -3400,6 +3400,20 @@ add_action('template_redirect', 'simple_clean_block_ai_user_agents', 1); // Prio
 // ===================================================================
 // GLOSSAR ADMIN SETTINGS - BULK SCAN
 // ===================================================================
+
+/**
+ * Register glossar settings
+ */
+function simple_clean_glossar_settings_init() {
+    register_setting('simple_clean_glossar', 'glossar_auto_link');
+    register_setting('simple_clean_glossar', 'glossar_first_only');
+    register_setting('simple_clean_glossar', 'glossar_case_sensitive');
+}
+add_action('admin_init', 'simple_clean_glossar_settings_init');
+
+/**
+ * Add admin menu for Glossar settings
+ */
 function simple_clean_glossar_admin_menu() {
     add_submenu_page(
         'edit.php?post_type=glossar',
@@ -3466,6 +3480,48 @@ function simple_clean_glossar_settings_page() {
                     <td><strong style="color: orange;"><?php echo esc_html($posts_without_candidates); ?></strong> (Fallback)</td>
                 </tr>
             </table>
+        </div>
+
+        <div class="card" style="max-width: 800px; margin-top: 20px;">
+            <h2>⚙️ Verlinkungseinstellungen</h2>
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('simple_clean_glossar');
+                ?>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Automatische Verlinkung</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="glossar_auto_link" value="1" <?php checked(get_option('glossar_auto_link', '1'), '1'); ?>>
+                                Begriffe automatisch im Content verlinken
+                            </label>
+                            <p class="description">Wenn aktiviert, werden Glossar-Begriffe automatisch erkannt und verlinkt.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Nur erste Erwähnung</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="glossar_first_only" value="1" <?php checked(get_option('glossar_first_only', '1'), '1'); ?>>
+                                Nur erste Erwähnung pro Seite verlinken
+                            </label>
+                            <p class="description">Vermeidet zu viele Links auf einer Seite.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Groß-/Kleinschreibung</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="glossar_case_sensitive" value="1" <?php checked(get_option('glossar_case_sensitive', '0'), '1'); ?>>
+                                Groß-/Kleinschreibung beachten
+                            </label>
+                            <p class="description">Wenn deaktiviert, wird "Atom" und "atom" als gleich erkannt.</p>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button('Einstellungen speichern'); ?>
+            </form>
         </div>
 
         <div class="card" style="max-width: 800px; margin-top: 20px;">
