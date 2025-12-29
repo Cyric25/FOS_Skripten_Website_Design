@@ -9,7 +9,6 @@ This file provides guidance to Claude Code when working with this WordPress them
 **Description:** Ein einfaches, responsives WordPress-Theme ohne Widgets, fokussiert auf Inhalt und Lesbarkeit
 **WordPress Compatibility:** 5.0+
 **PHP Compatibility:** 7.4+
-**Environment:** Local by Flywheel development environment
 **Repository:** https://github.com/Cyric25/FOS_Skripten_Website_Design
 
 ## Architecture
