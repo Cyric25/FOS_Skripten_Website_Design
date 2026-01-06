@@ -37,6 +37,57 @@ function simple_clean_fallback_menu() {
     echo '</ul>';
 }
 
+// Auto-assign "Skripten Übersicht" menu to primary location
+function simple_clean_auto_assign_menu() {
+    // Get current menu locations
+    $locations = get_theme_mod('nav_menu_locations');
+
+    // Check if primary location is already assigned
+    if (isset($locations['primary']) && $locations['primary'] > 0) {
+        return; // Already assigned, nothing to do
+    }
+
+    // Get all menus
+    $menus = wp_get_nav_menus();
+
+    // Find "Skripten Übersicht" menu (try exact match first)
+    $target_menu_id = null;
+    foreach ($menus as $menu) {
+        if ($menu->name === 'Skripten Übersicht') {
+            $target_menu_id = $menu->term_id;
+            break;
+        }
+    }
+
+    // If not found, try case-insensitive and partial match
+    if (!$target_menu_id) {
+        foreach ($menus as $menu) {
+            if (stripos($menu->name, 'Skripten') !== false || stripos($menu->name, 'übersicht') !== false) {
+                $target_menu_id = $menu->term_id;
+                break;
+            }
+        }
+    }
+
+    // If still not found and there's only one menu, use that
+    if (!$target_menu_id && count($menus) === 1) {
+        $target_menu_id = $menus[0]->term_id;
+    }
+
+    // If menu exists, assign it to primary location
+    if ($target_menu_id) {
+        if (!is_array($locations)) {
+            $locations = array();
+        }
+        $locations['primary'] = $target_menu_id;
+        set_theme_mod('nav_menu_locations', $locations);
+    }
+}
+// Run on admin init to auto-assign menu if not already assigned
+add_action('admin_init', 'simple_clean_auto_assign_menu');
+// Also run on theme switch
+add_action('after_switch_theme', 'simple_clean_auto_assign_menu');
+
 // Enqueue Styles and Scripts
 function simple_clean_theme_assets() {
     // Enqueue main stylesheet
@@ -3425,6 +3476,33 @@ function simple_clean_glossar_settings_page() {
         return;
     }
 
+    // Handle CSV import
+    if (isset($_POST['glossar_import']) && check_admin_referer('glossar_import', 'glossar_import_nonce')) {
+        $result = simple_clean_handle_glossar_import();
+        if ($result['success']) {
+            add_action('admin_notices', function() use ($result) {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>✓ Import erfolgreich!</strong></p>';
+                echo '<p>' . $result['imported'] . ' Begriffe importiert, ' . $result['updated'] . ' aktualisiert, ' . $result['skipped'] . ' übersprungen.</p>';
+                if (!empty($result['errors'])) {
+                    echo '<p><strong>Fehler:</strong></p><ul>';
+                    foreach ($result['errors'] as $error) {
+                        echo '<li>' . esc_html($error) . '</li>';
+                    }
+                    echo '</ul>';
+                }
+                echo '</div>';
+            });
+        } else {
+            add_action('admin_notices', function() use ($result) {
+                echo '<div class="notice notice-error is-dismissible">';
+                echo '<p><strong>❌ Import fehlgeschlagen!</strong></p>';
+                echo '<p>' . esc_html($result['message']) . '</p>';
+                echo '</div>';
+            });
+        }
+    }
+
     // Get statistics
     global $wpdb;
     $total_posts = (int) $wpdb->get_var("
@@ -3512,6 +3590,46 @@ function simple_clean_glossar_settings_page() {
                 </table>
                 <?php submit_button('Einstellungen speichern'); ?>
             </form>
+        </div>
+
+        <div class="card" style="max-width: 800px; margin-top: 20px;">
+            <h2>📥 CSV Import</h2>
+            <p>Importiere Glossar-Begriffe aus einer CSV-Datei. Die CSV-Datei muss folgende Spalten enthalten:</p>
+            <ul style="margin-left: 20px;">
+                <li><strong>Begriff</strong> (Pflichtfeld) - Der Glossarbegriff</li>
+                <li><strong>Definition</strong> (Pflichtfeld) - Die Erklärung des Begriffs</li>
+                <li><strong>Slug</strong> (optional) - URL-freundlicher Name (wird automatisch generiert, wenn leer)</li>
+                <li><strong>Status</strong> (optional) - "publish", "draft" oder "pending" (Standard: publish)</li>
+            </ul>
+
+            <p><strong>📋 CSV-Template für KI:</strong></p>
+            <code style="display: block; background: #f6f7f7; padding: 10px; margin: 10px 0; font-size: 12px;">
+Begriff,Definition,Slug,Status<br>
+Atom,"Ein Atom ist das kleinste Teilchen eines chemischen Elements.",atom,publish<br>
+Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen.",molekuel,publish
+            </code>
+
+            <form method="post" enctype="multipart/form-data">
+                <?php wp_nonce_field('glossar_import', 'glossar_import_nonce'); ?>
+                <p>
+                    <input type="file" name="glossar_csv" accept=".csv" required style="margin-right: 10px;">
+                    <label>
+                        <input type="checkbox" name="glossar_import_overwrite" value="1">
+                        <?php _e('Bestehende Begriffe überschreiben (gleicher Slug)', 'simple-clean-theme'); ?>
+                    </label>
+                </p>
+                <button type="submit" name="glossar_import" class="button button-primary" value="1">
+                    📤 CSV-Datei importieren
+                </button>
+            </form>
+
+            <div style="background: #fff3cd; padding: 12px; border-left: 4px solid #ffc107; margin: 15px 0;">
+                <strong>ℹ️ Hinweise:</strong><br>
+                • <strong>CSV-Encoding:</strong> Verwende UTF-8 für Umlaute (ä, ö, ü)<br>
+                • <strong>Trennzeichen:</strong> Komma (,) - Excel/Google Sheets kompatibel<br>
+                • <strong>KI-Unterstützung:</strong> Das CSV-Format kann von ChatGPT, Claude oder anderen KI-Tools ausgefüllt werden<br>
+                • <strong>Bulk-Bearbeitung:</strong> Exportiere, bearbeite in Excel/Sheets, importiere zurück
+            </div>
         </div>
 
         <div class="card" style="max-width: 800px; margin-top: 20px;">
