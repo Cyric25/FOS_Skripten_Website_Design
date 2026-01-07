@@ -28,6 +28,8 @@ class Simple_Clean_Page_Manager {
         add_action('admin_menu', [__CLASS__, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
         add_action('wp_ajax_page_manager_update_order', [__CLASS__, 'ajax_update_order']);
+        add_action('wp_ajax_page_manager_create_page', [__CLASS__, 'ajax_create_page']);
+        add_action('wp_ajax_page_manager_delete_page', [__CLASS__, 'ajax_delete_page']);
     }
 
     /**
@@ -121,6 +123,10 @@ class Simple_Clean_Page_Manager {
             </p>
 
             <div class="page-manager-toolbar">
+                <button type="button" id="create-new-page" class="button button-primary">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    Neue Seite
+                </button>
                 <button type="button" id="expand-all" class="button">
                     <span class="dashicons dashicons-arrow-down-alt2"></span>
                     Alle aufklappen
@@ -131,6 +137,21 @@ class Simple_Clean_Page_Manager {
                 </button>
                 <span class="spinner" id="save-spinner"></span>
                 <span class="save-status" id="save-status"></span>
+            </div>
+
+            <!-- Modal für neue Seite -->
+            <div id="new-page-modal" class="page-manager-modal" style="display:none;">
+                <div class="page-manager-modal-content">
+                    <h2>Neue Seite erstellen</h2>
+                    <p>
+                        <label for="new-page-title">Seitentitel:</label>
+                        <input type="text" id="new-page-title" class="widefat" placeholder="Titel der neuen Seite" />
+                    </p>
+                    <div class="page-manager-modal-buttons">
+                        <button type="button" id="create-page-submit" class="button button-primary">Erstellen</button>
+                        <button type="button" id="create-page-cancel" class="button">Abbrechen</button>
+                    </div>
+                </div>
             </div>
 
             <div class="page-manager-container">
@@ -197,6 +218,12 @@ class Simple_Clean_Page_Manager {
                        class="button button-small" target="_blank" title="Ansehen">
                         <span class="dashicons dashicons-visibility"></span>
                     </a>
+                    <button type="button" class="button button-small delete-page"
+                            data-page-id="<?php echo esc_attr($page->ID); ?>"
+                            data-page-title="<?php echo esc_attr($page->post_title); ?>"
+                            title="Löschen">
+                        <span class="dashicons dashicons-trash"></span>
+                    </button>
                 </span>
             </div>
 
@@ -356,6 +383,75 @@ class Simple_Clean_Page_Manager {
         }
 
         return false;
+    }
+
+    /**
+     * AJAX handler: Create new page
+     */
+    public static function ajax_create_page() {
+        // Security check
+        check_ajax_referer('page_manager_nonce', 'nonce');
+
+        if (!current_user_can('edit_pages')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung.']);
+        }
+
+        $title = isset($_POST['title']) ? sanitize_text_field($_POST['title']) : '';
+
+        if (empty($title)) {
+            wp_send_json_error(['message' => 'Titel erforderlich.']);
+        }
+
+        // Create new page at top level
+        $page_id = wp_insert_post([
+            'post_title' => $title,
+            'post_type' => 'page',
+            'post_status' => 'draft',
+            'menu_order' => 0,
+            'post_parent' => 0
+        ]);
+
+        if (is_wp_error($page_id)) {
+            wp_send_json_error(['message' => $page_id->get_error_message()]);
+        }
+
+        wp_send_json_success([
+            'message' => 'Seite erstellt.',
+            'page_id' => $page_id
+        ]);
+    }
+
+    /**
+     * AJAX handler: Delete page
+     */
+    public static function ajax_delete_page() {
+        // Security check
+        check_ajax_referer('page_manager_nonce', 'nonce');
+
+        if (!current_user_can('edit_pages')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung.']);
+        }
+
+        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
+
+        if (!$page_id) {
+            wp_send_json_error(['message' => 'Keine Seiten-ID.']);
+        }
+
+        // Check if page exists
+        $page = get_post($page_id);
+        if (!$page || $page->post_type !== 'page') {
+            wp_send_json_error(['message' => 'Seite nicht gefunden.']);
+        }
+
+        // Delete page permanently
+        $result = wp_delete_post($page_id, true);
+
+        if (!$result) {
+            wp_send_json_error(['message' => 'Fehler beim Löschen.']);
+        }
+
+        wp_send_json_success(['message' => 'Seite gelöscht.']);
     }
 }
 

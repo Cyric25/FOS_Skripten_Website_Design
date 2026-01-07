@@ -30,6 +30,56 @@
          * Bind UI events
          */
         bindEvents: function() {
+            const self = this;
+
+            // Create new page - open modal
+            $('#create-new-page').on('click', function() {
+                $('#new-page-modal').fadeIn(200);
+                $('#new-page-title').focus();
+            });
+
+            // Create new page - close modal
+            $('#create-page-cancel').on('click', function() {
+                $('#new-page-modal').fadeOut(200);
+                $('#new-page-title').val('');
+            });
+
+            // Create new page - submit
+            $('#create-page-submit').on('click', function() {
+                const title = $('#new-page-title').val().trim();
+
+                if (!title) {
+                    alert('Bitte geben Sie einen Titel ein.');
+                    return;
+                }
+
+                self.createPage(title);
+            });
+
+            // Create new page - Enter key
+            $('#new-page-title').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    $('#create-page-submit').click();
+                }
+            });
+
+            // Close modal on ESC key
+            $(document).on('keydown', function(e) {
+                if (e.key === 'Escape' && $('#new-page-modal').is(':visible')) {
+                    $('#create-page-cancel').click();
+                }
+            });
+
+            // Delete page
+            $(document).on('click', '.delete-page', function() {
+                const pageId = $(this).data('page-id');
+                const pageTitle = $(this).data('page-title');
+
+                if (confirm('Möchten Sie die Seite "' + pageTitle + '" wirklich löschen?')) {
+                    self.deletePage(pageId);
+                }
+            });
+
             // Toggle children visibility
             $(document).on('click', '.toggle-children', function(e) {
                 e.preventDefault();
@@ -230,6 +280,86 @@
                     $status.addClass('status-error').text(message || pageManagerData.strings.error);
                     break;
             }
+        },
+
+        /**
+         * Create a new page
+         *
+         * @param {string} title - Page title
+         */
+        createPage: function(title) {
+            const self = this;
+
+            // Show loading
+            self.showStatus('saving', 'Erstelle Seite...');
+
+            // Send AJAX request
+            $.ajax({
+                url: pageManagerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'page_manager_create_page',
+                    nonce: pageManagerData.nonce,
+                    title: title
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showStatus('saved', response.data.message);
+
+                        // Close modal
+                        $('#new-page-modal').fadeOut(200);
+                        $('#new-page-title').val('');
+
+                        // Reload page to show new page
+                        setTimeout(function() {
+                            location.reload();
+                        }, 500);
+                    } else {
+                        self.showStatus('error', response.data.message);
+                    }
+                },
+                error: function() {
+                    self.showStatus('error', 'Fehler beim Erstellen der Seite.');
+                }
+            });
+        },
+
+        /**
+         * Delete a page
+         *
+         * @param {int} pageId - Page ID to delete
+         */
+        deletePage: function(pageId) {
+            const self = this;
+
+            // Show loading
+            self.showStatus('saving', 'Lösche Seite...');
+
+            // Send AJAX request
+            $.ajax({
+                url: pageManagerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'page_manager_delete_page',
+                    nonce: pageManagerData.nonce,
+                    page_id: pageId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showStatus('saved', response.data.message);
+
+                        // Remove item from DOM
+                        $('.page-item[data-page-id="' + pageId + '"]').fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                    } else {
+                        self.showStatus('error', response.data.message);
+                    }
+                },
+                error: function() {
+                    self.showStatus('error', 'Fehler beim Löschen der Seite.');
+                }
+            });
         }
     };
 
