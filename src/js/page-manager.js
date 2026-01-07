@@ -37,16 +37,25 @@
                 const $children = $pageItem.children('.page-tree-children');
                 const isExpanded = $(this).attr('aria-expanded') === 'true';
 
-                $children.slideToggle(200);
+                if (isExpanded) {
+                    // Collapse
+                    $children.slideUp(200, function() {
+                        $(this).removeClass('visible');
+                    });
+                } else {
+                    // Expand
+                    $children.addClass('visible').slideDown(200);
+                }
+
                 $(this).attr('aria-expanded', !isExpanded);
                 $(this).find('.dashicons')
-                    .toggleClass('dashicons-arrow-down-alt2', isExpanded)
-                    .toggleClass('dashicons-arrow-right-alt2', !isExpanded);
+                    .toggleClass('dashicons-arrow-down-alt2', !isExpanded)
+                    .toggleClass('dashicons-arrow-right-alt2', isExpanded);
             });
 
             // Expand all
             $('#expand-all').on('click', function() {
-                $('.page-tree-children').slideDown(200);
+                $('.page-tree-children').addClass('visible').slideDown(200);
                 $('.toggle-children')
                     .attr('aria-expanded', 'true')
                     .find('.dashicons')
@@ -56,7 +65,9 @@
 
             // Collapse all
             $('#collapse-all').on('click', function() {
-                $('.page-tree-children').slideUp(200);
+                $('.page-tree-children').slideUp(200, function() {
+                    $(this).removeClass('visible');
+                });
                 $('.toggle-children')
                     .attr('aria-expanded', 'false')
                     .find('.dashicons')
@@ -116,8 +127,8 @@
                         if (!$parentItem.find('> .page-item-row > .toggle-children').length) {
                             const $placeholder = $parentItem.find('> .page-item-row > .toggle-placeholder');
                             $placeholder.replaceWith(
-                                '<button class="toggle-children" aria-expanded="true">' +
-                                '<span class="dashicons dashicons-arrow-down-alt2"></span>' +
+                                '<button class="toggle-children" aria-expanded="false">' +
+                                '<span class="dashicons dashicons-arrow-right-alt2"></span>' +
                                 '</button>'
                             );
                         }

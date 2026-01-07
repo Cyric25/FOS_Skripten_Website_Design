@@ -173,8 +173,8 @@ class Simple_Clean_Page_Manager {
                 </span>
 
                 <?php if ($has_children): ?>
-                    <button class="toggle-children" aria-expanded="true" title="Unterseiten ein-/ausklappen">
-                        <span class="dashicons dashicons-arrow-down-alt2"></span>
+                    <button class="toggle-children" aria-expanded="false" title="Unterseiten ein-/ausklappen">
+                        <span class="dashicons dashicons-arrow-right-alt2"></span>
                     </button>
                 <?php else: ?>
                     <span class="toggle-placeholder"></span>
