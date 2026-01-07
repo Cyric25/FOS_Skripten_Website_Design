@@ -108,12 +108,18 @@
                     $('.empty-children').removeClass('accepting-drop');
                 },
 
+                // Handle changes (both within list and between lists)
+                update: function(event, ui) {
+                    // Only fire on the list that received the change
+                    if (this === ui.item.parent()[0]) {
+                        self.saveOrder();
+                    }
+                },
+
                 // Handle receiving items from another list (hierarchy change)
                 receive: function(event, ui) {
                     const $targetList = $(this);
                     const $item = ui.item;
-                    const pageId = $item.data('page-id');
-                    const newParentId = $targetList.data('parent');
 
                     // Update UI
                     $targetList.removeClass('empty-children');
@@ -133,21 +139,29 @@
                             );
                         }
                     }
-
-                    // Save the new hierarchy
-                    self.updateParent(pageId, newParentId);
                 }
             });
         },
 
         /**
-         * Update page parent via AJAX
-         *
-         * @param {number} pageId Page ID
-         * @param {number} newParentId New parent ID
+         * Collect current order and save via AJAX
          */
-        updateParent: function(pageId, newParentId) {
+        saveOrder: function() {
             const self = this;
+            const orderData = [];
+
+            // Collect order from all lists
+            $('.sortable-list').each(function() {
+                const parentId = $(this).data('parent');
+
+                $(this).children('.page-item').each(function(index) {
+                    orderData.push({
+                        id: $(this).data('page-id'),
+                        parent: parentId,
+                        order: index
+                    });
+                });
+            });
 
             // Show saving indicator
             self.showStatus('saving');
@@ -157,19 +171,23 @@
                 url: pageManagerData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'page_manager_update_parent',
+                    action: 'page_manager_update_order',
                     nonce: pageManagerData.nonce,
-                    page_id: pageId,
-                    new_parent: newParentId
+                    order: orderData
                 },
                 success: function(response) {
                     if (response.success) {
                         self.showStatus('saved', response.data.message);
 
-                        // Update data attribute
-                        $('.page-item[data-page-id="' + pageId + '"]').attr('data-parent-id', newParentId);
+                        // Update data attributes
+                        orderData.forEach(function(item) {
+                            $('.page-item[data-page-id="' + item.id + '"]').attr('data-parent-id', item.parent);
+                        });
                     } else {
                         self.showStatus('error', response.data.message);
+                        if (response.data.errors && response.data.errors.length > 0) {
+                            console.error('Fehler:', response.data.errors);
+                        }
                     }
                 },
                 error: function() {

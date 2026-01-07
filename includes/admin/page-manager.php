@@ -27,7 +27,7 @@ class Simple_Clean_Page_Manager {
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
-        add_action('wp_ajax_page_manager_update_parent', [__CLASS__, 'ajax_update_parent']);
+        add_action('wp_ajax_page_manager_update_order', [__CLASS__, 'ajax_update_order']);
     }
 
     /**
@@ -115,7 +115,9 @@ class Simple_Clean_Page_Manager {
             </h1>
 
             <p class="description">
-                Ziehen Sie Seiten auf andere Seiten, um die Hierarchie zu ändern (Eltern-Kind-Beziehungen).
+                Ziehen Sie Seiten, um die Reihenfolge und Hierarchie zu ändern.
+                Die Position innerhalb einer Ebene bestimmt die Reihenfolge (menu_order),
+                das Verschieben auf eine andere Seite ändert die Hierarchie (Eltern-Kind-Beziehung).
             </p>
 
             <div class="page-manager-toolbar">
@@ -234,9 +236,9 @@ class Simple_Clean_Page_Manager {
     }
 
     /**
-     * AJAX handler: Update page parent (hierarchy only)
+     * AJAX handler: Update page hierarchy and order
      */
-    public static function ajax_update_parent() {
+    public static function ajax_update_order() {
         // Security check
         check_ajax_referer('page_manager_nonce', 'nonce');
 
@@ -244,51 +246,85 @@ class Simple_Clean_Page_Manager {
             wp_send_json_error(['message' => 'Keine Berechtigung.']);
         }
 
-        // Get the data
-        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
-        $new_parent = isset($_POST['new_parent']) ? absint($_POST['new_parent']) : 0;
+        // Get the order data
+        $order_data = isset($_POST['order']) ? $_POST['order'] : [];
 
-        if (!$page_id) {
-            wp_send_json_error(['message' => 'Keine Seiten-ID erhalten.']);
+        if (empty($order_data)) {
+            wp_send_json_error(['message' => 'Keine Daten erhalten.']);
         }
 
-        // Verify page exists
-        $page = get_post($page_id);
-        if (!$page || $page->post_type !== 'page') {
-            wp_send_json_error(['message' => 'Seite nicht gefunden.']);
-        }
-
-        // Prevent circular reference (page can't be its own parent or child of itself)
-        if ($new_parent == $page_id) {
-            wp_send_json_error(['message' => 'Eine Seite kann nicht ihr eigenes Elternteil sein.']);
-        }
-
-        // Check if new parent would create circular reference
-        if ($new_parent > 0 && self::would_create_circular_reference($page_id, $new_parent)) {
-            wp_send_json_error(['message' => 'Diese Hierarchie würde eine zirkuläre Referenz erzeugen.']);
-        }
-
-        // Update post_parent
         global $wpdb;
-        $result = $wpdb->update(
-            $wpdb->posts,
-            ['post_parent' => $new_parent],
-            ['ID' => $page_id],
-            ['%d'],
-            ['%d']
-        );
+        $updated = 0;
+        $errors = [];
 
-        if ($result !== false) {
-            // Clear post cache
-            clean_post_cache($page_id);
+        foreach ($order_data as $item) {
+            $page_id = absint($item['id']);
+            $new_parent = absint($item['parent']);
+            $new_order = absint($item['order']);
 
+            // Verify page exists
+            $page = get_post($page_id);
+            if (!$page || $page->post_type !== 'page') {
+                $errors[] = "Seite ID $page_id nicht gefunden";
+                continue;
+            }
+
+            // Prevent circular reference
+            if ($new_parent == $page_id) {
+                $errors[] = "Seite ID $page_id kann nicht ihr eigenes Elternteil sein";
+                continue;
+            }
+
+            // Check if new parent would create circular reference
+            if ($new_parent > 0 && self::would_create_circular_reference($page_id, $new_parent)) {
+                $errors[] = "Seite ID $page_id würde zirkuläre Referenz erzeugen";
+                continue;
+            }
+
+            // Get current values
+            $current = $wpdb->get_row($wpdb->prepare(
+                "SELECT post_parent, menu_order FROM {$wpdb->posts} WHERE ID = %d",
+                $page_id
+            ));
+
+            if (!$current) {
+                continue;
+            }
+
+            // Only update if something changed
+            if ($current->post_parent != $new_parent || $current->menu_order != $new_order) {
+                $result = $wpdb->update(
+                    $wpdb->posts,
+                    [
+                        'post_parent' => $new_parent,
+                        'menu_order' => $new_order,
+                    ],
+                    ['ID' => $page_id],
+                    ['%d', '%d'],
+                    ['%d']
+                );
+
+                if ($result !== false) {
+                    $updated++;
+                    // Clear post cache
+                    clean_post_cache($page_id);
+                } else {
+                    $errors[] = "Fehler beim Aktualisieren von Seite ID $page_id";
+                }
+            }
+        }
+
+        if ($updated > 0) {
             wp_send_json_success([
-                'message' => 'Hierarchie aktualisiert.',
-                'page_id' => $page_id,
-                'new_parent' => $new_parent
+                'updated' => $updated,
+                'message' => sprintf('%d Seite(n) aktualisiert.', $updated),
+                'errors' => $errors
             ]);
         } else {
-            wp_send_json_error(['message' => 'Fehler beim Aktualisieren der Hierarchie.']);
+            wp_send_json_error([
+                'message' => 'Keine Änderungen vorgenommen.',
+                'errors' => $errors
+            ]);
         }
     }
 
