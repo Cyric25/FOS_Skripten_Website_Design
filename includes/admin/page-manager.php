@@ -80,11 +80,11 @@ class Simple_Clean_Page_Manager {
         }
 
         // Our custom CSS
-        $css_file = get_template_directory() . '/dist/css/page-manager.css';
+        $css_file = get_template_directory() . '/dist/css/page-manager-style.css';
         if (file_exists($css_file)) {
             wp_enqueue_style(
                 'page-manager-style',
-                get_template_directory_uri() . '/dist/css/page-manager.css',
+                get_template_directory_uri() . '/dist/css/page-manager-style.css',
                 [],
                 filemtime($css_file)
             );
