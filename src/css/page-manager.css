@@ -103,25 +103,16 @@
     min-height: 0;
     padding: 0;
     border-left: none;
+    display: none; /* Unsichtbar - nur für Sortable-Funktionalität */
 }
 
 .page-tree-children.empty-children.accepting-drop {
-    min-height: 50px;
-    padding: 10px;
-    border: 2px dashed #0073aa;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #f0f6fc 0%, #e5f5fa 100%);
+    min-height: 20px;
+    padding: 5px 0;
     margin-left: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.page-tree-children.empty-children.accepting-drop::before {
-    content: "↓ Hier ablegen";
-    color: #0073aa;
-    font-size: 12px;
-    font-weight: 500;
+    display: block;
+    border-left: 3px solid #0073aa;
+    background: transparent;
 }
 
 /* ===================================================================
@@ -294,26 +285,28 @@
     z-index: 10000;
 }
 
+/* Visual feedback when hovering over a page to make it a child */
+.page-item.ui-sortable-hover > .page-item-row {
+    background: #f0f6fc;
+    border-left: 4px solid #0073aa;
+    padding-left: 11px; /* 15px - 4px border */
+}
+
+.page-item.ui-sortable-hover > .page-item-row::before {
+    content: "→ ";
+    color: #0073aa;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
 /* Placeholder */
 .page-item-placeholder {
     height: 52px;
     margin: 4px 0;
-    background: linear-gradient(135deg, #f0f6fc 0%, #e5f5fa 100%);
+    background: #f0f6fc;
     border: 2px dashed #0073aa;
     border-radius: 6px;
-    position: relative;
-}
-
-.page-item-placeholder::before {
-    content: "↓";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    color: #0073aa;
-    font-size: 24px;
-    font-weight: bold;
-    opacity: 0.5;
+    opacity: 0.6;
 }
 
 /* ===================================================================
