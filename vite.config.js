@@ -14,7 +14,9 @@ export default defineConfig({
         main: resolve(__dirname, 'src/js/main.js'),
         glossar: resolve(__dirname, 'src/js/glossar.js'),
         'glossar-editor': resolve(__dirname, 'src/js/glossar-editor.js'),
-        'glossar-style': resolve(__dirname, 'src/css/glossar.css')
+        'glossar-style': resolve(__dirname, 'src/css/glossar.css'),
+        'page-manager': resolve(__dirname, 'src/js/page-manager.js'),
+        'page-manager-style': resolve(__dirname, 'src/css/page-manager.css')
       },
       output: {
         // Output format

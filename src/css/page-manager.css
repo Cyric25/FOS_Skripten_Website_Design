@@ -1,0 +1,314 @@
+/**
+ * Seitenmanager - Page Manager Styles
+ *
+ * @package FOS_Online_Schulbuch
+ * @since 1.4.7
+ */
+
+/* ===================================================================
+   Container
+   =================================================================== */
+
+.page-manager-wrap {
+    max-width: 900px;
+}
+
+.page-manager-wrap h1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-manager-wrap .description {
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+/* ===================================================================
+   Toolbar
+   =================================================================== */
+
+.page-manager-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.page-manager-toolbar .button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-manager-toolbar .button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.save-status {
+    margin-left: auto;
+    font-weight: 500;
+}
+
+.save-status.status-saved {
+    color: #46b450;
+}
+
+.save-status.status-error {
+    color: #dc3232;
+}
+
+/* ===================================================================
+   Page Tree Container
+   =================================================================== */
+
+.page-manager-container {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+/* ===================================================================
+   Page Tree Lists
+   =================================================================== */
+
+.page-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.page-tree-children {
+    list-style: none;
+    margin: 0 0 0 30px;
+    padding: 0;
+    border-left: 2px solid #eee;
+}
+
+.page-tree-children.empty-children {
+    min-height: 0;
+    padding: 0;
+    border-left: none;
+}
+
+.page-tree-children.empty-children.accepting-drop {
+    min-height: 40px;
+    padding: 5px;
+    border: 2px dashed #0073aa;
+    border-radius: 4px;
+    background: #f0f6fc;
+    margin-left: 30px;
+}
+
+/* ===================================================================
+   Page Item
+   =================================================================== */
+
+.page-item {
+    margin: 2px 0;
+}
+
+.page-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.page-item-row:hover {
+    background: #f0f0f0;
+    border-color: #c3c4c7;
+}
+
+/* ===================================================================
+   Drag Handle
+   =================================================================== */
+
+.drag-handle {
+    cursor: grab;
+    color: #999;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.drag-handle:hover {
+    color: #0073aa;
+}
+
+.drag-handle .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ===================================================================
+   Toggle Button
+   =================================================================== */
+
+.toggle-children {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-children:hover {
+    color: #0073aa;
+}
+
+.toggle-children .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s;
+}
+
+.toggle-placeholder {
+    width: 24px;
+}
+
+/* ===================================================================
+   Page Title
+   =================================================================== */
+
+.page-title {
+    flex: 1;
+    font-weight: 500;
+    color: #1d2327;
+}
+
+/* ===================================================================
+   Status Badges
+   =================================================================== */
+
+.page-status-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.badge-draft {
+    background: #f0f0f1;
+    color: #646970;
+}
+
+.badge-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-private {
+    background: #f0e6ff;
+    color: #6b21a8;
+}
+
+/* Status classes for rows */
+.page-item.status-draft .page-title {
+    color: #666;
+}
+
+.page-item.status-pending .page-title {
+    color: #856404;
+}
+
+.page-item.status-private .page-title {
+    color: #6b21a8;
+}
+
+/* ===================================================================
+   Page Actions
+   =================================================================== */
+
+.page-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.page-item-row:hover .page-actions {
+    opacity: 1;
+}
+
+.page-actions .button {
+    padding: 0 6px;
+    min-height: 26px;
+    line-height: 24px;
+}
+
+.page-actions .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+}
+
+/* ===================================================================
+   Dragging States
+   =================================================================== */
+
+.page-item.dragging > .page-item-row {
+    background: #e5f5fa;
+    border-color: #0073aa;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.page-item.ui-sortable-helper {
+    z-index: 10000;
+}
+
+/* Placeholder */
+.page-item-placeholder {
+    height: 46px;
+    margin: 2px 0;
+    background: #f0f6fc;
+    border: 2px dashed #0073aa;
+    border-radius: 4px;
+}
+
+/* ===================================================================
+   No Pages Message
+   =================================================================== */
+
+.no-pages {
+    padding: 40px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* ===================================================================
+   Responsive Adjustments
+   =================================================================== */
+
+@media screen and (max-width: 782px) {
+    .page-manager-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .page-actions {
+        opacity: 1;
+    }
+
+    .page-tree-children {
+        margin-left: 20px;
+    }
+}

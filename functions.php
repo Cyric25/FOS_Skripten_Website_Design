@@ -3860,3 +3860,12 @@ function simple_clean_glossar_bulk_scan_batch_ajax() {
     ]);
 }
 add_action('wp_ajax_glossar_bulk_scan_batch', 'simple_clean_glossar_bulk_scan_batch_ajax');
+
+// ===================================================================
+// SEITENMANAGER - HIERARCHICAL PAGE MANAGER
+// ===================================================================
+
+// Include Page Manager class (admin only)
+if (is_admin()) {
+    require_once get_template_directory() . '/includes/admin/page-manager.php';
+}
