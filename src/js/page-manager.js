@@ -137,7 +137,7 @@
                 items: '> .page-item',
                 handle: '.drag-handle',
                 placeholder: 'page-item-placeholder',
-                connectWith: '.sortable-list',
+                connectWith: '.sortable-list:not(.empty-children)',
                 tolerance: 'pointer',
                 cursor: 'grabbing',
                 opacity: 0.8,
@@ -148,6 +148,9 @@
                     ui.placeholder.height(ui.item.height());
                     ui.item.addClass('dragging');
 
+                    // Make empty drop zones connectable
+                    $('.sortable-list').sortable('option', 'connectWith', '.sortable-list');
+
                     // Expand empty drop zones
                     $('.empty-children').addClass('accepting-drop');
                 },
@@ -156,6 +159,9 @@
                 stop: function(event, ui) {
                     ui.item.removeClass('dragging');
                     $('.empty-children').removeClass('accepting-drop');
+
+                    // Reset connectWith to exclude empty-children
+                    $('.sortable-list').sortable('option', 'connectWith', '.sortable-list:not(.empty-children)');
                 },
 
                 // Handle changes (both within list and between lists)
