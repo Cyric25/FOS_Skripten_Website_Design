@@ -206,11 +206,19 @@
             const self = this;
             const orderData = [];
 
-            // Collect order from all lists
+            // Collect order from all lists that actually have children
             $('.sortable-list').each(function() {
-                const parentId = $(this).data('parent');
+                const $list = $(this);
+                const $items = $list.children('.page-item');
 
-                $(this).children('.page-item').each(function(index) {
+                // Skip empty lists (no pages in them)
+                if ($items.length === 0) {
+                    return;
+                }
+
+                const parentId = $list.data('parent');
+
+                $items.each(function(index) {
                     orderData.push({
                         id: $(this).data('page-id'),
                         parent: parentId,
@@ -218,6 +226,9 @@
                     });
                 });
             });
+
+            // Debug: Log what we're about to save
+            console.log('Speichere Seitenreihenfolge:', orderData);
 
             // Show saving indicator
             self.showStatus('saving');
