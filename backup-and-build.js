@@ -6,9 +6,47 @@ import { execSync } from 'child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read version from package.json
+/**
+ * Increment patch version (e.g., 1.5.2 -> 1.5.3)
+ */
+function incrementVersion(version) {
+    const parts = version.split('.');
+    parts[2] = parseInt(parts[2]) + 1;
+    return parts.join('.');
+}
+
+/**
+ * Update version in package.json
+ */
+function updatePackageVersion(newVersion) {
+    const packagePath = path.join(__dirname, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    packageJson.version = newVersion;
+    fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
+    return packageJson;
+}
+
+/**
+ * Update version in style.css
+ */
+function updateStyleVersion(newVersion) {
+    const stylePath = path.join(__dirname, 'style.css');
+    let styleContent = fs.readFileSync(stylePath, 'utf8');
+    styleContent = styleContent.replace(/Version: [\d.]+/, `Version: ${newVersion}`);
+    fs.writeFileSync(stylePath, styleContent, 'utf8');
+}
+
+// Read current version from package.json
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-const version = packageJson.version;
+const oldVersion = packageJson.version;
+const version = incrementVersion(oldVersion);
+
+// Update version in both files
+console.log(`📌 Versionsnummer erhöhen: ${oldVersion} → ${version}\n`);
+updatePackageVersion(version);
+updateStyleVersion(version);
+console.log('   ✓ package.json aktualisiert');
+console.log('   ✓ style.css aktualisiert\n');
 
 const distDir = path.join(__dirname, 'dist');
 const backupDir = path.join(__dirname, 'backups');
