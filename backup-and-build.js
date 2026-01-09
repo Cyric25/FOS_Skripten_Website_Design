@@ -27,12 +27,21 @@ function updatePackageVersion(newVersion) {
 }
 
 /**
- * Update version in style.css
+ * Update version in style.css (both Version field and Theme Name)
  */
 function updateStyleVersion(newVersion) {
     const stylePath = path.join(__dirname, 'style.css');
     let styleContent = fs.readFileSync(stylePath, 'utf8');
+
+    // Update Version: field
     styleContent = styleContent.replace(/Version: [\d.]+/, `Version: ${newVersion}`);
+
+    // Update Theme Name: to include version number
+    styleContent = styleContent.replace(
+        /Theme Name: FOS Online Schulbuch( v[\d.]+)?/,
+        `Theme Name: FOS Online Schulbuch v${newVersion}`
+    );
+
     fs.writeFileSync(stylePath, styleContent, 'utf8');
 }
 

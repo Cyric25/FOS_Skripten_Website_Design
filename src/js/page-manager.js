@@ -138,6 +138,7 @@
          */
         initSortables: function() {
             const self = this;
+            let invalidDropDetected = false;  // Flag for invalid drop
 
             // Make all sortable lists sortable
             $('.sortable-list').sortable({
@@ -145,15 +146,20 @@
                 handle: '.drag-handle',
                 placeholder: 'page-item-placeholder',
                 connectWith: '.sortable-list',
-                tolerance: 'pointer',
+                tolerance: 'intersect',  // Better drop detection - element must overlap drop zone
                 cursor: 'grabbing',
                 opacity: 0.8,
-                revert: true,  // Always revert if dropped outside valid zones
+                revert: 200,  // Always show revert animation for invalid drops
                 forceHelperSize: true,
-                scroll: false,  // Prevent auto-scrolling issues
+                scroll: true,  // Enable auto-scrolling when dragging near edges
+                scrollSensitivity: 40,
+                scrollSpeed: 40,
+                // No containment - allow free dragging to prevent "flying away" effect
 
                 // Visual feedback on start
                 start: function(event, ui) {
+                    invalidDropDetected = false;  // Reset flag
+
                     ui.placeholder.height(ui.item.height());
                     ui.item.addClass('dragging');
 
@@ -168,28 +174,6 @@
                     $('.page-manager-container').addClass('drag-active');
                 },
 
-                // Before stop - validate drop
-                beforeStop: function(event, ui) {
-                    const $currentParent = ui.item.parent();
-
-                    // Check if item is in a valid sortable list
-                    if (!$currentParent.hasClass('sortable-list')) {
-                        // Item was dropped outside a valid list - cancel and return to original
-                        const $originalParent = ui.item.data('original-parent');
-                        const originalIndex = ui.item.data('original-index');
-
-                        if ($originalParent && $originalParent.length) {
-                            // Move back to original position
-                            const $siblings = $originalParent.children('.page-item');
-                            if (originalIndex >= $siblings.length) {
-                                $originalParent.append(ui.item);
-                            } else {
-                                ui.item.insertBefore($siblings.eq(originalIndex));
-                            }
-                        }
-                    }
-                },
-
                 // When hovering over a page item row
                 over: function(event, ui) {
                     const $list = $(this);
@@ -200,9 +184,50 @@
                     }
                 },
 
+                // Before stop - CRITICAL: Detect invalid drops
+                beforeStop: function(event, ui) {
+                    const $currentParent = ui.item.parent();
+
+                    // Check 1: Not in a sortable list at all
+                    if (!$currentParent.hasClass('sortable-list')) {
+                        invalidDropDetected = true;
+                    }
+
+                    // Check 2: In a collapsed/hidden children list
+                    if ($currentParent.hasClass('page-tree-children') &&
+                        !$currentParent.hasClass('visible') &&
+                        !$currentParent.hasClass('accepting-drop')) {
+                        invalidDropDetected = true;
+                    }
+
+                    // Check 3: Negative position indicates invalid drop
+                    const itemPos = ui.item.position();
+                    if (itemPos && itemPos.top < -2) {
+                        invalidDropDetected = true;
+                    }
+                },
+
                 // Clean up on stop
                 stop: function(event, ui) {
                     ui.item.removeClass('dragging');
+
+                    // CRITICAL: If invalid drop detected, move back manually
+                    if (invalidDropDetected) {
+                        const $originalParent = ui.item.data('original-parent');
+                        const originalIndex = ui.item.data('original-index');
+
+                        if ($originalParent && $originalParent.length) {
+                            const $siblings = $originalParent.children('.page-item');
+                            if (originalIndex >= $siblings.length) {
+                                $originalParent.append(ui.item);
+                            } else {
+                                ui.item.insertBefore($siblings.eq(originalIndex));
+                            }
+                        }
+
+                        // Reset flag
+                        invalidDropDetected = false;
+                    }
 
                     // Remove drag-active class from container
                     $('.page-manager-container').removeClass('drag-active');
@@ -291,9 +316,6 @@
                     });
                 });
             });
-
-            // Debug: Log what we're about to save
-            console.log('Speichere Seitenreihenfolge:', orderData);
 
             // Show saving indicator
             self.showStatus('saving');
