@@ -144,31 +144,46 @@
                 items: '> .page-item',
                 handle: '.drag-handle',
                 placeholder: 'page-item-placeholder',
-                connectWith: '.sortable-list:not(.empty-children)',
+                connectWith: '.sortable-list',
                 tolerance: 'pointer',
                 cursor: 'grabbing',
                 opacity: 0.8,
-                revert: 100,
+                revert: 150,
+                forceHelperSize: true,
 
                 // Visual feedback on start
                 start: function(event, ui) {
                     ui.placeholder.height(ui.item.height());
                     ui.item.addClass('dragging');
 
-                    // Make empty drop zones connectable
-                    $('.sortable-list').sortable('option', 'connectWith', '.sortable-list');
+                    // Show all empty-children as potential drop zones
+                    $('.empty-children').addClass('accepting-drop').css('display', 'block');
+                },
 
-                    // Expand empty drop zones
-                    $('.empty-children').addClass('accepting-drop');
+                // When hovering over a page item row
+                over: function(event, ui) {
+                    const $list = $(this);
+
+                    // If hovering over an empty-children list, show it
+                    if ($list.hasClass('empty-children')) {
+                        $list.addClass('accepting-drop').css('display', 'block');
+                    }
                 },
 
                 // Clean up on stop
                 stop: function(event, ui) {
                     ui.item.removeClass('dragging');
-                    $('.empty-children').removeClass('accepting-drop');
 
-                    // Reset connectWith to exclude empty-children
-                    $('.sortable-list').sortable('option', 'connectWith', '.sortable-list:not(.empty-children)');
+                    // Hide empty-children that are still empty
+                    $('.empty-children').each(function() {
+                        const $list = $(this);
+                        if ($list.children('.page-item').length === 0) {
+                            $list.removeClass('accepting-drop').css('display', '');
+                        } else {
+                            // Has children now, keep it visible and remove empty-children class
+                            $list.removeClass('empty-children accepting-drop').addClass('visible');
+                        }
+                    });
                 },
 
                 // Handle changes (both within list and between lists)
@@ -213,8 +228,7 @@
             const self = this;
             const orderData = [];
 
-            // Only collect from root list and VISIBLE children lists
-            // This prevents collecting from hidden empty-children lists
+            // Collect from root list
             $('#page-tree-root').children('.page-item').each(function(index) {
                 orderData.push({
                     id: $(this).data('page-id'),
@@ -223,12 +237,20 @@
                 });
             });
 
-            // Collect from visible children lists
-            $('.page-tree-children.visible').each(function() {
+            // Collect from all children lists that have actual pages
+            // (visible OR newly populated empty-children that now have items)
+            $('.page-tree-children').each(function() {
                 const $list = $(this);
+                const $items = $list.children('.page-item');
+
+                // Skip if this list has no items
+                if ($items.length === 0) {
+                    return;
+                }
+
                 const parentId = $list.data('parent');
 
-                $list.children('.page-item').each(function(index) {
+                $items.each(function(index) {
                     orderData.push({
                         id: $(this).data('page-id'),
                         parent: parentId,

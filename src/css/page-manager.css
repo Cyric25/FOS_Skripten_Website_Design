@@ -107,12 +107,23 @@
 }
 
 .page-tree-children.empty-children.accepting-drop {
-    min-height: 20px;
-    padding: 5px 0;
+    min-height: 40px;
+    padding: 10px 0;
     margin-left: 40px;
-    display: block;
+    display: block !important;
     border-left: 3px solid #0073aa;
-    background: transparent;
+    background: rgba(0, 115, 170, 0.05);
+    transition: all 0.2s ease;
+}
+
+.page-tree-children.empty-children.accepting-drop::before {
+    content: "Hier ablegen um Unterseite zu erstellen";
+    display: block;
+    padding-left: 20px;
+    color: #0073aa;
+    font-size: 12px;
+    font-style: italic;
+    opacity: 0.7;
 }
 
 /* ===================================================================
