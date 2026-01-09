@@ -80,6 +80,13 @@
                 }
             });
 
+            // Toggle status
+            $(document).on('click', '.toggle-status', function() {
+                const pageId = $(this).data('page-id');
+                const $button = $(this);
+                self.toggleStatus(pageId, $button);
+            });
+
             // Toggle children visibility
             $(document).on('click', '.toggle-children', function(e) {
                 e.preventDefault();
@@ -206,19 +213,22 @@
             const self = this;
             const orderData = [];
 
-            // Collect order from all lists that actually have children
-            $('.sortable-list').each(function() {
+            // Only collect from root list and VISIBLE children lists
+            // This prevents collecting from hidden empty-children lists
+            $('#page-tree-root').children('.page-item').each(function(index) {
+                orderData.push({
+                    id: $(this).data('page-id'),
+                    parent: 0,
+                    order: index
+                });
+            });
+
+            // Collect from visible children lists
+            $('.page-tree-children.visible').each(function() {
                 const $list = $(this);
-                const $items = $list.children('.page-item');
-
-                // Skip empty lists (no pages in them)
-                if ($items.length === 0) {
-                    return;
-                }
-
                 const parentId = $list.data('parent');
 
-                $items.each(function(index) {
+                $list.children('.page-item').each(function(index) {
                     orderData.push({
                         id: $(this).data('page-id'),
                         parent: parentId,
@@ -375,6 +385,66 @@
                 },
                 error: function() {
                     self.showStatus('error', 'Fehler beim Löschen der Seite.');
+                }
+            });
+        },
+
+        /**
+         * Toggle page status (publish <-> draft)
+         *
+         * @param {int} pageId - Page ID
+         * @param {jQuery} $button - Button element
+         */
+        toggleStatus: function(pageId, $button) {
+            const self = this;
+
+            // Show loading
+            self.showStatus('saving', 'Status wird geändert...');
+
+            // Send AJAX request
+            $.ajax({
+                url: pageManagerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'page_manager_toggle_status',
+                    nonce: pageManagerData.nonce,
+                    page_id: pageId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showStatus('saved', response.data.message);
+
+                        const newStatus = response.data.new_status;
+                        const newIcon = response.data.icon;
+
+                        // Update button
+                        $button.data('current-status', newStatus);
+                        $button.find('.dashicons')
+                            .removeClass('dashicons-visibility dashicons-hidden')
+                            .addClass(newIcon);
+
+                        // Update page item class
+                        const $pageItem = $button.closest('.page-item');
+                        $pageItem.removeClass('status-publish status-draft status-pending status-private');
+                        $pageItem.addClass('status-' + newStatus);
+
+                        // Update status badge
+                        const $badge = $pageItem.find('.page-status-badge');
+                        if (newStatus === 'draft') {
+                            if ($badge.length === 0) {
+                                $pageItem.find('.page-title').after('<span class="page-status-badge badge-draft">Entwurf</span>');
+                            } else {
+                                $badge.removeClass().addClass('page-status-badge badge-draft').text('Entwurf');
+                            }
+                        } else if (newStatus === 'publish') {
+                            $badge.remove();
+                        }
+                    } else {
+                        self.showStatus('error', response.data.message);
+                    }
+                },
+                error: function() {
+                    self.showStatus('error', 'Fehler beim Ändern des Status.');
                 }
             });
         }

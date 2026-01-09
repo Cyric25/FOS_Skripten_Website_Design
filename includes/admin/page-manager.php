@@ -30,6 +30,7 @@ class Simple_Clean_Page_Manager {
         add_action('wp_ajax_page_manager_update_order', [__CLASS__, 'ajax_update_order']);
         add_action('wp_ajax_page_manager_create_page', [__CLASS__, 'ajax_create_page']);
         add_action('wp_ajax_page_manager_delete_page', [__CLASS__, 'ajax_delete_page']);
+        add_action('wp_ajax_page_manager_toggle_status', [__CLASS__, 'ajax_toggle_status']);
     }
 
     /**
@@ -210,13 +211,23 @@ class Simple_Clean_Page_Manager {
                 <?php self::render_status_badge($page->post_status); ?>
 
                 <span class="page-actions">
+                    <button type="button" class="button button-small toggle-status"
+                            data-page-id="<?php echo esc_attr($page->ID); ?>"
+                            data-current-status="<?php echo esc_attr($page->post_status); ?>"
+                            title="Status ändern">
+                        <?php if ($page->post_status === 'publish'): ?>
+                            <span class="dashicons dashicons-visibility"></span>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-hidden"></span>
+                        <?php endif; ?>
+                    </button>
                     <a href="<?php echo esc_url(get_edit_post_link($page->ID)); ?>"
                        class="button button-small" title="Bearbeiten">
                         <span class="dashicons dashicons-edit"></span>
                     </a>
                     <a href="<?php echo esc_url(get_permalink($page->ID)); ?>"
                        class="button button-small" target="_blank" title="Ansehen">
-                        <span class="dashicons dashicons-visibility"></span>
+                        <span class="dashicons dashicons-external"></span>
                     </a>
                     <button type="button" class="button button-small delete-page"
                             data-page-id="<?php echo esc_attr($page->ID); ?>"
@@ -452,6 +463,55 @@ class Simple_Clean_Page_Manager {
         }
 
         wp_send_json_success(['message' => 'Seite gelöscht.']);
+    }
+
+    /**
+     * AJAX handler: Toggle page status
+     */
+    public static function ajax_toggle_status() {
+        // Security check
+        check_ajax_referer('page_manager_nonce', 'nonce');
+
+        if (!current_user_can('edit_pages')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung.']);
+        }
+
+        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
+
+        if (!$page_id) {
+            wp_send_json_error(['message' => 'Keine Seiten-ID.']);
+        }
+
+        // Get page
+        $page = get_post($page_id);
+        if (!$page || $page->post_type !== 'page') {
+            wp_send_json_error(['message' => 'Seite nicht gefunden.']);
+        }
+
+        // Toggle status: publish <-> draft
+        $new_status = ($page->post_status === 'publish') ? 'draft' : 'publish';
+
+        // Update status
+        $result = wp_update_post([
+            'ID' => $page_id,
+            'post_status' => $new_status
+        ]);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(['message' => 'Fehler beim Ändern des Status.']);
+        }
+
+        // Get localized status labels
+        $status_labels = [
+            'publish' => 'Veröffentlicht',
+            'draft' => 'Entwurf'
+        ];
+
+        wp_send_json_success([
+            'message' => 'Status geändert zu: ' . $status_labels[$new_status],
+            'new_status' => $new_status,
+            'icon' => ($new_status === 'publish') ? 'dashicons-visibility' : 'dashicons-hidden'
+        ]);
     }
 }
 
