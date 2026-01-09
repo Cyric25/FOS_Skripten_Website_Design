@@ -158,6 +158,9 @@
 
                     // Show all empty-children as potential drop zones
                     $('.empty-children').addClass('accepting-drop').css('display', 'block');
+
+                    // Highlight root list as drop zone
+                    $('.page-manager-container').addClass('drag-active');
                 },
 
                 // When hovering over a page item row
@@ -173,6 +176,9 @@
                 // Clean up on stop
                 stop: function(event, ui) {
                     ui.item.removeClass('dragging');
+
+                    // Remove drag-active class from container
+                    $('.page-manager-container').removeClass('drag-active');
 
                     // Hide empty-children that are still empty
                     $('.empty-children').each(function() {
