@@ -148,19 +148,46 @@
                 tolerance: 'pointer',
                 cursor: 'grabbing',
                 opacity: 0.8,
-                revert: 150,
+                revert: true,  // Always revert if dropped outside valid zones
                 forceHelperSize: true,
+                scroll: false,  // Prevent auto-scrolling issues
 
                 // Visual feedback on start
                 start: function(event, ui) {
                     ui.placeholder.height(ui.item.height());
                     ui.item.addClass('dragging');
 
+                    // Store original parent list for safety
+                    ui.item.data('original-parent', ui.item.parent());
+                    ui.item.data('original-index', ui.item.index());
+
                     // Show all empty-children as potential drop zones
                     $('.empty-children').addClass('accepting-drop').css('display', 'block');
 
                     // Highlight root list as drop zone
                     $('.page-manager-container').addClass('drag-active');
+                },
+
+                // Before stop - validate drop
+                beforeStop: function(event, ui) {
+                    const $currentParent = ui.item.parent();
+
+                    // Check if item is in a valid sortable list
+                    if (!$currentParent.hasClass('sortable-list')) {
+                        // Item was dropped outside a valid list - cancel and return to original
+                        const $originalParent = ui.item.data('original-parent');
+                        const originalIndex = ui.item.data('original-index');
+
+                        if ($originalParent && $originalParent.length) {
+                            // Move back to original position
+                            const $siblings = $originalParent.children('.page-item');
+                            if (originalIndex >= $siblings.length) {
+                                $originalParent.append(ui.item);
+                            } else {
+                                ui.item.insertBefore($siblings.eq(originalIndex));
+                            }
+                        }
+                    }
                 },
 
                 // When hovering over a page item row
