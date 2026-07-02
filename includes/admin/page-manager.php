@@ -103,12 +103,19 @@ class Simple_Clean_Page_Manager {
             wp_die(__('Sie haben keine Berechtigung für diese Seite.'));
         }
 
-        // Get all top-level pages
-        $pages = get_pages([
-            'parent' => 0,
+        // Get ALL pages in one query and build a parent => children map
+        // (avoids one query per tree node)
+        $all_pages = get_pages([
             'sort_column' => 'menu_order, post_title',
             'post_status' => ['publish', 'draft', 'pending', 'private'],
         ]);
+
+        $children_map = [];
+        foreach ($all_pages as $tree_page) {
+            $children_map[$tree_page->post_parent][] = $tree_page;
+        }
+
+        $pages = isset($children_map[0]) ? $children_map[0] : [];
 
         ?>
         <div class="wrap page-manager-wrap">
@@ -163,7 +170,7 @@ class Simple_Clean_Page_Manager {
                 <?php if ($pages): ?>
                     <ul class="page-tree sortable-list" id="page-tree-root" data-parent="0">
                         <?php foreach ($pages as $page): ?>
-                            <?php self::render_page_item($page); ?>
+                            <?php self::render_page_item($page, $children_map); ?>
                         <?php endforeach; ?>
                     </ul>
                 <?php else: ?>
@@ -178,14 +185,11 @@ class Simple_Clean_Page_Manager {
      * Render a single page item with its children
      *
      * @param WP_Post $page The page object
+     * @param array $children_map Prebuilt map: parent ID => array of child WP_Post objects
      */
-    private static function render_page_item($page) {
-        // Get children
-        $children = get_pages([
-            'parent' => $page->ID,
-            'sort_column' => 'menu_order, post_title',
-            'post_status' => ['publish', 'draft', 'pending', 'private'],
-        ]);
+    private static function render_page_item($page, $children_map) {
+        // Get children from the prebuilt map (no extra query per node)
+        $children = isset($children_map[$page->ID]) ? $children_map[$page->ID] : [];
 
         $has_children = !empty($children);
         $status_class = 'status-' . $page->post_status;
@@ -251,7 +255,7 @@ class Simple_Clean_Page_Manager {
             <?php if ($has_children): ?>
                 <ul class="page-tree-children sortable-list" data-parent="<?php echo esc_attr($page->ID); ?>">
                     <?php foreach ($children as $child): ?>
-                        <?php self::render_page_item($child); ?>
+                        <?php self::render_page_item($child, $children_map); ?>
                     <?php endforeach; ?>
                 </ul>
             <?php else: ?>

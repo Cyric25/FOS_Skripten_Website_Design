@@ -36,18 +36,28 @@ if (!defined('ABSPATH')) {
             echo '<div class="sidebar-section-title">' . esc_html($root_title) . '</div>';
         }
 
-        // Get child pages of the root page
-        $pages = get_pages(array(
+        // Load ALL descendants of the root page in a single query and
+        // build a parent => children map (avoids one query per tree node)
+        $all_pages = get_pages(array(
             'child_of' => $root_page_id,
-            'parent' => $root_page_id,
             'sort_column' => 'menu_order, post_title',
         ));
+
+        $children_map = array();
+        foreach ($all_pages as $tree_page) {
+            $children_map[$tree_page->post_parent][] = $tree_page;
+        }
+
+        // Ancestors of the current page, computed once for the whole tree
+        $current_ancestors = get_post_ancestors($current_page_id);
+
+        $pages = isset($children_map[$root_page_id]) ? $children_map[$root_page_id] : array();
 
         if ($pages) {
             echo '<ul class="page-tree">';
 
             foreach ($pages as $page) {
-                display_page_tree_item($page, $current_page_id, 0, true); // true = auto-expand all
+                display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, 0, true); // true = auto-expand all
             }
 
             echo '</ul>';
@@ -89,26 +99,18 @@ function get_root_page_id($page_id) {
  *
  * @param WP_Post $page Current page object
  * @param int $current_page_id Currently viewed page ID
+ * @param array $children_map Prebuilt map: parent ID => array of child WP_Post objects
+ * @param array $current_ancestors Ancestor IDs of the currently viewed page
  * @param int $depth Current depth level
  * @param bool $auto_expand Auto-expand all items
  */
-function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expand = true) {
-    // Get child pages
-    $children = get_pages(array(
-        'child_of' => $page->ID,
-        'parent' => $page->ID,
-        'sort_column' => 'menu_order, post_title',
-    ));
+function display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, $depth = 0, $auto_expand = true) {
+    // Get child pages from the prebuilt map (no extra query per node)
+    $children = isset($children_map[$page->ID]) ? $children_map[$page->ID] : array();
 
     $has_children = !empty($children);
     $is_current = ($page->ID == $current_page_id);
-    $is_ancestor = false;
-
-    // Check if current page is a descendant of this page
-    if (!$is_current) {
-        $ancestors = get_post_ancestors($current_page_id);
-        $is_ancestor = in_array($page->ID, $ancestors);
-    }
+    $is_ancestor = !$is_current && in_array($page->ID, $current_ancestors);
 
     // Build CSS classes
     $classes = array('page-item');
@@ -145,7 +147,7 @@ function display_page_tree_item($page, $current_page_id, $depth = 0, $auto_expan
     if ($has_children) {
         echo '<ul class="page-tree-children">';
         foreach ($children as $child) {
-            display_page_tree_item($child, $current_page_id, $depth + 1, $auto_expand);
+            display_page_tree_item($child, $current_page_id, $children_map, $current_ancestors, $depth + 1, $auto_expand);
         }
         echo '</ul>';
     }

@@ -662,16 +662,20 @@ function simple_clean_handle_glossar_export() {
 }
 
 // Helper function: Check if term or variation already exists
-function simple_clean_glossar_term_exists_or_similar($term) {
+// $existing_posts kann vorgeladen übergeben werden (z. B. beim CSV-Import),
+// sonst werden die Glossar-Posts pro Aufruf geladen.
+function simple_clean_glossar_term_exists_or_similar($term, $existing_posts = null) {
     // Normalize the input term
     $normalized_term = simple_clean_normalize_glossar_term($term);
 
-    // Get all existing glossar terms
-    $existing_posts = get_posts(array(
-        'post_type' => 'glossar',
-        'posts_per_page' => -1,
-        'post_status' => array('publish', 'draft', 'pending'),
-    ));
+    // Get all existing glossar terms (unless provided by the caller)
+    if ($existing_posts === null) {
+        $existing_posts = get_posts(array(
+            'post_type' => 'glossar',
+            'posts_per_page' => -1,
+            'post_status' => array('publish', 'draft', 'pending'),
+        ));
+    }
 
     foreach ($existing_posts as $post) {
         $existing_normalized = simple_clean_normalize_glossar_term($post->post_title);
@@ -810,6 +814,13 @@ function simple_clean_handle_glossar_import() {
     $errors = array();
     $row_number = 0;
 
+    // Bestehende Begriffe EINMAL laden statt pro CSV-Zeile
+    $existing_posts = get_posts(array(
+        'post_type' => 'glossar',
+        'posts_per_page' => -1,
+        'post_status' => array('publish', 'draft', 'pending'),
+    ));
+
     while (($data = fgetcsv($file, 10000, ',')) !== false) {
         $row_number++;
 
@@ -855,7 +866,7 @@ function simple_clean_handle_glossar_import() {
         }
 
         // Check if term or variation already exists
-        $exists_check = simple_clean_glossar_term_exists_or_similar($term);
+        $exists_check = simple_clean_glossar_term_exists_or_similar($term, $existing_posts);
 
         if ($exists_check['exists']) {
             // Term or variation already exists
@@ -898,6 +909,12 @@ function simple_clean_handle_glossar_import() {
                 $skipped++;
             } else {
                 $imported++;
+                // Neu angelegten Begriff aufnehmen, damit Duplikate
+                // innerhalb derselben CSV weiterhin erkannt werden
+                $new_post = get_post($post_id);
+                if ($new_post) {
+                    $existing_posts[] = $new_post;
+                }
             }
         }
     }
@@ -936,9 +953,22 @@ function simple_clean_glossar_assets() {
         );
     }
 
+    // Determine which terms this page actually needs (modal display only).
+    // Full term list with definitions on every page is too heavy with 500+ terms.
+    $terms_for_page = array();
+    if (is_singular() && !is_singular('glossar')) {
+        $candidates = get_post_meta(get_the_ID(), '_glossar_term_candidates', true);
+        if (is_array($candidates)) {
+            $terms_for_page = simple_clean_get_glossar_terms_by_ids($candidates);
+        } else {
+            // Not scanned yet: same fallback as the server-side linking
+            $terms_for_page = simple_clean_get_glossar_terms();
+        }
+    }
+
     // Enqueue glossar JavaScript (only for modals, NOT for auto-linking)
     $glossar_js = get_template_directory() . '/dist/js/glossar.js';
-    if (file_exists($glossar_js)) {
+    if (!empty($terms_for_page) && file_exists($glossar_js)) {
         wp_enqueue_script(
             'simple-clean-glossar',
             get_template_directory_uri() . '/dist/js/glossar.js',
@@ -947,13 +977,13 @@ function simple_clean_glossar_assets() {
             true
         );
 
-        // Pass settings to JavaScript (terms are now handled server-side)
+        // Pass settings to JavaScript (linking is handled server-side)
         wp_localize_script('simple-clean-glossar', 'glossarData', array(
             'modalType' => get_option('glossar_modal_type', 'tooltip'),
             'autoLink' => '0', // Disabled, handled server-side now
             'firstOnly' => get_option('glossar_first_only', '1'),
             'caseSensitive' => get_option('glossar_case_sensitive', '0'),
-            'terms' => simple_clean_get_glossar_terms(), // Still needed for modal display
+            'terms' => $terms_for_page, // Only terms relevant for this page
         ));
     }
 }
@@ -1793,9 +1823,19 @@ function simple_clean_track_glossar_usage($post_id = null) {
         return;
     }
 
-    // Get all glossar terms
-    $glossar_terms = simple_clean_get_glossar_terms();
+    // Nur Kandidaten-Begriffe prüfen (statt ALLER Begriffe) - reduziert die
+    // Varianten-Regex-Läufe bei großen Glossaren massiv
+    $candidates = get_post_meta($post_id, '_glossar_term_candidates', true);
+    if (is_array($candidates)) {
+        $glossar_terms = simple_clean_get_glossar_terms_by_ids($candidates);
+    } else {
+        // Noch nicht gescannt: alle Begriffe als Fallback
+        $glossar_terms = simple_clean_get_glossar_terms();
+    }
+
     if (empty($glossar_terms)) {
+        // Keine relevanten Begriffe (mehr) auf dieser Seite
+        delete_post_meta($post_id, '_glossar_terms_used');
         return;
     }
 
@@ -1901,20 +1941,22 @@ add_action('save_post_glossar', function($post_id, $post, $update) {
 function simple_clean_get_term_usage($term_id) {
     global $wpdb;
 
-    // Query all posts that have this term ID in their _glossar_terms_used meta
-    $query = "
+    // Serialized int arrays store IDs as "i:123;" - prefilter with LIKE in SQL
+    // instead of loading every post's meta (avoids N+1 queries)
+    $like = '%' . $wpdb->esc_like('i:' . (int) $term_id . ';') . '%';
+
+    $results = $wpdb->get_results($wpdb->prepare("
         SELECT DISTINCT p.ID, p.post_title, p.post_type, p.post_date
         FROM {$wpdb->posts} p
         INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
         WHERE pm.meta_key = '_glossar_terms_used'
+        AND pm.meta_value LIKE %s
         AND p.post_status = 'publish'
         AND p.post_type IN ('post', 'page')
         ORDER BY p.post_date DESC
-    ";
+    ", $like));
 
-    $results = $wpdb->get_results($query);
-
-    // Filter results to only include posts where our term_id is in the array
+    // Exact verification against the unserialized array (LIKE is only a prefilter)
     $matching_posts = array();
     foreach ($results as $post) {
         $used_terms = get_post_meta($post->ID, '_glossar_terms_used', true);
