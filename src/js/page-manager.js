@@ -16,6 +16,8 @@
         return;
     }
 
+    const STORAGE_KEY = 'pageManagerExpandedState';
+
     const PageManager = {
 
         /**
@@ -24,6 +26,7 @@
         init: function() {
             this.bindEvents();
             this.initSortables();
+            this.restoreExpandedState();
         },
 
         /**
@@ -32,16 +35,21 @@
         bindEvents: function() {
             const self = this;
 
-            // Create new page - open modal
+            // Create new page - open modal (top level)
             $('#create-new-page').on('click', function() {
-                $('#new-page-modal').fadeIn(200);
-                $('#new-page-title').focus();
+                self.openCreateModal(0, '');
+            });
+
+            // Create child page - open modal
+            $(document).on('click', '.create-child-page', function() {
+                const parentId = $(this).data('page-id');
+                const parentTitle = $(this).data('page-title');
+                self.openCreateModal(parentId, parentTitle);
             });
 
             // Create new page - close modal
             $('#create-page-cancel').on('click', function() {
-                $('#new-page-modal').fadeOut(200);
-                $('#new-page-title').val('');
+                self.closeCreateModal();
             });
 
             // Create new page - submit
@@ -66,7 +74,7 @@
             // Close modal on ESC key
             $(document).on('keydown', function(e) {
                 if (e.key === 'Escape' && $('#new-page-modal').is(':visible')) {
-                    $('#create-page-cancel').click();
+                    self.closeCreateModal();
                 }
             });
 
@@ -75,7 +83,7 @@
                 const pageId = $(this).data('page-id');
                 const pageTitle = $(this).data('page-title');
 
-                if (confirm('Möchten Sie die Seite "' + pageTitle + '" wirklich löschen?')) {
+                if (confirm('Möchten Sie die Seite "' + pageTitle + '" in den Papierkorb verschieben?')) {
                     self.deletePage(pageId);
                 }
             });
@@ -108,6 +116,9 @@
                 $(this).find('.dashicons')
                     .toggleClass('dashicons-arrow-down-alt2', !isExpanded)
                     .toggleClass('dashicons-arrow-right-alt2', isExpanded);
+
+                // Save state
+                self.saveExpandedState();
             });
 
             // Expand all
@@ -118,6 +129,7 @@
                     .find('.dashicons')
                     .removeClass('dashicons-arrow-right-alt2')
                     .addClass('dashicons-arrow-down-alt2');
+                self.saveExpandedState();
             });
 
             // Collapse all
@@ -130,6 +142,7 @@
                     .find('.dashicons')
                     .removeClass('dashicons-arrow-down-alt2')
                     .addClass('dashicons-arrow-right-alt2');
+                self.saveExpandedState();
             });
         },
 
@@ -387,12 +400,45 @@
         },
 
         /**
+         * Open the create page modal
+         *
+         * @param {int} parentId - Parent page ID (0 for top level)
+         * @param {string} parentTitle - Parent page title
+         */
+        openCreateModal: function(parentId, parentTitle) {
+            $('#new-page-parent-id').val(parentId);
+
+            if (parentId > 0) {
+                $('#new-page-modal-title').text('Unterseite erstellen');
+                $('#new-page-parent-name').text(parentTitle);
+                $('#new-page-modal-parent-info').show();
+            } else {
+                $('#new-page-modal-title').text('Neue Seite erstellen');
+                $('#new-page-modal-parent-info').hide();
+            }
+
+            $('#new-page-modal').fadeIn(200);
+            $('#new-page-title').focus();
+        },
+
+        /**
+         * Close the create page modal
+         */
+        closeCreateModal: function() {
+            $('#new-page-modal').fadeOut(200);
+            $('#new-page-title').val('');
+            $('#new-page-parent-id').val(0);
+            $('#new-page-modal-parent-info').hide();
+        },
+
+        /**
          * Create a new page
          *
          * @param {string} title - Page title
          */
         createPage: function(title) {
             const self = this;
+            const parentId = parseInt($('#new-page-parent-id').val(), 10) || 0;
 
             // Show loading
             self.showStatus('saving', 'Erstelle Seite...');
@@ -404,15 +450,23 @@
                 data: {
                     action: 'page_manager_create_page',
                     nonce: pageManagerData.nonce,
-                    title: title
+                    title: title,
+                    parent_id: parentId
                 },
                 success: function(response) {
                     if (response.success) {
                         self.showStatus('saved', response.data.message);
+                        self.closeCreateModal();
 
-                        // Close modal
-                        $('#new-page-modal').fadeOut(200);
-                        $('#new-page-title').val('');
+                        // Save current expanded state before reload
+                        self.saveExpandedState();
+
+                        // If child page created, ensure parent is expanded
+                        if (parentId > 0) {
+                            const state = self.getExpandedState();
+                            state[parentId] = true;
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                        }
 
                         // Reload page to show new page
                         setTimeout(function() {
@@ -472,6 +526,63 @@
          * @param {int} pageId - Page ID
          * @param {jQuery} $button - Button element
          */
+        /**
+         * Get expanded state from localStorage
+         *
+         * @returns {Object} Map of pageId -> boolean
+         */
+        getExpandedState: function() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+            } catch (e) {
+                return {};
+            }
+        },
+
+        /**
+         * Save current expanded state to localStorage
+         */
+        saveExpandedState: function() {
+            const state = {};
+            // Use a small delay so the DOM has updated aria-expanded
+            setTimeout(function() {
+                $('.toggle-children').each(function() {
+                    const pageId = $(this).closest('.page-item').data('page-id');
+                    const isExpanded = $(this).attr('aria-expanded') === 'true';
+                    if (isExpanded) {
+                        state[pageId] = true;
+                    }
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            }, 50);
+        },
+
+        /**
+         * Restore expanded state from localStorage
+         */
+        restoreExpandedState: function() {
+            const state = this.getExpandedState();
+            const expandedIds = Object.keys(state).filter(function(id) { return state[id]; });
+
+            if (expandedIds.length === 0) {
+                return;
+            }
+
+            expandedIds.forEach(function(pageId) {
+                const $pageItem = $('.page-item[data-page-id="' + pageId + '"]');
+                const $toggle = $pageItem.find('> .page-item-row > .toggle-children');
+                const $children = $pageItem.children('.page-tree-children');
+
+                if ($toggle.length && $children.length) {
+                    $children.addClass('visible').show();
+                    $toggle.attr('aria-expanded', 'true');
+                    $toggle.find('.dashicons')
+                        .removeClass('dashicons-arrow-right-alt2')
+                        .addClass('dashicons-arrow-down-alt2');
+                }
+            });
+        },
+
         toggleStatus: function(pageId, $button) {
             const self = this;
 

@@ -474,11 +474,20 @@ add_action('init', 'simple_clean_register_glossar_cpt');
 
 // Glossar Settings Page
 function simple_clean_glossar_settings_init() {
-    register_setting('simple_clean_glossar', 'glossar_modal_type');
-    register_setting('simple_clean_glossar', 'glossar_auto_link');
-    register_setting('simple_clean_glossar', 'glossar_first_only');
-    register_setting('simple_clean_glossar', 'glossar_case_sensitive');
-    register_setting('simple_clean_glossar', 'glossar_auto_rebuild');
+    register_setting('simple_clean_glossar', 'glossar_modal_type', array(
+        'sanitize_callback' => function($value) {
+            return in_array($value, array('tooltip', 'sidebar'), true) ? $value : 'tooltip';
+        },
+    ));
+    $checkbox_sanitize = array(
+        'sanitize_callback' => function($value) {
+            return $value === '1' ? '1' : '0';
+        },
+    );
+    register_setting('simple_clean_glossar', 'glossar_auto_link', $checkbox_sanitize);
+    register_setting('simple_clean_glossar', 'glossar_first_only', $checkbox_sanitize);
+    register_setting('simple_clean_glossar', 'glossar_case_sensitive', $checkbox_sanitize);
+    register_setting('simple_clean_glossar', 'glossar_auto_rebuild', $checkbox_sanitize);
 
     add_settings_section(
         'glossar_settings_section',
@@ -915,7 +924,7 @@ function simple_clean_handle_glossar_import() {
 
         // Extract data
         $term = trim($data[0]);
-        $definition = trim($data[1]);
+        $definition = wp_kses_post(trim($data[1]));
         $slug = isset($data[2]) ? sanitize_title(trim($data[2])) : '';
         $status = isset($data[3]) ? trim($data[3]) : 'publish';
 
@@ -2347,6 +2356,19 @@ function simple_clean_glossar_editor_assets() {
 }
 add_action('enqueue_block_editor_assets', 'simple_clean_glossar_editor_assets');
 
+// Lightbox toggle in image block sidebar
+add_action( 'enqueue_block_editor_assets', 'simple_clean_enqueue_lightbox_editor' );
+function simple_clean_enqueue_lightbox_editor() {
+    $js_file = get_template_directory() . '/includes/admin/image-lightbox-editor.js';
+    wp_enqueue_script(
+        'simple-clean-lightbox-editor',
+        get_template_directory_uri() . '/includes/admin/image-lightbox-editor.js',
+        array( 'wp-blocks', 'wp-hooks', 'wp-element', 'wp-block-editor', 'wp-components' ),
+        file_exists( $js_file ) ? filemtime( $js_file ) : '1',
+        true
+    );
+}
+
 // Prevent duplicate glossar terms in admin
 function simple_clean_prevent_duplicate_glossar_terms($post_id, $post, $update) {
     // Only check for glossar post type
@@ -2670,12 +2692,12 @@ function simple_clean_password_protection_page() {
                     </th>
                     <td>
                         <input
-                            type="text"
+                            type="password"
                             id="password_protection_password"
                             name="password_protection_password"
                             class="regular-text"
                             placeholder="<?php echo $has_password ? 'Aktuelles Passwort beibehalten' : 'Neues Passwort eingeben'; ?>"
-                            autocomplete="off"
+                            autocomplete="new-password"
                         >
                         <?php if ($has_password): ?>
                             <p class="description">
@@ -2719,6 +2741,19 @@ function simple_clean_is_password_protection_enabled() {
 }
 
 /**
+ * Derive the access-cookie token from the stored password hash.
+ * The cookie never contains the password itself; changing the password
+ * changes the hash and therefore invalidates all existing cookies.
+ */
+function simple_clean_password_cookie_token() {
+    $stored_hash = get_option('simple_clean_password_protection_password');
+    if (empty($stored_hash)) {
+        return '';
+    }
+    return hash_hmac('sha256', $stored_hash, wp_salt('auth'));
+}
+
+/**
  * Check if user has valid access (logged in OR correct password entered)
  */
 function simple_clean_has_valid_access() {
@@ -2729,16 +2764,30 @@ function simple_clean_has_valid_access() {
 
     // Check if password cookie is set and valid
     if (isset($_COOKIE['simple_clean_password_granted'])) {
-        $cookie_value = $_COOKIE['simple_clean_password_granted'];
-        $stored_hash = get_option('simple_clean_password_protection_password');
+        $token = simple_clean_password_cookie_token();
 
-        // Verify cookie matches current password hash
-        if (wp_check_password($cookie_value, $stored_hash)) {
+        if ($token !== '' && hash_equals($token, (string) $_COOKIE['simple_clean_password_granted'])) {
             return true;
         }
     }
 
     return false;
+}
+
+/**
+ * Brute-force lockout: transient key for the current client IP.
+ */
+function simple_clean_password_lock_key() {
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+    return 'simple_clean_pw_lock_' . md5($ip);
+}
+
+/**
+ * Check if the current client is locked out (too many failed attempts).
+ */
+function simple_clean_password_is_locked() {
+    $attempts = (int) get_transient(simple_clean_password_lock_key());
+    return $attempts >= 10;
 }
 
 /**
@@ -2754,15 +2803,22 @@ function simple_clean_handle_password_submission() {
         return false;
     }
 
+    // Reject while locked out (max 10 attempts per 15 minutes per IP)
+    if (simple_clean_password_is_locked()) {
+        return false;
+    }
+
     $submitted_password = $_POST['website_password'];
     $stored_hash = get_option('simple_clean_password_protection_password');
 
     // Check password
-    if (wp_check_password($submitted_password, $stored_hash)) {
-        // Set cookie for 30 days
+    if (!empty($stored_hash) && wp_check_password($submitted_password, $stored_hash)) {
+        delete_transient(simple_clean_password_lock_key());
+
+        // Set cookie for 30 days (derived token, never the password itself)
         setcookie(
             'simple_clean_password_granted',
-            $submitted_password, // Store plain password for cookie verification
+            simple_clean_password_cookie_token(),
             time() + (30 * DAY_IN_SECONDS),
             COOKIEPATH,
             COOKIE_DOMAIN,
@@ -2772,6 +2828,11 @@ function simple_clean_handle_password_submission() {
 
         return true;
     }
+
+    // Count failed attempt
+    $lock_key = simple_clean_password_lock_key();
+    $attempts = (int) get_transient($lock_key);
+    set_transient($lock_key, $attempts + 1, 15 * MINUTE_IN_SECONDS);
 
     return false;
 }
@@ -2798,7 +2859,7 @@ function simple_clean_password_protection_check() {
     // Handle password form submission
     if (simple_clean_handle_password_submission()) {
         // Password correct - reload page to show content
-        wp_redirect($_SERVER['REQUEST_URI']);
+        wp_safe_redirect($_SERVER['REQUEST_URI']);
         exit;
     }
 
@@ -2817,7 +2878,8 @@ add_action('template_redirect', 'simple_clean_password_protection_check');
  * Display password protection form
  */
 function simple_clean_show_password_form() {
-    $error = isset($_POST['website_password_submit']) ? true : false;
+    $is_locked = simple_clean_password_is_locked();
+    $error = !$is_locked && isset($_POST['website_password_submit']);
     $site_name = get_bloginfo('name');
     $login_url = wp_login_url($_SERVER['REQUEST_URI']);
 
@@ -3056,7 +3118,11 @@ function simple_clean_show_password_form() {
                 Bitte geben Sie das Passwort ein oder melden Sie sich an, um auf die Inhalte zuzugreifen.
             </div>
 
-            <?php if ($error): ?>
+            <?php if ($is_locked): ?>
+                <div class="error-message">
+                    🔒 <strong>Zu viele Fehlversuche!</strong> Bitte warten Sie 15 Minuten und versuchen Sie es dann erneut.
+                </div>
+            <?php elseif ($error): ?>
                 <div class="error-message">
                     ❌ <strong>Falsches Passwort!</strong> Bitte versuchen Sie es erneut.
                 </div>
@@ -3215,7 +3281,7 @@ function simple_clean_ai_protection_settings_section() {
                 <li>Diffbot (Diffbot)</li>
                 <li>Omgilibot / Omgili</li>
                 <li>ai2bot (Allen Institute)</li>
-                <li>Scrapy, curl, wget, python-requests</li>
+                <li>Scrapy (Crawler-Framework)</li>
             </ul>
             <p style="margin-top: 15px;"><strong>Standard-Suchmaschinen bleiben ERLAUBT:</strong> Googlebot, Bingbot, DuckDuckBot, Yahoo Slurp (wichtig für SEO)</p>
         </div>
@@ -3288,9 +3354,6 @@ function simple_clean_generate_robots_txt($output, $public) {
         'Diffbot',
         'CCBot',
         'Scrapy',
-        'python-requests',
-        'curl',
-        'wget',
     );
 
     foreach ($ai_crawlers as $crawler) {
@@ -3368,9 +3431,6 @@ function simple_clean_block_ai_user_agents() {
         'diffbot',
         'ccbot',
         'scrapy',
-        'python-requests',
-        'curl/',
-        'wget/',
     );
 
     // Check if User-Agent matches any blocked pattern
@@ -3868,4 +3928,259 @@ add_action('wp_ajax_glossar_bulk_scan_batch', 'simple_clean_glossar_bulk_scan_ba
 // Include Page Manager class (admin only)
 if (is_admin()) {
     require_once get_template_directory() . '/includes/admin/page-manager.php';
+    require_once get_template_directory() . '/includes/admin/clipboard-uploader.php';
+    Simple_Clean_Clipboard_Uploader::init();
+}
+
+// ===================================================================
+// SVG-UPLOAD SUPPORT
+// ===================================================================
+
+// 1. Allow SVG MIME type in media uploads
+add_filter( 'upload_mimes', 'simple_clean_allow_svg_upload' );
+function simple_clean_allow_svg_upload( $mimes ) {
+    $mimes['svg'] = 'image/svg+xml';
+    return $mimes;
+}
+
+// 2. Fix WordPress real MIME type check — prevents rejection of valid SVGs
+add_filter( 'wp_check_filetype_and_ext', 'simple_clean_fix_svg_mime', 10, 5 );
+function simple_clean_fix_svg_mime( $data, $file, $filename, $mimes, $real_mime = null ) {
+    if ( ! $data['ext'] && ! $data['type'] ) {
+        $ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+        if ( 'svg' === $ext ) {
+            $data['ext']  = 'svg';
+            $data['type'] = 'image/svg+xml';
+        }
+    }
+    return $data;
+}
+
+// 3. Sanitize SVG on upload: strip active content, reject unparseable files
+add_filter( 'wp_handle_upload', 'simple_clean_sanitize_svg_upload' );
+function simple_clean_sanitize_svg_upload( $upload ) {
+    if ( ( $upload['type'] ?? '' ) !== 'image/svg+xml' ) return $upload;
+
+    $content   = @file_get_contents( $upload['file'] );
+    $sanitized = $content ? simple_clean_sanitize_svg_string( $content ) : false;
+
+    if ( false === $sanitized ) {
+        @unlink( $upload['file'] );
+        return array( 'error' => 'Ungültige SVG-Datei: Upload wurde abgelehnt.' );
+    }
+
+    file_put_contents( $upload['file'], $sanitized );
+    return $upload;
+}
+
+function simple_clean_sanitize_svg_string( $svg ) {
+    $svg = preg_replace( '/<\?xml[^?]*\?>/i', '', $svg );
+    $svg = preg_replace( '/<!DOCTYPE[^>]*>/i',  '', $svg );
+    $svg = trim( $svg );
+
+    if ( substr( $svg, 0, 4 ) !== '<svg' ) return false;
+
+    libxml_use_internal_errors( true );
+    $dom    = new DOMDocument();
+    $loaded = $dom->loadXML( $svg, LIBXML_NONET );
+    libxml_clear_errors();
+
+    if ( ! $loaded || ! $dom->documentElement ) return false;
+
+    $xpath = new DOMXPath( $dom );
+    $lc    = 'translate(local-name(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz")';
+
+    // Remove elements that can execute or embed active content.
+    // SMIL animation elements can set on*-attributes at runtime (<set attributeName="onload">).
+    $forbidden = $xpath->query(
+        '//*[contains(" script foreignobject set animate animatetransform animatemotion animatecolor ",' .
+        ' concat(" ", ' . $lc . ', " "))]'
+    );
+    foreach ( iterator_to_array( $forbidden ) as $node ) {
+        $node->parentNode->removeChild( $node );
+    }
+
+    // Remove event-handler attributes and javascript: values
+    $bad = $xpath->query( '//@*[starts-with(' . $lc . ',"on") or contains(.,"javascript:")]' );
+    if ( $bad ) {
+        foreach ( iterator_to_array( $bad ) as $attr ) {
+            $attr->ownerElement->removeAttributeNode( $attr );
+        }
+    }
+
+    // Whitelist href/xlink:href targets (fragment, relative, http(s), data:image/* raster)
+    $hrefs = $xpath->query( '//@*[local-name()="href"]' );
+    if ( $hrefs ) {
+        foreach ( iterator_to_array( $hrefs ) as $attr ) {
+            if ( ! simple_clean_svg_href_is_safe( trim( $attr->value ) ) ) {
+                $attr->ownerElement->removeAttributeNode( $attr );
+            }
+        }
+    }
+
+    return $dom->saveXML();
+}
+
+/**
+ * Allowed href targets in uploaded SVGs. data:image/* is required for the
+ * clipboard uploader ("SVG eingebettet" embeds a PNG data URI); SVG data URIs
+ * are rejected because they could nest active content.
+ */
+function simple_clean_svg_href_is_safe( $value ) {
+    if ( $value === '' || $value[0] === '#' ) return true;
+
+    $lower = strtolower( $value );
+    if ( strpos( $lower, 'data:' ) === 0 ) {
+        return strpos( $lower, 'data:image/' ) === 0 && strpos( $lower, 'data:image/svg' ) !== 0;
+    }
+    if ( preg_match( '#^https?://#', $lower ) ) return true;
+
+    // Any other scheme (javascript:, vbscript:, file:, ...) is rejected
+    return strpos( $value, ':' ) === false;
+}
+
+// 4. Read width/height from SVG so the Image block can use correct dimensions
+add_filter( 'wp_get_attachment_metadata', 'simple_clean_svg_dimensions', 10, 2 );
+function simple_clean_svg_dimensions( $data, $attachment_id ) {
+    if ( get_post_mime_type( $attachment_id ) !== 'image/svg+xml' ) return $data;
+    if ( ! is_array( $data ) ) $data = [];
+    if ( ! empty( $data['width'] ) ) return $data; // already set
+
+    $file = get_attached_file( $attachment_id );
+    if ( ! $file ) return $data;
+
+    $svg = @file_get_contents( $file );
+    if ( ! $svg ) return $data;
+
+    libxml_use_internal_errors( true );
+    $dom = new DOMDocument();
+    $dom->loadXML( $svg, LIBXML_NONET );
+    libxml_clear_errors();
+
+    $root    = $dom->documentElement;
+    $width   = 0;
+    $height  = 0;
+
+    if ( $root ) {
+        $w = (float) $root->getAttribute( 'width' );
+        $h = (float) $root->getAttribute( 'height' );
+
+        if ( ! $w || ! $h ) {
+            $vb = $root->getAttribute( 'viewBox' );
+            if ( $vb ) {
+                $parts = preg_split( '/[\s,]+/', trim( $vb ) );
+                if ( count( $parts ) >= 4 ) {
+                    $w = (float) $parts[2];
+                    $h = (float) $parts[3];
+                }
+            }
+        }
+
+        $width  = $w ? (int) $w : 800;
+        $height = $h ? (int) $h : 600;
+    }
+
+    $data['width']  = $width;
+    $data['height'] = $height;
+    $data['file']   = basename( $file );
+    $data['sizes']  = [];
+
+    return $data;
+}
+
+// 5. Show SVG thumbnails in the media library
+add_action( 'admin_head', 'simple_clean_svg_media_library_style' );
+function simple_clean_svg_media_library_style() {
+    echo '<style>
+        img[src$=".svg"].attachment-thumbnail,
+        .attachment-preview img[src$=".svg"],
+        .thumbnail img[src$=".svg"] {
+            width:  100% !important;
+            height: auto !important;
+        }
+        .wp-list-table img[src$=".svg"] {
+            max-width: 80px;
+            height: auto;
+        }
+    </style>';
+}
+
+// ===================================================================
+// WORDPRESS LIGHTBOX – ALWAYS USE FULL-SIZE IMAGE
+// ===================================================================
+// Problem: When an image block uses a resized/smaller size (medium,
+// large, or a manually set pixel width), WordPress sets uploadedSrc in
+// data-wp-context to that smaller URL.  The Interactivity API then
+// loads that image in the lightbox dialog, which has only the small
+// natural dimensions – so the lightbox can never fill the viewport.
+//
+// Fix: Replace uploadedSrc with the original full-resolution URL from
+// the media library (wp_get_attachment_image_src(..., 'full')).
+// ===================================================================
+// ---------------------------------------------------------------------------
+// Custom Lightbox (CLB)
+//
+// Replaces the WordPress built-in lightbox entirely.
+// Step 1 (render_block_data): disable WP lightbox BEFORE WordPress renders
+//   the block so no lightbox markup is ever added to the HTML.
+// Step 2 (render_block): add data-clb-src to the <img> so our JS picks it up.
+// ---------------------------------------------------------------------------
+
+// Step 1: mark CLB-eligible blocks and disable WP lightbox before render.
+add_filter( 'render_block_data', 'simple_clean_disable_wp_lightbox', 10, 1 );
+function simple_clean_disable_wp_lightbox( $parsed_block ) {
+    if ( 'core/image' !== ( $parsed_block['blockName'] ?? '' ) ) {
+        return $parsed_block;
+    }
+    if ( ! empty( $parsed_block['attrs']['lightbox']['enabled'] ) ) {
+        // Remember that this block needs CLB, then prevent WP from rendering
+        // its own lightbox overlay and trigger button entirely.
+        $parsed_block['attrs']['_clb_replace_wp'] = true;
+        $parsed_block['attrs']['lightbox']['enabled'] = false;
+    }
+    return $parsed_block;
+}
+
+// Step 2: add data-clb-src to images that need CLB.
+add_filter( 'render_block', 'simple_clean_custom_lightbox', 10, 2 );
+function simple_clean_custom_lightbox( $block_content, $parsed_block ) {
+
+    if ( 'core/image' !== ( $parsed_block['blockName'] ?? '' ) ) {
+        return $block_content;
+    }
+
+    $needs_clb = ! empty( $parsed_block['attrs']['_clb_replace_wp'] )
+        || strpos( $parsed_block['attrs']['className'] ?? '', 'clb-lightbox' ) !== false;
+
+    if ( ! $needs_clb ) {
+        return $block_content;
+    }
+
+    // Resolve the full-size URL
+    $attachment_id = intval( $parsed_block['attrs']['id'] ?? 0 );
+    $full_url      = '';
+    if ( $attachment_id ) {
+        $full = wp_get_attachment_image_src( $attachment_id, 'full' );
+        if ( $full && ! empty( $full[0] ) ) {
+            $full_url = esc_url( $full[0] );
+        }
+    }
+    if ( ! $full_url ) {
+        if ( preg_match( '/<img[^>]+src=["\']([^"\']+)["\']/', $block_content, $m ) ) {
+            $full_url = esc_url( $m[1] );
+        }
+    }
+    if ( ! $full_url ) {
+        return $block_content;
+    }
+
+    // Add data-clb-src to the first <img> in the block
+    $block_content = preg_replace(
+        '/(<img\s)/i',
+        '<img data-clb-src="' . $full_url . '" ',
+        $block_content,
+        1
+    );
+
+    return $block_content;
 }

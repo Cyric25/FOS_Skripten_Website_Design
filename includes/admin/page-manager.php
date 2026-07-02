@@ -143,7 +143,11 @@ class Simple_Clean_Page_Manager {
             <!-- Modal für neue Seite -->
             <div id="new-page-modal" class="page-manager-modal" style="display:none;">
                 <div class="page-manager-modal-content">
-                    <h2>Neue Seite erstellen</h2>
+                    <h2 id="new-page-modal-title">Neue Seite erstellen</h2>
+                    <p id="new-page-modal-parent-info" class="modal-parent-info" style="display:none;">
+                        Unterseite von: <strong id="new-page-parent-name"></strong>
+                    </p>
+                    <input type="hidden" id="new-page-parent-id" value="0" />
                     <p>
                         <label for="new-page-title">Seitentitel:</label>
                         <input type="text" id="new-page-title" class="widefat" placeholder="Titel der neuen Seite" />
@@ -229,6 +233,12 @@ class Simple_Clean_Page_Manager {
                        class="button button-small" target="_blank" title="Ansehen">
                         <span class="dashicons dashicons-external"></span>
                     </a>
+                    <button type="button" class="button button-small create-child-page"
+                            data-page-id="<?php echo esc_attr($page->ID); ?>"
+                            data-page-title="<?php echo esc_attr($page->post_title); ?>"
+                            title="Unterseite erstellen">
+                        <span class="dashicons dashicons-plus-alt2"></span>
+                    </button>
                     <button type="button" class="button button-small delete-page"
                             data-page-id="<?php echo esc_attr($page->ID); ?>"
                             data-page-title="<?php echo esc_attr($page->post_title); ?>"
@@ -304,6 +314,12 @@ class Simple_Clean_Page_Manager {
             $page = get_post($page_id);
             if (!$page || $page->post_type !== 'page') {
                 $errors[] = "Seite ID $page_id nicht gefunden";
+                continue;
+            }
+
+            // Per-page permission check
+            if (!current_user_can('edit_page', $page_id)) {
+                $errors[] = "Keine Berechtigung für Seite ID $page_id";
                 continue;
             }
 
@@ -408,18 +424,27 @@ class Simple_Clean_Page_Manager {
         }
 
         $title = isset($_POST['title']) ? sanitize_text_field($_POST['title']) : '';
+        $parent_id = isset($_POST['parent_id']) ? absint($_POST['parent_id']) : 0;
 
         if (empty($title)) {
             wp_send_json_error(['message' => 'Titel erforderlich.']);
         }
 
-        // Create new page at top level
+        // Verify parent exists if specified
+        if ($parent_id > 0) {
+            $parent = get_post($parent_id);
+            if (!$parent || $parent->post_type !== 'page') {
+                wp_send_json_error(['message' => 'Elternseite nicht gefunden.']);
+            }
+        }
+
+        // Create new page (top level or as child)
         $page_id = wp_insert_post([
             'post_title' => $title,
             'post_type' => 'page',
             'post_status' => 'draft',
             'menu_order' => 0,
-            'post_parent' => 0
+            'post_parent' => $parent_id
         ]);
 
         if (is_wp_error($page_id)) {
@@ -428,7 +453,8 @@ class Simple_Clean_Page_Manager {
 
         wp_send_json_success([
             'message' => 'Seite erstellt.',
-            'page_id' => $page_id
+            'page_id' => $page_id,
+            'parent_id' => $parent_id
         ]);
     }
 
@@ -455,14 +481,19 @@ class Simple_Clean_Page_Manager {
             wp_send_json_error(['message' => 'Seite nicht gefunden.']);
         }
 
-        // Delete page permanently
-        $result = wp_delete_post($page_id, true);
+        // Deleting requires the delete capability for this specific page
+        if (!current_user_can('delete_page', $page_id)) {
+            wp_send_json_error(['message' => 'Keine Berechtigung zum Löschen dieser Seite.']);
+        }
+
+        // Move page to trash (recoverable, not permanent)
+        $result = wp_trash_post($page_id);
 
         if (!$result) {
             wp_send_json_error(['message' => 'Fehler beim Löschen.']);
         }
 
-        wp_send_json_success(['message' => 'Seite gelöscht.']);
+        wp_send_json_success(['message' => 'Seite in den Papierkorb verschoben.']);
     }
 
     /**
@@ -488,8 +519,17 @@ class Simple_Clean_Page_Manager {
             wp_send_json_error(['message' => 'Seite nicht gefunden.']);
         }
 
+        if (!current_user_can('edit_page', $page_id)) {
+            wp_send_json_error(['message' => 'Keine Berechtigung für diese Seite.']);
+        }
+
         // Toggle status: publish <-> draft
         $new_status = ($page->post_status === 'publish') ? 'draft' : 'publish';
+
+        // Publishing requires the publish capability
+        if ($new_status === 'publish' && !current_user_can('publish_pages')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung zum Veröffentlichen.']);
+        }
 
         // Update status
         $result = wp_update_post([
