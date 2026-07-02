@@ -318,6 +318,16 @@
     vertical-align: middle;
 }
 
+.page-actions .create-child-page {
+    color: #0073aa;
+}
+
+.page-actions .create-child-page:hover {
+    background: #0073aa;
+    color: #fff;
+    border-color: #0073aa;
+}
+
 /* ===================================================================
    Dragging States
    =================================================================== */
@@ -420,6 +430,16 @@
     margin-top: 0;
     margin-bottom: 20px;
     color: #1d2327;
+}
+
+.modal-parent-info {
+    background: #f0f6fc;
+    border-left: 4px solid #0073aa;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #1d2327;
+    border-radius: 0 4px 4px 0;
 }
 
 .page-manager-modal-content p {

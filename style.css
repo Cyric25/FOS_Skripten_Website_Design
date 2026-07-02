@@ -1,7 +1,7 @@
 /*
-Theme Name: FOS Online Schulbuch v1.5.21
+Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.21
+Version: 1.5.53
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -233,6 +233,58 @@ img {
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* ── Custom Lightbox (CLB) ──────────────────────────────────────────────────
+ * Overlay built by JS (main.js initCustomLightbox).
+ * WordPress's built-in lightbox markup is stripped by functions.php.        */
+
+img[data-clb-src] { cursor: zoom-in; }
+
+#clb-overlay {
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200000;
+    background: #f2f2f2;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem 1rem;
+    box-sizing: border-box;
+    transition: opacity 0.2s ease;
+}
+#clb-overlay.clb-active {
+    opacity: 1;
+    pointer-events: auto;
+}
+#clb-img {
+    display: block;
+    cursor: zoom-out;
+    border-radius: 2px;
+    /* width/height/max-width/max-height and transform set exclusively by JS */
+}
+#clb-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: rgba(0, 0, 0, 0.08);
+    border: none;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+#clb-close:hover {
+    background: rgba(0, 0, 0, 0.18);
 }
 
 /* Figure elements (images with captions) */

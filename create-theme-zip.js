@@ -7,10 +7,12 @@ import archiver from 'archiver';
 const require = createRequire(import.meta.url);
 const packageJson = require('./package.json');
 
-const OUTPUT_DIR = './dist';
-const THEME_NAME = 'fos-online-schulbuch';
-const VERSION = packageJson.version;
-const OUTPUT_FILE = `${THEME_NAME}-v${VERSION}.zip`;
+const OUTPUT_DIR  = './dist';
+const THEME_NAME  = 'fos-online-schulbuch';
+const VERSION     = packageJson.version;
+// Fixed filename so WordPress always updates the same theme folder.
+// Files live inside a THEME_NAME/ subfolder inside the ZIP – required by WP.
+const OUTPUT_FILE = `${THEME_NAME}.zip`;
 
 // Files and folders to include in the ZIP
 const INCLUDE_PATTERNS = [
@@ -58,6 +60,11 @@ async function shouldIncludeFile(filePath) {
     if (relativePath.startsWith('dist/js/') ||
         relativePath.startsWith('dist/css/') ||
         relativePath === 'dist/.vite/manifest.json') {
+        return true;
+    }
+
+    // Include PHP and JS files in subdirectories (e.g. includes/)
+    if (relativePath.startsWith('includes/') && filePath.match(/\.(php|js)$/)) {
         return true;
     }
 
@@ -125,12 +132,13 @@ async function createThemeZip() {
         // Get all files
         const allFiles = await getAllFiles('.');
 
-        // Add files to archive (directly in root, no parent folder)
+        // Add files into THEME_NAME/ subfolder so WP installs to a fixed directory
         for (const file of allFiles) {
             if (await shouldIncludeFile(file)) {
-                const relativePath = file.replace(/^\.[\\/]/, '');
-                archive.file(file, { name: relativePath });
-                console.log(`  + ${relativePath}`);
+                const relativePath = file.replace(/^\.[\\/]/, '').replace(/\\/g, '/');
+                const zipPath = `${THEME_NAME}/${relativePath}`;
+                archive.file(file, { name: zipPath });
+                console.log(`  + ${zipPath}`);
             }
         }
 

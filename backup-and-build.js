@@ -27,7 +27,7 @@ function updatePackageVersion(newVersion) {
 }
 
 /**
- * Update version in style.css (both Version field and Theme Name)
+ * Update version in style.css (Version field only, Theme Name stays fixed)
  */
 function updateStyleVersion(newVersion) {
     const stylePath = path.join(__dirname, 'style.css');
@@ -36,10 +36,10 @@ function updateStyleVersion(newVersion) {
     // Update Version: field
     styleContent = styleContent.replace(/Version: [\d.]+/, `Version: ${newVersion}`);
 
-    // Update Theme Name: to include version number
+    // Keep Theme Name fixed (no version suffix) so WordPress recognises the theme
     styleContent = styleContent.replace(
         /Theme Name: FOS Online Schulbuch( v[\d.]+)?/,
-        `Theme Name: FOS Online Schulbuch v${newVersion}`
+        'Theme Name: FOS Online Schulbuch'
     );
 
     fs.writeFileSync(stylePath, styleContent, 'utf8');
@@ -75,32 +75,16 @@ if (fs.existsSync(backupZip)) {
     console.log('   ✓ Altes Backup gelöscht\n');
 }
 
-// Schritt 2: Finde das neueste versionierte ZIP (beliebige Version)
-if (fs.existsSync(distDir)) {
-    const files = fs.readdirSync(distDir);
-    const zipFiles = files.filter(f => f.startsWith('fos-online-schulbuch-v') && f.endsWith('.zip'));
-
-    if (zipFiles.length > 0) {
-        // Sortiere nach Datum (neuestes zuletzt)
-        zipFiles.sort((a, b) => {
-            const statA = fs.statSync(path.join(distDir, a));
-            const statB = fs.statSync(path.join(distDir, b));
-            return statA.mtimeMs - statB.mtimeMs;
-        });
-
-        const latestZip = zipFiles[zipFiles.length - 1];
-        const latestZipPath = path.join(distDir, latestZip);
-
-        console.log(`💾 Aktuelles ZIP wird zu Backup umbenannt: ${latestZip}`);
-        fs.renameSync(latestZipPath, backupZip);
-        const stats = fs.statSync(backupZip);
-        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-        console.log(`   ✓ Backup erstellt: fos-online-schulbuch-backup.zip (${sizeMB} MB)\n`);
-    } else {
-        console.log('ℹ️  Kein vorheriges ZIP gefunden, kein Backup nötig\n');
-    }
+// Schritt 2: Vorheriges ZIP sichern
+const currentZip = path.join(distDir, 'fos-online-schulbuch.zip');
+if (fs.existsSync(currentZip)) {
+    console.log('💾 Aktuelles ZIP wird zu Backup umbenannt: fos-online-schulbuch.zip');
+    fs.renameSync(currentZip, backupZip);
+    const stats = fs.statSync(backupZip);
+    const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+    console.log(`   ✓ Backup erstellt: fos-online-schulbuch-backup.zip (${sizeMB} MB)\n`);
 } else {
-    console.log('ℹ️  Dist-Verzeichnis nicht gefunden, kein Backup nötig\n');
+    console.log('ℹ️  Kein vorheriges ZIP gefunden, kein Backup nötig\n');
 }
 
 // Schritt 3: Neues ZIP erstellen
@@ -118,10 +102,10 @@ try {
         const backupStats = fs.statSync(backupZip);
         console.log(`   Backup:  fos-online-schulbuch-backup.zip (${(backupStats.size / 1024).toFixed(0)} KB)`);
     }
-    const newZip = path.join(distDir, `fos-online-schulbuch-v${version}.zip`);
+    const newZip = path.join(distDir, 'fos-online-schulbuch.zip');
     if (fs.existsSync(newZip)) {
         const currentStats = fs.statSync(newZip);
-        console.log(`   Aktuell: fos-online-schulbuch-v${version}.zip (${(currentStats.size / 1024).toFixed(0)} KB)`);
+        console.log(`   Aktuell: fos-online-schulbuch.zip v${version} (${(currentStats.size / 1024).toFixed(0)} KB)`);
     }
 } catch (error) {
     console.error('❌ Fehler beim Erstellen des ZIPs:', error.message);
