@@ -400,17 +400,9 @@ function simple_clean_save_navigation_meta($post_id) {
 
     // Save or delete meta
     if (isset($_POST['simple_clean_hide_navigation']) && $_POST['simple_clean_hide_navigation'] === '1') {
-        $result = update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
-        // Add admin notice
-        add_action('admin_notices', function() {
-            echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Sidebar ausgeblendet:</strong> Die Seitenleiste am linken Rand wird auf dieser Seite nicht angezeigt.</p></div>';
-        });
+        update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
     } else {
         delete_post_meta($post_id, '_simple_clean_hide_navigation');
-        // Add admin notice
-        add_action('admin_notices', function() {
-            echo '<div class="notice notice-info is-dismissible"><p><strong>ℹ️ Sidebar aktiviert:</strong> Die Seitenleiste wird auf dieser Seite angezeigt.</p></div>';
-        });
     }
 }
 add_action('save_post', 'simple_clean_save_navigation_meta');
@@ -600,95 +592,6 @@ function simple_clean_glossar_auto_rebuild_cb() {
     <?php
 }
 
-
-// Handle glossar delete actions
-function simple_clean_handle_glossar_delete_actions() {
-    // Only process if we have an action
-    if (!isset($_POST['glossar_action'])) {
-        return;
-    }
-
-    // Check user permissions
-    if (!current_user_can('manage_options')) {
-        wp_die('Sie haben keine Berechtigung, diese Aktion auszuführen.');
-    }
-
-    $action = sanitize_text_field($_POST['glossar_action']);
-
-    // Handle bulk delete
-    if ($action === 'bulk_delete') {
-        // Verify nonce
-        if (!isset($_POST['glossar_bulk_delete_nonce']) ||
-            !wp_verify_nonce($_POST['glossar_bulk_delete_nonce'], 'glossar_bulk_delete')) {
-            wp_die('Sicherheitsüberprüfung fehlgeschlagen.');
-        }
-
-        // Get all glossar posts
-        $glossar_posts = get_posts(array(
-            'post_type' => 'glossar',
-            'posts_per_page' => -1,
-            'post_status' => 'any',
-        ));
-
-        $deleted_count = 0;
-        foreach ($glossar_posts as $post) {
-            if (wp_delete_post($post->ID, true)) {
-                $deleted_count++;
-            }
-        }
-
-        // Add admin notice
-        add_action('admin_notices', function() use ($deleted_count) {
-            echo '<div class="notice notice-success is-dismissible">';
-            echo '<p><strong>✓ Erfolgreich gelöscht!</strong></p>';
-            echo '<p>' . $deleted_count . ' Glossar-Begriffe wurden dauerhaft aus der Datenbank entfernt.</p>';
-            echo '</div>';
-        });
-
-        return;
-    }
-
-    // Handle single delete
-    if ($action === 'delete_single') {
-        // Get post ID
-        if (!isset($_POST['glossar_post_id'])) {
-            wp_die('Keine Post-ID angegeben.');
-        }
-
-        $post_id = intval($_POST['glossar_post_id']);
-
-        // Verify nonce
-        if (!isset($_POST['glossar_delete_nonce']) ||
-            !wp_verify_nonce($_POST['glossar_delete_nonce'], 'glossar_delete_' . $post_id)) {
-            wp_die('Sicherheitsüberprüfung fehlgeschlagen.');
-        }
-
-        // Verify post type
-        if (get_post_type($post_id) !== 'glossar') {
-            wp_die('Ungültiger Post-Typ.');
-        }
-
-        // Get post title before deletion
-        $post_title = get_the_title($post_id);
-
-        // Delete post
-        if (wp_delete_post($post_id, true)) {
-            add_action('admin_notices', function() use ($post_title) {
-                echo '<div class="notice notice-success is-dismissible">';
-                echo '<p><strong>✓ Begriff gelöscht!</strong></p>';
-                echo '<p>Der Begriff "' . esc_html($post_title) . '" wurde dauerhaft gelöscht.</p>';
-                echo '</div>';
-            });
-        } else {
-            add_action('admin_notices', function() use ($post_title) {
-                echo '<div class="notice notice-error is-dismissible">';
-                echo '<p><strong>❌ Fehler beim Löschen!</strong></p>';
-                echo '<p>Der Begriff "' . esc_html($post_title) . '" konnte nicht gelöscht werden.</p>';
-                echo '</div>';
-            });
-        }
-    }
-}
 
 // Early hook to handle export before any output
 function simple_clean_handle_glossar_export_early() {
@@ -1056,121 +959,6 @@ function simple_clean_glossar_assets() {
 }
 add_action('wp_enqueue_scripts', 'simple_clean_glossar_assets');
 
-// Server-Side Glossar Auto-Linking (much faster than JavaScript)
-function simple_clean_glossar_auto_link_content($content) {
-    // Skip if in admin, feed, or auto-linking is disabled
-    if (is_admin() || is_feed() || get_option('glossar_auto_link', '1') !== '1') {
-        return $content;
-    }
-
-    // Skip if this is a glossar post itself
-    if (is_singular('glossar')) {
-        return $content;
-    }
-
-    // Get all glossar terms (cached)
-    $terms = simple_clean_get_glossar_terms();
-    if (empty($terms)) {
-        return $content;
-    }
-
-    // Sort terms by length (longest first) to avoid partial matches
-    usort($terms, function($a, $b) {
-        return mb_strlen($b['term']) - mb_strlen($a['term']);
-    });
-
-    $first_only = get_option('glossar_first_only', '1') === '1';
-    $case_sensitive = get_option('glossar_case_sensitive', '0') === '1';
-    $linked_terms = array();
-
-    // Split content into HTML tags and text
-    $parts = preg_split('/(<[^>]+>)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
-
-    $result = '';
-    $in_link = false;
-    $in_script = false;
-
-    foreach ($parts as $part) {
-        // Check if this is an HTML tag
-        if (preg_match('/^<[^>]+>$/', $part)) {
-            // Track if we're inside a link or script tag
-            if (preg_match('/^<a\b/i', $part)) {
-                $in_link = true;
-            } elseif (preg_match('/^<\/a>/i', $part)) {
-                $in_link = false;
-            } elseif (preg_match('/^<(script|style|code|pre)\b/i', $part)) {
-                $in_script = true;
-            } elseif (preg_match('/^<\/(script|style|code|pre)>/i', $part)) {
-                $in_script = false;
-            }
-
-            $result .= $part;
-            continue;
-        }
-
-        // Skip processing if we're inside a link, script, or if already a glossar term
-        if ($in_link || $in_script || strpos($part, 'glossar-term') !== false) {
-            $result .= $part;
-            continue;
-        }
-
-        // Process this text part
-        $processed_part = $part;
-
-        foreach ($terms as $term_data) {
-            $term = $term_data['term'];
-
-            // Skip if first_only is enabled and term already linked globally
-            if ($first_only && in_array(strtolower($term), $linked_terms)) {
-                continue;
-            }
-
-            // Get all variants of this term
-            $variants = simple_clean_get_glossar_term_variants($term);
-
-            // Process each variant
-            foreach ($variants as $variant) {
-                // Build regex pattern with word boundaries
-                $pattern = $case_sensitive ?
-                    '/\b(' . preg_quote($variant, '/') . ')\b/' :
-                    '/\b(' . preg_quote($variant, '/') . ')\b/iu';
-
-                // Check if variant exists in this part
-                if (!preg_match($pattern, $processed_part)) {
-                    continue;
-                }
-
-                // Replace callback
-                $processed_part = preg_replace_callback($pattern, function($matches) use ($term_data, &$linked_terms, $first_only, $term) {
-                    // Create the glossar link
-                    $replacement = '<span class="glossar-term glossar-clickable" ' .
-                                  'data-glossar-id="' . esc_attr($term_data['id']) . '" ' .
-                                  'id="glossar-term-' . esc_attr($term_data['id']) . '" ' .
-                                  'role="button" tabindex="0" ' .
-                                  'aria-label="Glossar-Begriff: ' . esc_attr($term_data['term']) . '">' .
-                                  $matches[1] . '</span>';
-
-                    // Mark term as linked if first_only is enabled
-                    if ($first_only) {
-                        $linked_terms[] = strtolower($term);
-                    }
-
-                    return $replacement;
-                }, $processed_part, $first_only ? 1 : -1);
-
-                // If first_only and term was linked, break variant loop
-                if ($first_only && in_array(strtolower($term), $linked_terms)) {
-                    break 2; // Break both variant and term loop
-                }
-            }
-        }
-
-        $result .= $processed_part;
-    }
-
-    return $result;
-}
-
 // Use priority 10000 to run AFTER all other content filters
 // CDB-Designer LaTeX Parser runs at priority 999
 // This ensures Container Blocks are FULLY rendered before processing
@@ -1435,8 +1223,7 @@ function simple_clean_get_glossar_terms_by_ids($term_ids) {
 }
 
 /**
- * Erstellt Regex-Pattern nur für spezifische Begriffe
- * Analog zu simple_clean_build_glossar_pattern() aber optimiert für kleine Term-Sets
+ * Erstellt Regex-Pattern nur für spezifische Begriffe (optimiert für kleine Term-Sets)
  *
  * @param array $terms Array von Glossar-Terms
  * @return array ['pattern' => string, 'mapping' => array]
@@ -1675,7 +1462,7 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
         }
 
         // Extrahiere nur die IDs für die Verarbeitung
-        $candidates = array_keys($all_terms);
+        $candidates = array_column($all_terms, 'id');
     }
 
     // Optimierte Verarbeitung mit nur relevanten Begriffen
@@ -1707,7 +1494,6 @@ function simple_clean_invalidate_affected_posts_optimized($post_id, $post) {
 
     // Cache löschen
     wp_cache_delete('glossar_terms', 'simple_clean_glossar');
-    wp_cache_delete('glossar_combined_pattern', 'simple_clean_glossar');
 
     // Finde betroffene Posts (Posts die diesen Begriff als Kandidat haben)
     $term_title = mb_strtolower($post->post_title, 'UTF-8');
@@ -1835,178 +1621,6 @@ add_action('delete_post', 'simple_clean_cleanup_deleted_glossar_term', 10, 1);
 // ===================================================================
 // Content cache has been removed as it doesn't work with CDB blocks.
 // Using optimized per-page candidate system instead.
-
-/**
- * Build optimized combined regex pattern for all glossar terms
- * Returns pattern and variant-to-term mapping
- * Cached for performance
- */
-function simple_clean_build_glossar_pattern() {
-    $cache_key = 'glossar_combined_pattern';
-    $cache_group = 'simple_clean_glossar';
-
-    $cached = wp_cache_get($cache_key, $cache_group);
-    if ($cached !== false) {
-        return $cached;
-    }
-
-    $terms = simple_clean_get_glossar_terms();
-    if (empty($terms)) {
-        return array(
-            'pattern' => null,
-            'variant_map' => array()
-        );
-    }
-
-    $all_variants = array();
-    $variant_to_term = array(); // Maps lowercase variant -> term data
-
-    foreach ($terms as $term_data) {
-        $variants = simple_clean_get_glossar_term_variants($term_data['term']);
-
-        foreach ($variants as $variant) {
-            $escaped = preg_quote($variant, '/');
-            $all_variants[] = $escaped;
-
-            // Store mapping (case-insensitive key)
-            $key = mb_strtolower($variant, 'UTF-8');
-            $variant_to_term[$key] = $term_data;
-        }
-    }
-
-    // Remove duplicates
-    $all_variants = array_unique($all_variants);
-
-    // Sort by length (longest first) to ensure proper matching
-    // e.g., "Molekülorbital" before "Molekül"
-    usort($all_variants, function($a, $b) {
-        return mb_strlen($b) - mb_strlen($a);
-    });
-
-    // Build combined pattern
-    $pattern = '/\b(' . implode('|', $all_variants) . ')\b/iu';
-
-    $result = array(
-        'pattern' => $pattern,
-        'variant_map' => $variant_to_term
-    );
-
-    wp_cache_set($cache_key, $result, $cache_group, HOUR_IN_SECONDS);
-
-    return $result;
-}
-
-// Clear pattern cache when glossar terms are modified
-add_action('save_post_glossar', function($post_id, $post, $update) {
-    wp_cache_delete('glossar_combined_pattern', 'simple_clean_glossar');
-}, 10, 3);
-
-/**
- * Process content and add glossar links using optimized pattern matching
- * Returns processed content and list of linked term IDs
- */
-function simple_clean_process_glossar_links($content) {
-    $pattern_data = simple_clean_build_glossar_pattern();
-
-    if (!$pattern_data['pattern']) {
-        return array(
-            'content' => $content,
-            'terms_found' => array()
-        );
-    }
-
-    $first_only = get_option('glossar_first_only', '1') === '1';
-    $case_sensitive = get_option('glossar_case_sensitive', '0') === '1';
-    $linked_terms = array();
-    $terms_found = array(); // Track term IDs for usage tracking
-
-    // Split content into HTML tags and text
-    $parts = preg_split('/(<[^>]+>)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
-
-    $result = '';
-    $in_link = false;
-    $in_script = false;
-
-    foreach ($parts as $part) {
-        // Check if this is an HTML tag
-        if (preg_match('/^<[^>]+>$/', $part)) {
-            // Track if we're inside a link or script tag
-            if (preg_match('/^<a\b/i', $part)) {
-                $in_link = true;
-            } elseif (preg_match('/^<\/a>/i', $part)) {
-                $in_link = false;
-            } elseif (preg_match('/^<(script|style|code|pre)\b/i', $part)) {
-                $in_script = true;
-            } elseif (preg_match('/^<\/(script|style|code|pre)>/i', $part)) {
-                $in_script = false;
-            }
-
-            $result .= $part;
-            continue;
-        }
-
-        // Skip processing if we're inside a link, script, or if already a glossar term
-        if ($in_link || $in_script || strpos($part, 'glossar-term') !== false) {
-            $result .= $part;
-            continue;
-        }
-
-        // Process this text part with optimized pattern
-        $processed_part = $part;
-
-        // Use preg_replace_callback with combined pattern
-        $processed_part = preg_replace_callback(
-            $pattern_data['pattern'],
-            function($matches) use ($pattern_data, &$linked_terms, &$terms_found, $first_only, $case_sensitive) {
-                $matched_text = $matches[1];
-                $key = $case_sensitive ? $matched_text : mb_strtolower($matched_text, 'UTF-8');
-
-                // Get term data from variant map
-                if (!isset($pattern_data['variant_map'][$key])) {
-                    return $matched_text; // No match found, shouldn't happen
-                }
-
-                $term_data = $pattern_data['variant_map'][$key];
-                $term_lower = strtolower($term_data['term']);
-
-                // Skip if first_only is enabled and term already linked
-                if ($first_only && in_array($term_lower, $linked_terms)) {
-                    return $matched_text;
-                }
-
-                // Create the glossar link
-                $replacement = '<span class="glossar-term glossar-clickable" ' .
-                              'data-glossar-id="' . esc_attr($term_data['id']) . '" ' .
-                              'id="glossar-term-' . esc_attr($term_data['id']) . '" ' .
-                              'role="button" tabindex="0" ' .
-                              'aria-label="Glossar-Begriff: ' . esc_attr($term_data['term']) . '">' .
-                              $matched_text . '</span>';
-
-                // Mark term as linked if first_only is enabled
-                if ($first_only) {
-                    $linked_terms[] = $term_lower;
-                }
-
-                // Track term ID for usage tracking
-                if (!in_array($term_data['id'], $terms_found)) {
-                    $terms_found[] = $term_data['id'];
-                }
-
-                return $replacement;
-            },
-            $processed_part
-        );
-
-        $result .= $processed_part;
-    }
-
-    return array(
-        'content' => $result,
-        'terms_found' => $terms_found
-    );
-}
-
-// Old content cache functions removed - using optimized per-page system instead
 
 // ===================================================================
 // GLOSSAR USAGE TRACKING (Wo wird Begriff verwendet)
@@ -2546,7 +2160,15 @@ function simple_clean_create_glossar_term($request) {
     $links = $request->get_param('links');
 
     // Check if term already exists (prevent duplicates)
-    $existing_term = get_page_by_title($title, OBJECT, 'glossar');
+    // Note: get_page_by_title() is deprecated since WP 6.2
+    global $wpdb;
+    $existing_term = $wpdb->get_var($wpdb->prepare(
+        "SELECT ID FROM $wpdb->posts
+         WHERE post_type = 'glossar'
+         AND post_status IN ('publish', 'draft', 'pending')
+         AND LOWER(post_title) = LOWER(%s)",
+        $title
+    ));
     if ($existing_term) {
         return new WP_Error(
             'duplicate_term',
