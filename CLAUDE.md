@@ -925,6 +925,87 @@ Before committing changes:
 - [ ] Ensure `dist/` folder not committed (in .gitignore)
 - [ ] Stage, commit, and push changes to GitHub
 
+## Funktionsübersicht functions.php (WICHTIG — Wegweiser für künftige Arbeiten)
+
+Die functions.php (~3850 Zeilen) enthält weit mehr als Theme-Setup. Die großen
+Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
+
+### Glossar-System (größtes Subsystem)
+- **CPT + Taxonomie:** `simple_clean_register_glossar_cpt()` (Slug `glossar`),
+  `simple_clean_register_glossar_taxonomy()` (Kategorie `glossar_category`)
+- **Automatische Verlinkung:** `the_content`-Filter (Priorität 10000)
+  `simple_clean_glossar_auto_link_content_optimized()` — Kandidaten-basiert:
+  beim Speichern scannt `simple_clean_scan_glossar_candidates()` den Inhalt und
+  legt Term-IDs in Post-Meta `_glossar_term_candidates` ab; beim Rendern werden
+  nur diese Terms geladen (Object-Cache `glossar_terms`/`simple_clean_glossar`).
+  Überspringt korrekt `<a>`, `<script>`, `<style>`, `<code>`, `<pre>`.
+- **Einstellungen:** Optionen `glossar_modal_type` (tooltip|sidebar),
+  `glossar_auto_link`, `glossar_first_only`, `glossar_case_sensitive`,
+  `glossar_auto_rebuild`; Admin-Seite `simple_clean_glossar_settings_page()`
+  (Untermenü des Glossar-CPT) mit CSV-Import/-Export und Bulk-Scan
+  (AJAX `glossar_bulk_scan` / `glossar_bulk_scan_batch`).
+- **Duplikat-Erkennung:** `simple_clean_glossar_term_exists_or_similar()`
+  (Normalisierung, Singular/Plural-Heuristik, Levenshtein ≤ 2).
+- **REST:** `POST simple-clean/v1/glossar` (Permission: `edit_posts`) zum
+  programmatischen Anlegen von Begriffen.
+- **Frontend-Assets:** `simple_clean_glossar_assets()` lädt glossar.js nur,
+  wenn die Seite Kandidaten hat; Terms werden als `glossarData` lokalisiert.
+
+### Website-Passwortschutz (kompletter Site-Lock)
+- `simple_clean_password_protection_check()` auf `template_redirect`;
+  Admin-Seite unter `simple_clean_password_protection_menu()`.
+- Passwort gehasht (`wp_check_password`), Brute-Force-Lockout
+  (10 Versuche / 15 min / IP via Transient), Zugriffs-Cookie
+  `simple_clean_password_granted` = abgeleiteter Token (30 Tage, httponly).
+- Eingeloggte Nutzer und wp-login sind ausgenommen. Formular-HTML inline in
+  `simple_clean_show_password_form()`.
+
+### AI-Crawler-Blocker
+- `simple_clean_block_ai_user_agents()` auf `template_redirect` (Priorität 1,
+  läuft VOR dem Passwortschutz): 403 für bekannte AI-User-Agents
+  (Musterliste im Code); Logging nur bei WP_DEBUG.
+- Ergänzend `simple_clean_generate_robots_txt()` (Filter `robots_txt`).
+- Wichtig zu wissen: blockt nur WordPress-gerenderte Seiten — statische
+  Dateien unter /wp-content/ liefert der Webserver direkt aus.
+
+### SVG-Upload-Pipeline
+- `simple_clean_allow_svg_upload()` (MIME), `simple_clean_fix_svg_mime()`,
+  Sanitizing bei Upload via `simple_clean_sanitize_svg_upload()` →
+  `simple_clean_sanitize_svg_string()`: DOM-basiert, entfernt script/
+  foreignObject/SMIL-Elemente und on*-Attribute, href-Whitelist
+  (`simple_clean_svg_href_is_safe()`: nur #fragment, relativ, http(s),
+  data:image/* außer SVG). Abmessungen für den Editor:
+  `simple_clean_svg_dimensions()`.
+
+### Custom Lightbox (CLB)
+- Ersetzt die WP-Core-Lightbox komplett: `simple_clean_disable_wp_lightbox()`
+  (render_block_data) + `simple_clean_custom_lightbox()` (render_block) hängen
+  `data-clb-src` (Full-Size-URL) an core/image-Blöcke; das Frontend-JS mit
+  FLIP-Zoom-Animation liegt in `src/js/main.js` (einziger Inhalt des Bundles).
+
+### Sidebar-Navigation
+- `sidebar.php`: kompletter Seitenbaum mit EINER `get_pages()`-Query +
+  Parent-Children-Map; Swipe/ESC/Click-outside im Inline-Script.
+- **ACHTUNG Hoisting-Falle:** Die Template-Funktionen (`get_root_page_id`,
+  `display_page_tree_item`) stehen bewusst AM DATEIANFANG in
+  function_exists-Guards — bedingt deklarierte Funktionen werden von PHP
+  nicht gehoistet; standen sie am Dateiende, gab es einen Fatal (v1.5.57→58).
+- Pro Seite abschaltbar über Meta `_simple_clean_hide_navigation`
+  (Meta-Box „Seitenleiste (Sidebar) Einstellungen").
+
+### Admin-Werkzeuge (includes/admin/)
+- `page-manager.php`: Seiten-Übersicht mit Drag-Sortierung, Anlegen/Löschen/
+  Status-Toggle per AJAX (`page_manager_*`), Rechteprüfung pro Einzelseite.
+- `clipboard-uploader.php`: Bilder aus der Zwischenablage in die Mediathek
+  (Capability `upload_files`).
+
+### Sonstiges
+- Customizer-Farben: `simple_clean_customize_register()` /
+  `simple_clean_customizer_css()` — CSS-Variablen in :root (Details siehe
+  Root-CLAUDE.md „Color Scheme").
+- Menü-Auto-Zuweisung: `simple_clean_auto_assign_menu()` (sucht Menü
+  „Skripten Übersicht").
+
 ## Additional Documentation
 
 - **Installation guide for users:** `readme.md`
