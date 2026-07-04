@@ -82,6 +82,7 @@ if (!defined('ABSPATH')) {
  * @param int $page_id Current page ID
  * @return int Root page ID
  */
+if (!function_exists('get_root_page_id')) {
 function get_root_page_id($page_id) {
     $ancestors = get_post_ancestors($page_id);
 
@@ -92,6 +93,7 @@ function get_root_page_id($page_id) {
 
     // If no ancestors, the current page is the root
     return $page_id;
+}
 }
 
 /**
@@ -104,6 +106,7 @@ function get_root_page_id($page_id) {
  * @param int $depth Current depth level
  * @param bool $auto_expand Auto-expand all items
  */
+if (!function_exists('display_page_tree_item')) {
 function display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, $depth = 0, $auto_expand = true) {
     // Get child pages from the prebuilt map (no extra query per node)
     $children = isset($children_map[$page->ID]) ? $children_map[$page->ID] : array();
@@ -153,6 +156,7 @@ function display_page_tree_item($page, $current_page_id, $children_map, $current
     }
 
     echo '</li>';
+}
 }
 ?>
 

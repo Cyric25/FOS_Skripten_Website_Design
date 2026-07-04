@@ -3100,8 +3100,11 @@ function simple_clean_block_ai_user_agents() {
     // Check if User-Agent matches any blocked pattern
     foreach ($blocked_patterns as $pattern) {
         if (strpos($user_agent, $pattern) !== false) {
-            // Log the blocked attempt (optional)
-            error_log("AI Crawler blocked: {$user_agent}");
+            // Log nur bei WP_DEBUG — bei Bot-Traffic füllte das sonst
+            // bei jedem geblockten Request die Logs (AP25)
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("AI Crawler blocked: {$user_agent}");
+            }
 
             // Send 403 Forbidden header
             header('HTTP/1.1 403 Forbidden');

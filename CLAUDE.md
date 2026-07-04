@@ -4,8 +4,12 @@ This file provides guidance to Claude Code when working with this WordPress them
 
 ## Theme Overview
 
-**Name:** Simple Clean Theme
-**Version:** 1.0
+**Name:** FOS Online Schulbuch (ehemals "Simple Clean Theme")
+**Version:** siehe `package.json` / `style.css` (aktuell 1.5.x)
+
+**Hinweis Menü-Toggle:** Der Mobile-Menü-Toggle ist ausschließlich als Inline-Script
+in `header.php` implementiert (inkl. ARIA, ESC, Click-outside). `src/js/main.js`
+enthält nur noch die Custom-Lightbox.
 **Description:** Ein einfaches, responsives WordPress-Theme ohne Widgets, fokussiert auf Inhalt und Lesbarkeit
 **WordPress Compatibility:** 5.0+
 **PHP Compatibility:** 7.4+
@@ -841,16 +845,6 @@ git push origin main          # Push again
 - NPM scripts: `package.json:6-11`
 
 ## Known Issues
-
-### Duplicate Menu Toggle Code
-
-**Issue:** Menu toggle is implemented twice:
-1. Inline script in `header.php:45-50` (basic)
-2. Bundled script in `src/js/main.js` (enhanced)
-
-**Impact:** Both work, but inline version loads first and lacks accessibility features.
-
-**Recommendation:** Remove inline script from `header.php` and rely on bundled version.
 
 ### Path Character Warning
 
