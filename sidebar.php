@@ -9,73 +9,15 @@
 if (!defined('ABSPATH')) {
     exit;
 }
-?>
 
-<aside class="sidebar hidden" id="sidebar">
-    <div class="sidebar-header">
-        <h3 class="sidebar-title">Navigation</h3>
-        <button class="sidebar-toggle-close" id="sidebar-toggle-close" aria-label="Sidebar schließen" title="Navigation schließen">
-            ✕
-        </button>
-    </div>
+/**
+ * WICHTIG: Die Funktionsdefinitionen MÜSSEN hier oben stehen (vor der ersten
+ * Verwendung). In function_exists()-Guards gewickelte Funktionen werden von
+ * PHP NICHT vorgezogen (kein Hoisting) — standen sie wie früher am Dateiende,
+ * war get_root_page_id() beim Aufruf in der Sidebar-Navigation noch nicht
+ * definiert → Fatal Error auf allen Seiten mit Sidebar.
+ */
 
-    <nav class="sidebar-navigation">
-        <?php
-        // Get current page ID
-        $current_page_id = get_the_ID();
-
-        // Find the root page (top-level ancestor of current page)
-        $root_page_id = get_root_page_id($current_page_id);
-
-        // Get the root page title for display
-        $root_page = get_post($root_page_id);
-        $root_title = $root_page ? $root_page->post_title : '';
-
-        // Display root page title as section header
-        if ($root_title) {
-            echo '<div class="sidebar-section-title">' . esc_html($root_title) . '</div>';
-        }
-
-        // Load ALL descendants of the root page in a single query and
-        // build a parent => children map (avoids one query per tree node)
-        $all_pages = get_pages(array(
-            'child_of' => $root_page_id,
-            'sort_column' => 'menu_order, post_title',
-        ));
-
-        $children_map = array();
-        foreach ($all_pages as $tree_page) {
-            $children_map[$tree_page->post_parent][] = $tree_page;
-        }
-
-        // Ancestors of the current page, computed once for the whole tree
-        $current_ancestors = get_post_ancestors($current_page_id);
-
-        $pages = isset($children_map[$root_page_id]) ? $children_map[$root_page_id] : array();
-
-        if ($pages) {
-            echo '<ul class="page-tree">';
-
-            foreach ($pages as $page) {
-                display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, 0, true); // true = auto-expand all
-            }
-
-            echo '</ul>';
-        } else {
-            // If no child pages, show a message
-            echo '<p class="no-pages-message">Keine Unterseiten vorhanden.</p>';
-        }
-        ?>
-    </nav>
-</aside>
-
-<!-- Sidebar toggle button (works on mobile and desktop) -->
-<button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Navigation öffnen" title="Navigation öffnen/schließen">
-    <span class="toggle-icon">☰</span>
-    <span class="toggle-text">Navigation</span>
-</button>
-
-<?php
 /**
  * Get the root page ID (top-level ancestor) for the current page
  *
@@ -159,6 +101,70 @@ function display_page_tree_item($page, $current_page_id, $children_map, $current
 }
 }
 ?>
+
+<aside class="sidebar hidden" id="sidebar">
+    <div class="sidebar-header">
+        <h3 class="sidebar-title">Navigation</h3>
+        <button class="sidebar-toggle-close" id="sidebar-toggle-close" aria-label="Sidebar schließen" title="Navigation schließen">
+            ✕
+        </button>
+    </div>
+
+    <nav class="sidebar-navigation">
+        <?php
+        // Get current page ID
+        $current_page_id = get_the_ID();
+
+        // Find the root page (top-level ancestor of current page)
+        $root_page_id = get_root_page_id($current_page_id);
+
+        // Get the root page title for display
+        $root_page = get_post($root_page_id);
+        $root_title = $root_page ? $root_page->post_title : '';
+
+        // Display root page title as section header
+        if ($root_title) {
+            echo '<div class="sidebar-section-title">' . esc_html($root_title) . '</div>';
+        }
+
+        // Load ALL descendants of the root page in a single query and
+        // build a parent => children map (avoids one query per tree node)
+        $all_pages = get_pages(array(
+            'child_of' => $root_page_id,
+            'sort_column' => 'menu_order, post_title',
+        ));
+
+        $children_map = array();
+        foreach ($all_pages as $tree_page) {
+            $children_map[$tree_page->post_parent][] = $tree_page;
+        }
+
+        // Ancestors of the current page, computed once for the whole tree
+        $current_ancestors = get_post_ancestors($current_page_id);
+
+        $pages = isset($children_map[$root_page_id]) ? $children_map[$root_page_id] : array();
+
+        if ($pages) {
+            echo '<ul class="page-tree">';
+
+            foreach ($pages as $page) {
+                display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, 0, true); // true = auto-expand all
+            }
+
+            echo '</ul>';
+        } else {
+            // If no child pages, show a message
+            echo '<p class="no-pages-message">Keine Unterseiten vorhanden.</p>';
+        }
+        ?>
+    </nav>
+</aside>
+
+<!-- Sidebar toggle button (works on mobile and desktop) -->
+<button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Navigation öffnen" title="Navigation öffnen/schließen">
+    <span class="toggle-icon">☰</span>
+    <span class="toggle-text">Navigation</span>
+</button>
 
 <script>
 // Sidebar Navigation - Executed immediately after sidebar HTML is rendered
