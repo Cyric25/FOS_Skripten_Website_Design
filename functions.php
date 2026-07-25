@@ -661,7 +661,11 @@ function simple_clean_handle_glossar_export() {
     fclose($output);
 }
 
-// Helper function: Check if term or variation already exists
+// Helper function: Check if a term already exists (exact match after normalization).
+// Bewusst NUR exakte Übereinstimmung: Die frühere Ähnlichkeitsheuristik
+// (Levenshtein ≤ 2, Singular/Plural, "enthält") übersprang eigenständige
+// Begriffe fälschlich beim Import (z. B. "Amine" vs. "Amin"/"Amide",
+// "Photon" vs. "Proton").
 // $existing_posts kann vorgeladen übergeben werden (z. B. beim CSV-Import),
 // sonst werden die Glossar-Posts pro Aufruf geladen.
 function simple_clean_glossar_term_exists_or_similar($term, $existing_posts = null) {
@@ -680,39 +684,12 @@ function simple_clean_glossar_term_exists_or_similar($term, $existing_posts = nu
     foreach ($existing_posts as $post) {
         $existing_normalized = simple_clean_normalize_glossar_term($post->post_title);
 
-        // Check for exact match (normalized)
+        // Only skip on an exact (normalized) match
         if ($normalized_term === $existing_normalized) {
             return array(
                 'exists' => true,
                 'post' => $post,
                 'reason' => 'Exakte Übereinstimmung'
-            );
-        }
-
-        // Check for variations (one contains the other)
-        if (strlen($normalized_term) > 3 && strlen($existing_normalized) > 3) {
-            if (strpos($existing_normalized, $normalized_term) !== false) {
-                return array(
-                    'exists' => true,
-                    'post' => $post,
-                    'reason' => "Variation gefunden: '{$post->post_title}'"
-                );
-            }
-            if (strpos($normalized_term, $existing_normalized) !== false) {
-                return array(
-                    'exists' => true,
-                    'post' => $post,
-                    'reason' => "Variation gefunden: '{$post->post_title}'"
-                );
-            }
-        }
-
-        // Check for singular/plural variations
-        if (simple_clean_glossar_terms_are_similar($normalized_term, $existing_normalized)) {
-            return array(
-                'exists' => true,
-                'post' => $post,
-                'reason' => "Ähnliche Form gefunden: '{$post->post_title}'"
             );
         }
     }
@@ -738,35 +715,6 @@ function simple_clean_normalize_glossar_term($term) {
     $term = preg_replace('/\s+/', ' ', $term);
 
     return trim($term);
-}
-
-// Helper function: Check if terms are similar (singular/plural)
-function simple_clean_glossar_terms_are_similar($term1, $term2) {
-    // If terms are very short, don't check similarity
-    if (strlen($term1) < 4 || strlen($term2) < 4) {
-        return false;
-    }
-
-    // Check if one is just plural of the other (simple heuristic)
-    // German plural often: -e, -en, -er, -s
-    $endings = array('e', 'en', 'er', 's', 'n');
-
-    foreach ($endings as $ending) {
-        // Check if term1 = term2 + ending
-        if ($term1 === $term2 . $ending || $term2 === $term1 . $ending) {
-            return true;
-        }
-    }
-
-    // Check Levenshtein distance (max 2 character difference for similar terms)
-    if (strlen($term1) > 5 && strlen($term2) > 5) {
-        $distance = levenshtein($term1, $term2);
-        if ($distance > 0 && $distance <= 2) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 // Handle Glossar CSV Import
@@ -824,9 +772,14 @@ function simple_clean_handle_glossar_import() {
     while (($data = fgetcsv($file, 10000, ',')) !== false) {
         $row_number++;
 
-        // Skip header row
-        if ($row_number === 1 && ($data[0] === 'Begriff' || $data[0] === 'Term')) {
-            continue;
+        // Skip header row. Strip a leading UTF-8 BOM first, otherwise the
+        // header of a re-imported export ("\xEF\xBB\xBFBegriff") is not
+        // recognised and gets imported as a bogus term.
+        if ($row_number === 1) {
+            $data[0] = preg_replace('/^\xEF\xBB\xBF/', '', $data[0]);
+            if ($data[0] === 'Begriff' || $data[0] === 'Term') {
+                continue;
+            }
         }
 
         // Validate row has at least 2 columns (Begriff and Definition)
