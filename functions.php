@@ -644,8 +644,8 @@ function simple_clean_handle_glossar_export() {
     // Add BOM for Excel UTF-8 compatibility
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-    // Write CSV header
-    fputcsv($output, array('Begriff', 'Definition', 'Slug', 'Status'));
+    // Write CSV header (Semikolon = deutsches Excel/Sheets-Standard, passt zum Import)
+    fputcsv($output, array('Begriff', 'Definition', 'Slug', 'Status'), ';');
 
     // Write data
     foreach ($glossar_posts as $post) {
@@ -655,7 +655,7 @@ function simple_clean_handle_glossar_export() {
             $post->post_name,
             $post->post_status
         );
-        fputcsv($output, $row);
+        fputcsv($output, $row, ';');
     }
 
     fclose($output);
@@ -769,24 +769,8 @@ function simple_clean_handle_glossar_import() {
         'post_status' => array('publish', 'draft', 'pending'),
     ));
 
-    // Trennzeichen automatisch aus der Kopfzeile erkennen. Deutsche Excel-/
-    // Tool-Exporte verwenden meist Semikolon, der Theme-Export Komma.
-    $delimiter = ',';
-    $first_line = fgets($file);
-    rewind($file);
-    if ($first_line !== false) {
-        $first_line = preg_replace('/^\xEF\xBB\xBF/', '', $first_line);
-        $delimiter_counts = array(
-            ';'  => substr_count($first_line, ';'),
-            ','  => substr_count($first_line, ','),
-            "\t" => substr_count($first_line, "\t"),
-        );
-        arsort($delimiter_counts);
-        $detected = key($delimiter_counts);
-        if ($delimiter_counts[$detected] > 0) {
-            $delimiter = $detected;
-        }
-    }
+    // Trennzeichen ist immer Semikolon (deutsches Excel/Sheets-Standard).
+    $delimiter = ';';
 
     while (($data = fgetcsv($file, 10000, $delimiter)) !== false) {
         $row_number++;
