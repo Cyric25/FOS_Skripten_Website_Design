@@ -769,7 +769,26 @@ function simple_clean_handle_glossar_import() {
         'post_status' => array('publish', 'draft', 'pending'),
     ));
 
-    while (($data = fgetcsv($file, 10000, ',')) !== false) {
+    // Trennzeichen automatisch aus der Kopfzeile erkennen. Deutsche Excel-/
+    // Tool-Exporte verwenden meist Semikolon, der Theme-Export Komma.
+    $delimiter = ',';
+    $first_line = fgets($file);
+    rewind($file);
+    if ($first_line !== false) {
+        $first_line = preg_replace('/^\xEF\xBB\xBF/', '', $first_line);
+        $delimiter_counts = array(
+            ';'  => substr_count($first_line, ';'),
+            ','  => substr_count($first_line, ','),
+            "\t" => substr_count($first_line, "\t"),
+        );
+        arsort($delimiter_counts);
+        $detected = key($delimiter_counts);
+        if ($delimiter_counts[$detected] > 0) {
+            $delimiter = $detected;
+        }
+    }
+
+    while (($data = fgetcsv($file, 10000, $delimiter)) !== false) {
         $row_number++;
 
         // Skip header row. Strip a leading UTF-8 BOM first, otherwise the
