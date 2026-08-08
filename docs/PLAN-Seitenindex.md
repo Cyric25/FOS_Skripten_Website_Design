@@ -1,6 +1,6 @@
 # Projektplan: Seitenindex & Inhaltsverzeichnis-Block (Theme „FOS Online Schulbuch")
 
-_Erstellt am: 2026-08-07 · Letzte Aktualisierung: 2026-08-07_
+_Erstellt am: 2026-08-07 · Letzte Aktualisierung: 2026-08-08_
 
 ## 0. Anweisungen für den ausführenden Agenten
 
@@ -277,7 +277,7 @@ Das Unterscheidungsmerkmal existiert bereits: das Post-Meta
 
 #### AP-1.1: Ausgangszustand sichern und Phasen-Branch anlegen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-08)
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** keine
@@ -331,7 +331,51 @@ nur eine einzige Backup-Generation vorhält und sie bei jedem Build überschreib
 - Prüfschritt: `php -l` über alle PHP-Dateien meldet „No syntax errors detected" für jede Datei.
 - Prüfschritt: Die Rollback-ZIP-Datei lässt sich öffnen und enthält im Wurzelverzeichnis den Ordner `fos-online-schulbuch/` mit `style.css` und `functions.php`.
 
-**Übergabenotiz:**
+**Übergabenotiz:** (2026-08-08)
+
+**Was geändert wurde:**
+- Commit `c9322e2` auf `main`: „v1.5.68: Plastischer Look Sidebar-Streifen,
+  Cache-Busting style.css" – 7 Dateien, 3314 Einfügungen, 18 Löschungen.
+  Enthalten: `style.css`, `functions.php`, `package.json`, `CLAUDE.md`,
+  `.gitignore` sowie neu `docs/ERWEITERUNGSANALYSE-Seitenindex.md` und
+  `docs/PLAN-Seitenindex.md`. Nach `origin/main` gepusht
+  (`d252f81..c9322e2`).
+- `.gitignore`: Eintrag `.claude/` im Abschnitt „IDE / Editor" ergänzt. Der
+  Ordner war zuvor unversioniert und wäre sonst mit committet worden.
+- `backups/fos-online-schulbuch-rollback-phase1.zip` angelegt (Kopie von
+  `dist/fos-online-schulbuch.zip`, 79 145 Bytes, 22 Einträge, `style.css`
+  meldet Version 1.5.68).
+- Branch `phase-1-glossar-fallback` von `main` abgezweigt und mit
+  `-u origin` gepusst. Aktiver Branch. Beide Branches stehen auf `c9322e2`.
+
+**Getroffene Entscheidungen:**
+- `npm run build` war **nicht** nötig: `dist/fos-online-schulbuch.zip` existierte
+  bereits und trägt Version 1.5.68, passend zum committeten Stand. Die
+  Versionsnummer wurde daher **nicht** erhöht – sie steht weiterhin auf
+  1.5.68 in `package.json` und `style.css`.
+
+**Für Folge-APs relevant:**
+- **Kein PHP 7.4 verfügbar.** `php` im Pfad ist Version 8.5.1
+  (`/c/php/php`), unter `C:\allinkl-testserver\php\` liegt nur 8.3. `php -l`
+  weist damit Syntaxfehler zuverlässig nach, kann aber **nicht** erkennen,
+  wenn versehentlich PHP-8-only-Syntax verwendet wird (`match`, Union Types,
+  Nullsafe-Operator, Constructor Property Promotion). Die Zielumgebung
+  verlangt laut `style.css` PHP 7.4. AP-1.3, AP-1.4, AP-2.1 und AP-3.2
+  müssen das **durch Codelektüre** sicherstellen; `php -l` allein genügt hier
+  nicht. Die Review-APs prüfen es ohnehin gesondert.
+- Der Befehl für die Syntaxprüfung über alle PHP-Dateien (Git Bash, im Ordner
+  `Theme/`), `node_modules` ausgenommen:
+  `for f in $(find . -path ./node_modules -prune -o -name "*.php" -print); do php -l "$f"; done`
+  Geprüft werden damit 11 Dateien: 9 im Wurzelverzeichnis plus
+  `includes/admin/clipboard-uploader.php` und `includes/admin/page-manager.php`.
+  `functions.php.backup` wird nicht erfasst (keine `.php`-Endung) – das ist so
+  gewollt, die Datei ist ein Altbestand und nicht Teil des Themes.
+- `dist/` und `*.zip` sind in `.gitignore`; das Rollback-ZIP unter `backups/`
+  wird also **nicht** versioniert. Es existiert nur lokal. Vor einem
+  Rechnerwechsel wäre es gesondert zu sichern.
+- Die Live-Site wurde in diesem AP **nicht** angefasst – es gab keine
+  Codeänderung, die eingespielt werden müsste. Der auf der Website laufende
+  Stand entspricht dem Rollback-ZIP.
 
 ---
 
@@ -2546,7 +2590,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 
 | AP | Titel | Modell | Status | Abhängig von | Notiz |
 |---|---|---|---|---|---|
-| AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☐ | – | |
+| AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☑ | – | Commit `c9322e2` auf `main`; Branch `phase-1-glossar-fallback` aktiv. **Kein PHP 7.4 lokal verfügbar** – siehe Übergabenotiz |
 | AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☐ | AP-1.1 | |
 | AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☐ | AP-1.2 | |
 | AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☐ | AP-1.3 | |
@@ -2606,7 +2650,7 @@ pro Phasenabschluss.
 
 | Datum | AP / Phase | Getestet | Ergebnis | Getestet von |
 |---|---|---|---|---|
-| | AP-1.1 | | | |
+| 2026-08-08 | AP-1.1 | Alle 5 Akzeptanzkriterien; `php -l` über 11 PHP-Dateien; ZIP-Inhalt und Version geprüft | **Bestanden.** 11/11 Dateien „No syntax errors detected". Arbeitsbaum sauber, `main` und `phase-1-glossar-fallback` beide auf `c9322e2` und gepusht. Rollback-ZIP 79 145 Bytes, 22 Einträge, `style.css` = v1.5.68 | Claude (AP-Ausführung) |
 | | AP-1.2 | | | |
 | | AP-1.3 | | | |
 | | AP-1.4 | | | |
