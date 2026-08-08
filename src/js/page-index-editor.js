@@ -131,7 +131,11 @@
 						},
 					}),
 
-					attributes.layout !== 'list'
+					// Spalten wirken NUR bei "Mehrspaltig". Kapitelkarten stehen
+					// bewusst immer untereinander, die einfache Liste ohnehin.
+					// Die Einstellung deshalb dort ausblenden, statt einen
+					// Regler zu zeigen, der nichts bewirkt.
+					attributes.layout === 'columns'
 						? el(RangeControl, {
 								label: 'Spalten',
 								value: attributes.columns,

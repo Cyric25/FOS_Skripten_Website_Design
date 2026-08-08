@@ -1178,7 +1178,8 @@ ignoriert — der Block gäbe nichts aus, ohne Fehlermeldung. Das Theme
 deklariert „Requires at least: 5.0", deshalb `render_callback`.
 
 **Gestaltung:** `src/css/page-index.css`. Klassen: `.page-index`,
-`--cards|--list|--columns`, `--cols-1..4`, `__search`, `__chapters`,
+`--cards|--list|--columns`, `--cols-1..4` (**nur bei `--columns`**, siehe
+unten), `__search`, `__chapters`,
 `__chapter`, `__chapter-link`, `__sub`, `__sub-toggle`, `__pages`, `__page`,
 `__page-link`, `__empty`, `__no-results`, `__status` sowie
 `__chapter--hidden` / `__page--hidden` für den Filter.
@@ -1194,6 +1195,16 @@ Im CSS stehen **keine freistehenden Farbwerte**; Hexwerte nur als Rückfall in
 `var(--x, #wert)`, wo die Customizer-Farbe weiterhin gewinnt.
 Der „plastische Look" bleibt außen vor — er ist dem Navigations-Streifen
 vorbehalten.
+
+**Kapitelkarten stehen immer untereinander** (seit v1.5.75, auf Wunsch des
+Nutzers). Bei Kapiteln unterschiedlicher Länge entstehen im Raster ungleich
+hohe Karten und ausgefranste Reihen, und die Lesereihenfolge wird mehrdeutig.
+Wer mehrere Spalten will, wählt die Darstellung „Mehrspaltig" — dort ist der
+Spaltensatz der Zweck. **Folge:** Die Spalteneinstellung wirkt nur noch auf
+`--columns`; der Renderer gibt `--cols-N` auch nur dort aus, und der Editor
+blendet den Regler bei den anderen Darstellungen aus. Wer das Raster für
+Karten zurückholen will, braucht drei Änderungen — CSS, Klassenausgabe in
+`simple_clean_render_page_index()` und die Bedingung im Editor-Script.
 
 **Seiten ausnehmen:** Meta `_simple_clean_hide_from_index`, gesetzt über die
 zweite Checkbox der Meta-Box „Navigation & Inhaltsverzeichnis". Die Seite

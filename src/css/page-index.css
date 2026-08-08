@@ -54,10 +54,14 @@
 }
 
 /* --------------------------------------------------------------------
-   Kapitelraster
-   Die Spaltenzahl kommt aus der Klasse page-index--cols-N. Bewusst ueber
-   Haltepunkte statt auto-fit: So ist vorhersagbar, wie viele Spalten wann
-   erscheinen, statt es der Kartenbreite zu ueberlassen.
+   Kapitelliste
+   Kapitelkarten stehen IMMER untereinander, auf jeder Bildschirmbreite.
+   Das ist eine bewusste Festlegung: Bei Kapiteln unterschiedlicher Laenge
+   entstehen im Raster ungleich hohe Karten und ausgefranste Reihen, und die
+   Lesereihenfolge wird mehrdeutig. Wer mehrere Spalten will, waehlt die
+   Darstellung "Mehrspaltig" - dort ist der Spaltensatz der Zweck.
+   Die Spalteneinstellung wirkt deshalb nur noch auf "Mehrspaltig"; der
+   Editor blendet sie bei den anderen Darstellungen aus.
    -------------------------------------------------------------------- */
 .page-index__chapters {
 	display: grid;
@@ -66,24 +70,6 @@
 	margin: 0;
 	padding: 0;
 	list-style: none;
-}
-
-@media (min-width: 600px) {
-	.page-index--cols-2 .page-index__chapters,
-	.page-index--cols-3 .page-index__chapters,
-	.page-index--cols-4 .page-index__chapters {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-}
-
-@media (min-width: 992px) {
-	.page-index--cols-3 .page-index__chapters {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.page-index--cols-4 .page-index__chapters {
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-	}
 }
 
 /* --------------------------------------------------------------------

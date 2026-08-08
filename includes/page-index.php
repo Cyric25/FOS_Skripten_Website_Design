@@ -389,8 +389,11 @@ function simple_clean_render_page_index($attributes = array(), $content = '', $b
         ? $liste
         : '<p class="page-index__empty">' . esc_html__('Keine Seiten vorhanden.', 'fos-online-schulbuch') . '</p>';
 
+    // Die Spaltenklasse nur bei "Mehrspaltig" ausgeben. Kapitelkarten stehen
+    // bewusst immer untereinander (Begründung im CSS), und die einfache Liste
+    // ist ohnehin einspaltig — dort wäre die Klasse irreführend.
     $klassen = array('page-index', 'page-index--' . $attrs['layout']);
-    if ('list' !== $attrs['layout']) {
+    if ('columns' === $attrs['layout']) {
         $klassen[] = 'page-index--cols-' . $attrs['columns'];
     }
 
