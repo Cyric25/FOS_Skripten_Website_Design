@@ -2622,9 +2622,9 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP | Titel | Modell | Status | Abhängig von | Notiz |
 |---|---|---|---|---|---|
 | AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☑ | – | Commit `c9322e2` auf `main`; Branch `phase-1-glossar-fallback` aktiv. **Kein PHP 7.4 lokal verfügbar** – siehe Übergabenotiz |
-| AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ◐ | AP-1.1 | Code fertig (`36ad832`, v1.5.69). Offen: ZIP einspielen + Messung durch den Nutzer |
-| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ◐ | AP-1.2 | Code fertig, Harness 6/6. Build wartet auf die Ausgangsmessung aus AP-1.2 |
-| AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☐ | AP-1.3 | |
+| AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☑ | AP-1.1 | Ausgangsmessung erhoben (Abschnitt 9). Befund: Faktor 25 bei gleicher Query-Zahl → siehe Abschnitt 11 |
+| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ◐ | AP-1.2 | Harness 6/6, v1.5.70 live. Nutzer meldet deutliche Beschleunigung; Messwerte zur Bestätigung stehen aus |
+| AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ◐ | AP-1.3 | Harness 5/5, v1.5.70 live. Messwerte zur Bestätigung stehen aus |
 | AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | |
 | AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ☐ | AP-1.5 | |
 | AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | frischer Agent, nur lesend |
@@ -2667,24 +2667,51 @@ entwickelt und **nacheinander** eingespielt werden.
 Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und
 pro Phasenabschluss.
 
-**Messtabelle (wird in AP-1.2, AP-1.6 und AP-5.2 gefüllt):**
+**Messtabelle**
 
-| Zeitpunkt | URL | Queries | Zeit (s) | Speicher | Dokumentgröße |
+Ausgangszustand, erhoben am 2026-08-08 auf Theme v1.5.69 (vor dem
+Glossar-Fix), je Seite drei Aufrufe ohne Cache, Median:
+
+| Seite | Queries | Zeit (s) | Speicher | Größe | Links | HTML-Elemente |
+|---|---|---|---|---|---|---|
+| Verz. Labor `/laborsicherheit/` | 45 | 0,084 | 56 MB | 66,8 KB | 61 | 251 |
+| **Verz. Organische Chemie** `/organische-chemie-und-biochemie/` | **45** | **1,998** | 66 MB | 88,4 KB | 163 | 469 |
+| Verz. Analytische Chemie `/analytische-chemie/` | 47 | 0,073 | 58 MB | 82,1 KB | 114 | 380 |
+| Skriptenseite (Vergleich) | 53 | 0,078 | 54 MB | 169,7 KB | 166 | 1084 |
+| Startseite (Vergleich) | 41 | 0,053 | 48 MB | 67,0 KB | 40 | 208 |
+
+Umfang: 258 veröffentlichte Seiten, 1049 Glossareinträge.
+Einzelwerte der langsamen Seite: 1,998 / 1,977 / 2,048 s — stabil, kein Ausreißer.
+
+> **Der Befund, der den Plan verändert:** Alle drei Verzeichnisse laden über
+> `core/page-list` dieselben 258 Seiten, und die Query-Zahlen sind praktisch
+> gleich (45 / 45 / 47). Trotzdem unterscheiden sich die Zeiten um Faktor 25.
+> Ein Unterschied dieser Größe bei gleicher Datenbanklast kann **nicht** von
+> `get_pages()` kommen — das ist reine Rechenzeit. Die in der
+> Erweiterungsanalyse als „Ursache A" benannte fehlende Zwischenspeicherung
+> des Seitenbaums kostet ausweislich der Messung nur etwa 0,03 s gegenüber der
+> Startseite. Siehe Abschnitt 11.
+
+Nach dem Glossar-Fix (Theme v1.5.70, AP-1.3 + AP-1.4):
+
+| Seite | Queries | Zeit (s) | davon Glossar | Speicher | Größe |
 |---|---|---|---|---|---|
-| Ausgangszustand (AP-1.2) | Inhaltsverzeichnis | | | | |
-| Ausgangszustand (AP-1.2) | Skriptenseite (Vergleich) | | | | |
-| Ausgangszustand (AP-1.2) | Startseite (Vergleich) | | | | |
-| Nach Glossar-Fix (AP-1.6) | Inhaltsverzeichnis | | | | |
-| Nach Umstellung (AP-5.2) | Inhaltsverzeichnis | | | | |
+| Verz. Labor | | | | | |
+| Verz. Organische Chemie | | | | | |
+| Verz. Analytische Chemie | | | | | |
+| Skriptenseite (Vergleich) | | | | | |
+
+_Rückmeldung des Nutzers am 2026-08-08 nach dem Einspielen von v1.5.70:
+„subjektiv läuft die Seite jetzt sehr viel schneller". Zahlen stehen noch aus._
 
 **Prüfprotokoll:**
 
 | Datum | AP / Phase | Getestet | Ergebnis | Getestet von |
 |---|---|---|---|---|
 | 2026-08-08 | AP-1.1 | Alle 5 Akzeptanzkriterien; `php -l` über 11 PHP-Dateien; ZIP-Inhalt und Version geprüft | **Bestanden.** 11/11 Dateien „No syntax errors detected". Arbeitsbaum sauber, `main` und `phase-1-glossar-fallback` beide auf `c9322e2` und gepusht. Rollback-ZIP 79 145 Bytes, 22 Einträge, `style.css` = v1.5.68 | Claude (AP-Ausführung) |
-| | AP-1.2 | | | |
-| | AP-1.3 | | | |
-| | AP-1.4 | | | |
+| 2026-08-08 | AP-1.2 | Alle 5 Akzeptanzkriterien; Gegenprobe ohne Parameter; Ausgangsmessung über 3 Verzeichnisseiten + 2 Vergleichsseiten, je 3 Durchläufe | **Bestanden.** Werte in Abschnitt 9. Gegenprobe bestanden (ohne `?sc_perf=1` keine Ausgabe) | Claude + Nutzer |
+| 2026-08-08 | AP-1.3 | Stub-Harness gegen 6 Fälle (gescannt/leer/nie gescannt/Meta kaputt/leeres Glossar); `simple_clean_process_glossar_links_optimized()` byte-identisch gegengeprüft | **6/6 bestanden.** Live seit v1.5.70; Nutzer meldet „subjektiv sehr viel schneller". Zahlen ausstehend | Claude |
+| 2026-08-08 | AP-1.4 | Stub-Harness gegen 5 Fälle inkl. Nachweis, dass `glossar-style.css` weiterhin immer eingehängt wird | **5/5 bestanden.** Live seit v1.5.70 | Claude |
 | | AP-1.5 | | | |
 | | AP-1.6 | | | |
 | | Phase 1 Integration + Regression R1–R8 | | | |
@@ -2737,3 +2764,39 @@ pro Phasenabschluss.
 - **Projektübergreifende Farbdoku:** `CLAUDE.md` im Website-Wurzelverzeichnis,
   Abschnitt „Color Scheme" – wird in AP-4.doc um die neue Customizer-Sektion
   ergänzt.
+
+## 11. Korrektur der Ursachenanalyse (2026-08-08)
+
+Dieser Abschnitt ist nachträglich entstanden. Er hält fest, wo die
+ursprüngliche Analyse falsch lag, damit der Plan nicht weiter auf einer
+widerlegten Annahme aufbaut.
+
+**Was angenommen wurde.** `Theme/docs/ERWEITERUNGSANALYSE-Seitenindex.md`
+nennt zwei Ursachen: (A) `core/page-list` lädt bei jedem Aufruf alle Seiten
+ohne Zwischenspeicherung, (B) der Glossar-Autolinker fällt auf textarmen
+Seiten in den teuren Pfad über alle Begriffe. Die Phasen 2 und 3 des Plans —
+Seitenindex und Block mit Fragment-Cache — beruhen vollständig auf (A).
+
+**Was gemessen wurde.** Ursache (A) ist messbar vorhanden, aber klein: Die
+Verzeichnisseiten brauchen 45–47 Queries gegenüber 41 auf der Startseite, und
+die schnellen Verzeichnisse liegen bei 0,073–0,084 s gegenüber 0,053 s. Der
+gesamte Seitenbaum kostet also rund 0,03 s. Ein vorberechneter Index könnte
+davon höchstens einen Teil einsparen — im Bereich von Hundertstelsekunden.
+
+Die 2 Sekunden auf `/organische-chemie-und-biochemie/` entstehen woanders:
+gleiche Query-Zahl wie die schnellen Seiten, aber Faktor 25 mehr Zeit und
+10 MB mehr Spitzenspeicher. Das ist Rechenzeit, keine Datenbanklast.
+
+**Warum die Fehleinschätzung entstand.** Die Analyse hat den Core-Quelltext
+von `core/page-list` korrekt gelesen (kein Cache, `get_permalink()` je Seite)
+und daraus auf die Kostenverteilung geschlossen, statt sie zu messen. Der
+Schluss war plausibel und falsch: Bei 258 Seiten ist der Aufwand schlicht zu
+klein, um ins Gewicht zu fallen. Erkennbar gewesen wäre das nur durch
+Messung — genau deshalb steht sie im Plan vor den Umbauphasen.
+
+**Folge für den Plan.** Phase 1 (Glossar) trifft das Problem und bleibt.
+Phase 2 und 3 in ihrer bisherigen Begründung nicht. Über ihren Verbleib ist
+gesondert zu entscheiden; die Gestaltungsziele aus Phase 4 (Kapitelkarten,
+Tiefenbegrenzung, Aufklappen, Suchfeld) bleiben davon unberührt — sie waren
+nie mit Geschwindigkeit begründet, sondern mit Übersichtlichkeit, und der
+Nutzer hat die Verzeichnisse ausdrücklich zum Neubau freigegeben.
