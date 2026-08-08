@@ -22,7 +22,8 @@ const INCLUDE_PATTERNS = [
     'LICENSE',
     'dist/js/**/*',
     'dist/css/**/*',
-    'dist/.vite/manifest.json'
+    'dist/.vite/manifest.json',
+    'blocks/**/*.{php,json}'
 ];
 
 // Files and folders to exclude
@@ -65,6 +66,20 @@ async function shouldIncludeFile(filePath) {
 
     // Include PHP and JS files in subdirectories (e.g. includes/)
     if (relativePath.startsWith('includes/') && filePath.match(/\.(php|js)$/)) {
+        return true;
+    }
+
+    // Block-Definitionen (blocks/<name>/block.json und ggf. render.php).
+    //
+    // WICHTIG: .json wird bewusst NUR unterhalb von blocks/ freigegeben, nicht
+    // pauschal fuers ganze Theme - sonst landeten package.json und
+    // package-lock.json im Verteilungspaket.
+    //
+    // Faellt diese Regel weg, fehlt block.json im ZIP, der Block ist auf der
+    // Live-Site unbekannt und die Seite zeigt einen Blockfehler. Der Fehler
+    // taucht erst nach dem Hochladen auf, nicht beim Bauen. Dieselbe
+    // Fehlerklasse gab es schon einmal beim Plugin-ZIP (fehlender Autoloader).
+    if (relativePath.startsWith('blocks/') && filePath.match(/\.(php|json)$/)) {
         return true;
     }
 

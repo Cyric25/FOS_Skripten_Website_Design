@@ -1,0 +1,350 @@
+/*
+ * Gestaltung des Blocks fos/inhaltsverzeichnis.
+ *
+ * REGEL: keine festen Farbwerte. Alle Farben leiten sich aus den
+ * CSS-Variablen des Themes ab, damit die Customizer-Einstellung des Nutzers
+ * durchschlaegt. Eine fest eingetragene Hexfarbe wuerde sie stillschweigend
+ * aushebeln.
+ *
+ * KEIN "plastischer Look": Verlaeufe, Glanz und Schlagschatten bleiben laut
+ * Theme/CLAUDE.md bewusst dem Navigations-Streifen der Seitenleiste
+ * vorbehalten. Die Karten hier bleiben flach. Nicht "der Einheitlichkeit
+ * wegen" ausweiten.
+ */
+
+/* --------------------------------------------------------------------
+   Variablen
+   Rueckfallwerte, damit die Darstellung auch stimmt, solange die
+   Customizer-Sektion (AP-4.3) noch nicht existiert. Sobald sie da ist,
+   ueberschreibt sie diese Werte im :root des Dokuments.
+   -------------------------------------------------------------------- */
+.page-index {
+	--pidx-card-bg: var(--color-background, #fff);
+	--pidx-card-border: var(--color-sidebar-border, #e0e0e0);
+	--pidx-card-title: var(--color-special-text, #71230a);
+	--pidx-accent: var(--color-ui-surface, #e24614);
+	--pidx-radius: 8px;
+	--pidx-gap: 1rem;
+
+	display: block;
+	margin-block: 1.5rem;
+}
+
+/* --------------------------------------------------------------------
+   Suchfeld
+   -------------------------------------------------------------------- */
+.page-index__search-wrap {
+	margin-bottom: var(--pidx-gap);
+}
+
+.page-index__search {
+	width: 100%;
+	padding: 0.6rem 0.9rem;
+	font: inherit;
+	color: inherit;
+	background-color: var(--pidx-card-bg);
+	border: 1px solid var(--pidx-card-border);
+	border-radius: var(--pidx-radius);
+}
+
+.page-index__search:focus {
+	outline: 2px solid var(--pidx-accent);
+	outline-offset: 1px;
+	border-color: var(--pidx-accent);
+}
+
+/* --------------------------------------------------------------------
+   Kapitelraster
+   Die Spaltenzahl kommt aus der Klasse page-index--cols-N. Bewusst ueber
+   Haltepunkte statt auto-fit: So ist vorhersagbar, wie viele Spalten wann
+   erscheinen, statt es der Kartenbreite zu ueberlassen.
+   -------------------------------------------------------------------- */
+.page-index__chapters {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--pidx-gap);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+@media (min-width: 600px) {
+	.page-index--cols-2 .page-index__chapters,
+	.page-index--cols-3 .page-index__chapters,
+	.page-index--cols-4 .page-index__chapters {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 992px) {
+	.page-index--cols-3 .page-index__chapters {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.page-index--cols-4 .page-index__chapters {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+/* --------------------------------------------------------------------
+   Kapitelkarte
+   -------------------------------------------------------------------- */
+.page-index__chapter {
+	padding: 1rem 1.1rem;
+	background-color: var(--pidx-card-bg);
+	border: 1px solid var(--pidx-card-border);
+	border-radius: var(--pidx-radius);
+	transition: border-color 0.15s ease;
+}
+
+.page-index__chapter:hover,
+.page-index__chapter:focus-within {
+	border-color: var(--pidx-accent);
+}
+
+.page-index__chapter-link {
+	display: block;
+	font-size: 1.1rem;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--pidx-card-title);
+	text-decoration: none;
+}
+
+.page-index__chapter-link:hover,
+.page-index__chapter-link:focus-visible {
+	text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------
+   Aufklappebene
+   Natives <details>: barrierefrei, tastaturbedienbar, funktioniert ohne
+   JavaScript. Das voreingestellte Dreieck wird ersetzt, damit es sich
+   drehen laesst.
+   -------------------------------------------------------------------- */
+.page-index__sub {
+	margin-top: 0.6rem;
+}
+
+.page-index__sub-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.15rem 0;
+	font-size: 0.9rem;
+	color: var(--color-text-primary, #333);
+	cursor: pointer;
+	list-style: none;
+}
+
+/* Voreingestellten Marker entfernen - je nach Browser anders benannt. */
+.page-index__sub-toggle::-webkit-details-marker {
+	display: none;
+}
+
+.page-index__sub-toggle::marker {
+	content: "";
+}
+
+.page-index__sub-toggle::before {
+	content: "\25B8"; /* ▸ */
+	display: inline-block;
+	color: var(--pidx-accent);
+	transition: transform 0.15s ease;
+}
+
+.page-index__sub[open] > .page-index__sub-toggle::before {
+	transform: rotate(90deg);
+}
+
+/* Sichtbarer Fokusrahmen - ohne ihn waere die Tastaturbedienung blind. */
+.page-index__sub-toggle:focus-visible {
+	outline: 2px solid var(--pidx-accent);
+	outline-offset: 2px;
+	border-radius: 3px;
+}
+
+/* --------------------------------------------------------------------
+   Unterseitenliste
+   -------------------------------------------------------------------- */
+.page-index__pages {
+	margin: 0.4rem 0 0;
+	padding-left: 1.1rem;
+	list-style: none;
+}
+
+.page-index__page {
+	margin: 0.15rem 0;
+}
+
+.page-index__page-link {
+	color: var(--color-text-primary, #333);
+	text-decoration: none;
+	line-height: 1.5;
+}
+
+.page-index__page-link:hover,
+.page-index__page-link:focus-visible {
+	color: var(--pidx-accent);
+	text-decoration: underline;
+}
+
+/* Verschachtelte Ebenen leicht einruecken. */
+.page-index__pages .page-index__sub {
+	margin-top: 0.25rem;
+}
+
+/* --------------------------------------------------------------------
+   Darstellung: Einfache Liste
+   Kartenoptik vollstaendig abschalten, damit dieses Layout wirklich
+   schlicht ist.
+   -------------------------------------------------------------------- */
+.page-index--list .page-index__chapters {
+	grid-template-columns: 1fr;
+	gap: 1.2rem;
+}
+
+.page-index--list .page-index__chapter {
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 0;
+}
+
+.page-index--list .page-index__chapter:hover,
+.page-index--list .page-index__chapter:focus-within {
+	border: none;
+}
+
+/* --------------------------------------------------------------------
+   Darstellung: Mehrspaltig
+   Echter Mehrspaltensatz statt Raster - die Eintraege fliessen von Spalte
+   zu Spalte. break-inside verhindert, dass eine Karte zerrissen wird.
+   -------------------------------------------------------------------- */
+.page-index--columns .page-index__chapters {
+	display: block;
+	column-gap: var(--pidx-gap);
+}
+
+.page-index--columns.page-index--cols-2 .page-index__chapters {
+	column-count: 2;
+}
+
+.page-index--columns.page-index--cols-3 .page-index__chapters {
+	column-count: 3;
+}
+
+.page-index--columns.page-index--cols-4 .page-index__chapters {
+	column-count: 4;
+}
+
+.page-index--columns .page-index__chapter {
+	break-inside: avoid;
+	margin-bottom: var(--pidx-gap);
+}
+
+@media (max-width: 768px) {
+	.page-index--columns .page-index__chapters {
+		column-count: 1;
+	}
+}
+
+/* --------------------------------------------------------------------
+   Zustaende des Suchfilters (AP-4.2 setzt diese Klassen)
+   -------------------------------------------------------------------- */
+.page-index__chapter--hidden,
+.page-index__page--hidden {
+	display: none;
+}
+
+.page-index__no-results,
+.page-index__empty {
+	margin: 0;
+	padding: 1rem;
+	color: var(--color-text-primary, #333);
+	background-color: var(--color-background-light, #f8f9fa);
+	border-radius: var(--pidx-radius);
+}
+
+/* Nur fuer Screenreader - meldet die Trefferzahl beim Filtern. */
+.page-index__status {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* --------------------------------------------------------------------
+   Kleinere Bildschirme
+   Haltepunkte wie im uebrigen Theme: 992 / 768 / 480.
+   -------------------------------------------------------------------- */
+@media (max-width: 768px) {
+	.page-index__chapter {
+		padding: 0.85rem 0.9rem;
+	}
+
+	.page-index__chapter-link {
+		font-size: 1.05rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.page-index {
+		--pidx-gap: 0.7rem;
+	}
+
+	.page-index__chapter {
+		padding: 0.75rem 0.8rem;
+	}
+
+	.page-index__pages {
+		padding-left: 0.9rem;
+	}
+}
+
+/* --------------------------------------------------------------------
+   Druck
+   Ein Inhaltsverzeichnis wird erfahrungsgemaess ausgedruckt. Dann muessen
+   alle Ebenen sichtbar sein, auch die zugeklappten - und das Suchfeld
+   ergibt auf Papier keinen Sinn.
+   -------------------------------------------------------------------- */
+@media print {
+	.page-index__search-wrap {
+		display: none;
+	}
+
+	.page-index__sub > .page-index__pages {
+		display: block !important;
+	}
+
+	.page-index__sub-toggle {
+		list-style: none;
+	}
+
+	.page-index__sub-toggle::before {
+		content: "";
+	}
+
+	.page-index__chapter {
+		break-inside: avoid;
+		/* Kein fester Farbwert - auch hier gilt die Regel. Auf Papier ist der
+		   Rahmen dadurch eventuell zart, was hinnehmbar ist: Browser drucken
+		   Hintergruende ohnehin meist nicht mit. */
+		border-color: var(--pidx-card-border);
+	}
+}
+
+/* --------------------------------------------------------------------
+   Weniger Bewegung
+   -------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+	.page-index__chapter,
+	.page-index__sub-toggle::before {
+		transition: none;
+	}
+}

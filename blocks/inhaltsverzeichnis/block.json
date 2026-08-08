@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "fos/inhaltsverzeichnis",
+  "title": "Inhaltsverzeichnis",
+  "category": "widgets",
+  "icon": "list-view",
+  "description": "Übersicht der Unterseiten eines Kapitels – als Kapitelkarten oder Liste, mit einstellbarer Tiefe, Aufklappen und Suchfeld.",
+  "textdomain": "fos-online-schulbuch",
+  "supports": {
+    "html": false,
+    "anchor": true,
+    "align": ["wide", "full"]
+  },
+  "attributes": {
+    "rootPage": {
+      "type": "number",
+      "default": 0
+    },
+    "maxDepth": {
+      "type": "number",
+      "default": 2
+    },
+    "layout": {
+      "type": "string",
+      "default": "cards"
+    },
+    "columns": {
+      "type": "number",
+      "default": 3
+    },
+    "collapsible": {
+      "type": "boolean",
+      "default": true
+    },
+    "openByDefault": {
+      "type": "boolean",
+      "default": false
+    },
+    "showSearch": {
+      "type": "boolean",
+      "default": true
+    },
+    "showCounts": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}
