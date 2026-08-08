@@ -3646,6 +3646,16 @@ if (is_admin()) {
 }
 
 // ===================================================================
+// INHALTSVERZEICHNIS-BLOCK
+// ===================================================================
+
+// Bewusst AUSSERHALB des is_admin()-Blocks darüber: Der Block muss im
+// Editor UND im Frontend registriert sein. Wäre er nur im Admin geladen,
+// bliebe die Ausgabe auf der Website leer und der Editor meldete beim
+// Öffnen einen unbekannten Block.
+require_once get_template_directory() . '/includes/page-index.php';
+
+// ===================================================================
 // SVG-UPLOAD SUPPORT
 // ===================================================================
 
