@@ -277,24 +277,63 @@
   const titelVon = (s) => (s.title?.rendered || '').replace(/&#\d+;/g, m =>
     String.fromCharCode(parseInt(m.slice(2, -1), 10)));
 
-  if (!CONFIG.inhaltsverzeichnis) {
-    // Nur Seiten der OBERSTEN Ebene kommen als Inhaltsverzeichnis in Frage.
-    // Eine tief verschachtelte Seite namens "Übersicht" ist etwas anderes.
-    const oberste = seiten.filter(s => s.parent === 0);
-    const passend = oberste.filter(s => /inhalt|verzeichnis|übersicht|ubersicht|skripten/i.test(titelVon(s)));
-
-    if (passend.length === 1) {
-      CONFIG.inhaltsverzeichnis = pfadVon(passend[0]);
-      log(`Inhaltsverzeichnis erkannt: "${titelVon(passend[0])}" -> ${CONFIG.inhaltsverzeichnis}`);
-    } else {
-      warn('Inhaltsverzeichnis konnte nicht eindeutig bestimmt werden.');
-      if (passend.length > 1) {
-        warn('Mehrere Kandidaten auf oberster Ebene:');
-        console.table(passend.map(s => ({ Titel: titelVon(s), Pfad: pfadVon(s) })));
+  // Die Inhaltsverzeichnisseite wird NICHT ueber den Titel geraten - das ging
+  // schief und lieferte einmal eine beliebige Kapitelseite, einmal die
+  // Startseite. Gesucht wird stattdessen nach dem Merkmal, auf das es
+  // ankommt: Der Core-Block core/page-list rendert mit der CSS-Klasse
+  // wp-block-page-list. Welche Seite die ist, steht damit fest.
+  async function findePageListSeiten(kandidaten) {
+    const gefunden = [];
+    for (let i = 0; i < kandidaten.length; i += 20) {
+      const teil = kandidaten.slice(i, i + 20).map(s => s.id);
+      const a = await fetch(
+        `/wp-json/wp/v2/pages?include=${teil.join(',')}&per_page=20&_fields=id,link,title,content`,
+        { credentials: 'same-origin' });
+      if (!a.ok) continue;
+      const daten = await a.json();
+      for (const p of daten) {
+        const html = p.content?.rendered || '';
+        if (/wp-block-page-list/.test(html)) {
+          gefunden.push({
+            id: p.id,
+            titel: titelVon(p),
+            pfad: new URL(p.link).pathname,
+            links: (html.match(/<a\b/g) || []).length,
+          });
+        }
       }
-      warn('Alle Seiten der obersten Ebene:');
+    }
+    return gefunden;
+  }
+
+  if (!CONFIG.inhaltsverzeichnis) {
+    log('Suche die Seite mit dem Block "Seitenliste" (core/page-list) …');
+    // Erst die oberste Ebene pruefen - dort steht sie am wahrscheinlichsten -,
+    // dann den Rest.
+    const oberste = seiten.filter(s => s.parent === 0);
+    const rest    = seiten.filter(s => s.parent !== 0);
+    let treffer = await findePageListSeiten(oberste);
+    if (!treffer.length) {
+      log('  Auf oberster Ebene nichts gefunden, pruefe alle uebrigen Seiten …');
+      treffer = await findePageListSeiten(rest);
+    }
+
+    if (treffer.length === 1) {
+      CONFIG.inhaltsverzeichnis = treffer[0].pfad;
+      log(`Inhaltsverzeichnis gefunden: "${treffer[0].titel}" -> ${CONFIG.inhaltsverzeichnis}` +
+          `  (${treffer[0].links} Links im Block-Bereich)`);
+    } else if (treffer.length > 1) {
+      warn('Mehrere Seiten enthalten den Block "Seitenliste":');
+      console.table(treffer);
+      warn('Bitte oben bei CONFIG.inhaltsverzeichnis den gewuenschten Pfad eintragen.');
+      return;
+    } else {
+      warn('Keine Seite mit dem Block "Seitenliste" gefunden.');
+      warn('Moeglich: das Verzeichnis steckt in einem Container-Block, der');
+      warn('den Inhalt anders ablegt, oder es wurde anders gebaut.');
+      warn('Bitte oben bei CONFIG.inhaltsverzeichnis den Pfad von Hand eintragen.');
+      warn('Seiten der obersten Ebene zur Orientierung:');
       console.table(oberste.map(s => ({ Titel: titelVon(s), Pfad: pfadVon(s) })));
-      warn('Bitte oben bei CONFIG.inhaltsverzeichnis den Pfad eintragen und erneut ausfuehren.');
       return;
     }
   }
@@ -313,7 +352,7 @@
 
   async function miss(name, pfad) {
     const queries = [], zeiten = [], groessen = [];
-    let peak = '?';
+    let peak = '?', links = 0, elemente = 0;
     for (let i = 0; i < CONFIG.durchlaeufe; i++) {
       const r = await hole(pfad);
       if (r.status !== 200) { warn(`${name}: HTTP ${r.status} bei ${pfad}`); return null; }
@@ -322,6 +361,10 @@
       zeiten.push(zahl(r.treffer[2]));
       peak = speicher(r.treffer[3]);
       groessen.push(r.bytes);
+      // DOM-Umfang: bei einem Inhaltsverzeichnis oft der eigentliche
+      // Bremsklotz - der Server ist schnell fertig, der Browser nicht.
+      links    = (r.text.match(/<a\b/gi) || []).length;
+      elemente = (r.text.match(/<[a-z][a-z0-9]*\b/gi) || []).length;
     }
     const e = {
       Seite: name,
@@ -330,9 +373,12 @@
       'Zeit (s)': median(zeiten),
       Speicher: peak,
       'Groesse (KB)': (median(groessen) / 1024).toFixed(1),
+      Links: links,
+      'HTML-Elemente': elemente,
       Einzelwerte: `q:[${queries}] t:[${zeiten}]`,
     };
-    log(`${name}: ${e.Queries} Queries, ${e['Zeit (s)']} s, ${peak}, ${e['Groesse (KB)']} KB`);
+    log(`${name}: ${e.Queries} Queries, ${e['Zeit (s)']} s, ${peak}, ` +
+        `${e['Groesse (KB)']} KB, ${links} Links, ${elemente} Elemente`);
     return e;
   }
 
@@ -368,7 +414,8 @@
     ...zeilen.map(z =>
       `${z.Seite.padEnd(24)} queries=${String(z.Queries).padStart(4)}  ` +
       `time=${String(z['Zeit (s)']).padStart(7)}s  peak=${z.Speicher}  ` +
-      `groesse=${z['Groesse (KB)']} KB   (${z.Einzelwerte})`),
+      `groesse=${z['Groesse (KB)']} KB  links=${z.Links}  elemente=${z['HTML-Elemente']}` +
+      `   (${z.Einzelwerte})`),
     '',
     'Pfad Inhaltsverzeichnis: ' + CONFIG.inhaltsverzeichnis,
     'Pfad Skriptenseite:      ' + CONFIG.skriptenseite,
