@@ -114,13 +114,58 @@
       warn('     ABHILFE: In DIESEM Browserfenster als Administrator anmelden');
       warn('     und das Skript erneut ausfuehren.');
     } else if (themeVersion !== 'unbekannt' && vergleiche(themeVersion, '1.5.69') >= 0) {
-      warn(`  -> Theme v${themeVersion} laeuft und du bist angemeldet, trotzdem`);
-      warn('     kommt keine Ausgabe. Moegliche Ursachen:');
-      warn('     - Dein Konto hat nicht die Berechtigung manage_options.');
-      warn('     - Ein Optimierungs-Plugin entfernt HTML-Kommentare.');
-      warn('     - Ein Seiten-Cache liefert eine alte Fassung aus.');
-      warn(`     Zum Gegenpruefen von Hand aufrufen: ${url(CONFIG.startseite, true)}`);
-      warn('     und im Seitenquelltext (Strg+U) nach SC-PERF suchen.');
+      warn(`  -> Theme v${themeVersion} laeuft und du bist angemeldet.`);
+      warn('     Grenze die Ursache jetzt ein …');
+
+      // Probe 1: Werden HTML-Kommentare ueberhaupt ausgeliefert?
+      // Viele Optimierungs-Plugins (LiteSpeed, WP Rocket, Autoptimize)
+      // entfernen sie beim Minifizieren - dann kann SC-PERF nicht ankommen.
+      const kommentare = (start.text.match(/<!--/g) || []).length;
+
+      // Probe 2: Hat das Konto wirklich manage_options?
+      // /wp-admin/options-general.php ist genau daran gebunden und laesst
+      // sich mit dem Anmelde-Cookie ohne Nonce abrufen.
+      let rechte = 'unklar';
+      try {
+        const a = await fetch('/wp-admin/options-general.php', {
+          cache: 'no-store', credentials: 'same-origin',
+        });
+        const t = await a.text();
+        const verweigert = /nicht die Berechtigung|not allowed to access|Sie haben keine ausreichende/i.test(t);
+        if (a.status === 200 && !verweigert)      rechte = 'vorhanden';
+        else if (a.status === 403 || verweigert)  rechte = 'FEHLT';
+        else                                      rechte = `unklar (HTTP ${a.status})`;
+      } catch (e) { rechte = 'nicht pruefbar'; }
+
+      // Probe 3: Fingerabdruecke bekannter Optimierer im HTML
+      const spuren = ['litespeed', 'wp-rocket', 'wprocket', 'autoptimize', 'wp-fastest-cache',
+                      'w3-total-cache', 'wp-super-cache', 'hummingbird', 'swift-performance']
+        .filter(n => start.text.toLowerCase().includes(n));
+
+      console.table([{
+        'HTML-Kommentare in der Seite': kommentare,
+        'Berechtigung manage_options':  rechte,
+        'Gefundene Optimierer':         spuren.length ? spuren.join(', ') : 'keine',
+      }]);
+
+      if (rechte === 'FEHLT') {
+        warn('  URSACHE: Dein Konto hat kein manage_options.');
+        warn('  ABHILFE: Mit einem Administratorkonto anmelden.');
+      } else if (kommentare === 0) {
+        warn('  URSACHE: In der ausgelieferten Seite steht KEIN einziger HTML-Kommentar.');
+        warn('  Etwas entfernt sie - vermutlich ein Optimierungs-/Cache-Plugin' +
+             (spuren.length ? ` (${spuren.join(', ')})` : '') + '.');
+        warn('  ABHILFE: Melde mir das, ich stelle die Ausgabe auf ein Element um,');
+        warn('  das nicht wegoptimiert wird. Alternativ die Kommentar-Entfernung');
+        warn('  im Plugin voruebergehend abschalten.');
+      } else {
+        warn(`  ${kommentare} HTML-Kommentare kommen an, die Rechte stimmen (${rechte}).`);
+        warn('  Damit bleibt ein Seiten-Cache als wahrscheinlichste Ursache:');
+        warn('  Die Seite wird ausgeliefert, bevor PHP die Messung anhaengt.');
+        warn('  ABHILFE: Cache leeren, dann erneut ausfuehren. Bleibt es dabei,');
+        warn('  melde mir bitte diese Tabelle.');
+      }
+      warn(`  Zum Nachsehen von Hand: ${url(CONFIG.startseite, true)} (Strg+U, nach SC-PERF suchen)`);
     } else {
       warn(`  -> Theme-Version nicht ermittelbar (Stylesheet-Pfad: ${themePfad}).`);
       warn('     Bitte pruefen, ob v1.5.69 hochgeladen wurde.');
