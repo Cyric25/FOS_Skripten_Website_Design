@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.61
+Version: 1.5.68
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -25,6 +25,18 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
     --color-ui-surface: #e24614;          /* Bright orange for UI elements */
     --color-ui-surface-dark: #c93d12;     /* Darker orange for hover/active */
     --color-ui-surface-light: #f5ede9;    /* Light orange for backgrounds */
+
+    /* Plastischer Look — verwendet ausschließlich vom Navigations-Streifen
+       der Seitenleiste (.sidebar-toggle-btn). Header und Menü bleiben
+       bewusst schlicht.
+       Abgeleitet statt fest gesetzt, damit die Customizer-Farbe durchschlägt.
+       Die Prozentsätze spiegeln Website/Icons/generate_iconset_local.py:
+         DARK   = darken(base, 0.20)
+         SHADOW = darken(base, 0.55) */
+    --plastic-dark: color-mix(in srgb, var(--color-ui-surface) 80%, #000);
+    --plastic-shadow: color-mix(in srgb, var(--color-ui-surface) 45%, #000);
+    --plastic-edge-dark: color-mix(in srgb, var(--plastic-shadow) 75%, transparent);
+    --plastic-drop-shadow: color-mix(in srgb, var(--plastic-shadow) 55%, transparent);
 
     /* Semantic color assignments */
     --color-link: var(--color-special-text);
@@ -73,6 +85,9 @@ body {
 }
 
 /* Header und Navigation */
+/* Der Header bleibt bewusst schlicht: weiße Fläche, dezenter Schatten, keine
+   Kachel-Optik. Der plastische Look gilt nur für den Navigations-Streifen der
+   Seitenleiste (.sidebar-toggle-btn) — siehe CLAUDE.md. */
 .site-header {
     background-color: #fff;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -665,13 +680,36 @@ video {
 }
 
 /* Sidebar toggle button (desktop and mobile) */
+/* Plastischer Look wie die Icon-Kacheln: Verlauf 135°, radialer Glanz oben
+   links, Innenkante oben dunkel / unten hell / rechts dunkel, Schlagschatten.
+   Vorlage sind die SVGs (Website/Icons/generate_iconset_local.py), die
+   Farbstufen stehen als --plastic-* im :root-Block.
+
+   Die EINZIGE Stelle im Theme mit diesem Look — Header und Menü bleiben
+   bewusst schlicht weiß.
+
+   Der Schatten war vorher fest auf rgba(232,70,20,…) verdrahtet und blieb
+   damit orange, auch wenn im Customizer eine andere UI-Farbe eingestellt
+   wurde; jetzt läuft er über --plastic-drop-shadow mit. */
 .sidebar-toggle-btn {
     position: fixed;
-    background-color: var(--color-ui-surface); /* Orange #e24614 */
+    background-color: var(--color-ui-surface); /* Rückfall ohne color-mix() */
+    background-image:
+        radial-gradient(75% 75% at 30% 22%,
+            rgba(255, 255, 255, 0.35) 0%,
+            rgba(255, 255, 255, 0.08) 45%,
+            rgba(255, 255, 255, 0) 100%),
+        linear-gradient(135deg,
+            var(--color-ui-surface) 0%,
+            var(--plastic-dark) 100%);
     color: #fff;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(232, 70, 20, 0.3);
+    box-shadow:
+        inset 0 2px 2px -1px var(--plastic-edge-dark),
+        inset 0 -2px 2px -1px rgba(255, 255, 255, 0.5),
+        inset -1px 0 1px var(--plastic-edge-dark),
+        0 4px 12px var(--plastic-drop-shadow);
     z-index: 999;
     display: flex;
     align-items: center;
@@ -680,18 +718,46 @@ video {
     transition: all 0.3s ease;
 }
 
-/* Desktop: Top-left position, vertical pill - SUBTLE DESIGN */
+/* Desktop: durchgehender Streifen am linken Rand, von Fensterkante zu
+   Fensterkante (top und bottom je 0, keine Eckenrundung).
+
+   Der Streifen läuft bewusst HINTER der Kopfleiste: er behält den z-index 999
+   aus der Grundregel, die Kopfleiste hat 1000. Dadurch beginnt er optisch
+   unterhalb des Headers, obwohl er bei top: 0 anfängt. Kein z-index hier
+   setzen — 1001 hätte ihn über den Header gelegt.
+
+   SCHRIFTSCHÄRFE: transform und opacity sind hier bewusst so gesetzt.
+   Vorher stand da transform: translateX(0) und opacity: 0.95 — beides
+   erzeugt dauerhaft eine eigene Compositing-Ebene, und darin schaltet der
+   Browser die Subpixel-Glättung ab. Bei gedrehter Schrift in 0.75rem ergab
+   das sichtbar matschige Buchstaben.
+     - transform: none  statt translateX(0) — die Einblend-Animation
+       funktioniert weiter, weil none und translateX(-100%) interpolierbar sind
+     - opacity: 1       statt 0.95
+     - kein text-shadow (weichzeichnet kleine Schrift zusätzlich)
+     - größere Schrift
+   Wer hier wieder eine Teiltransparenz einbaut, holt sich die unscharfe
+   Schrift zurück. */
 .sidebar-toggle-btn {
-    top: 100px; /* Below sticky header */
+    top: 0;
+    bottom: 0;
     left: 0;
-    border-radius: 0 6px 6px 0;
-    padding: 0.5rem 0.4rem;
+    border-radius: 0;
+    padding: 0.5rem 1.1rem;
     flex-direction: column;
     writing-mode: vertical-rl;
-    transform: translateX(0);
-    /* Orange background is already set in main declaration */
-    opacity: 0.95; /* Slightly transparent but orange is clearly visible */
-    font-size: 0.75rem;
+    transform: none;
+    opacity: 1;
+    /* Bewusst KEIN font-size hier: .toggle-text weiter unten ist spezifischer
+       und würde es überschreiben — die Größe des Schriftzugs steht dort.
+       Bewusst KEIN z-index hier: die 999 aus der Grundregel hält den Streifen
+       hinter der Kopfleiste (1000). */
+}
+
+/* Die drei Striche sind am Computer überflüssig — der senkrechte Schriftzug
+   "Navigation" erklärt sich selbst. Auf Mobil bleiben sie (siehe 992px). */
+.sidebar-toggle-btn .toggle-icon {
+    display: none;
 }
 
 /* Hide when sidebar is visible on desktop */
@@ -701,10 +767,25 @@ video {
     pointer-events: none;
 }
 
+/* Beim Hover den ganzen Verlauf tauschen, nicht nur die Farbe: eine
+   einzelne background-color-Angabe ließe die Verlaufsschichten stehen,
+   background allein würde sie löschen und den Streifen flach machen. */
 .sidebar-toggle-btn:hover {
-    background-color: var(--color-ui-surface-dark); /* Darker orange #c93d12 */
+    background-color: var(--color-ui-surface-dark); /* Rückfall */
+    background-image:
+        radial-gradient(75% 75% at 30% 22%,
+            rgba(255, 255, 255, 0.35) 0%,
+            rgba(255, 255, 255, 0.08) 45%,
+            rgba(255, 255, 255, 0) 100%),
+        linear-gradient(135deg,
+            var(--color-ui-surface-dark) 0%,
+            var(--plastic-dark) 100%);
     opacity: 1;
-    box-shadow: 0 2px 8px rgba(232, 70, 20, 0.4);
+    box-shadow:
+        inset 0 2px 2px -1px var(--plastic-edge-dark),
+        inset 0 -2px 2px -1px rgba(255, 255, 255, 0.5),
+        inset -1px 0 1px var(--plastic-edge-dark),
+        0 2px 8px var(--plastic-drop-shadow);
     transform: translateX(3px);
 }
 
@@ -714,9 +795,14 @@ video {
     margin-bottom: 0.25rem;
 }
 
+/* Die Größe des Schriftzugs „Navigation" steht NUR hier — diese Regel ist
+   spezifischer als .sidebar-toggle-btn, ein font-size dort bliebe wirkungslos.
+   clamp() wie die übrigen Schriftgrößen des Themes: wächst mit dem Fenster,
+   bleibt aber in vernünftigen Grenzen. */
 .sidebar-toggle-btn .toggle-text {
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
+    font-size: clamp(0.85rem, 0.8rem + 0.2vw, 1.05rem);
+    letter-spacing: 0.08em;
+    font-weight: 700;
 }
 
 /* Page tree navigation */
@@ -897,7 +983,9 @@ video {
         position: fixed;
     }
 
-    /* Mobile: Bottom-left button, horizontal layout */
+    /* Mobile: Bottom-left button, horizontal layout.
+       Hebt die Desktop-Werte auf: dort ist der Streifen durchgehend
+       (top/bottom 0, eckig), hier wieder eine kompakte runde Pille. */
     .sidebar-toggle-btn {
         top: auto;
         bottom: 20px;
@@ -906,6 +994,13 @@ video {
         padding: 0.75rem 1.25rem;
         flex-direction: row;
         writing-mode: horizontal-tb;
+        letter-spacing: normal;
+    }
+
+    /* Auf dem kleinen Bildschirm sind die drei Striche das eigentliche
+       Erkennungszeichen — am Computer sind sie ausgeblendet. */
+    .sidebar-toggle-btn .toggle-icon {
+        display: inline-block;
     }
 
     .sidebar-toggle-btn .toggle-text {
@@ -948,6 +1043,14 @@ video {
     }
 }
 
+/* Kleine Handys — Verfeinerung der 992px-Regeln oben (kleinere Abstände und
+   Schrift).
+   FIX: Hier fehlte die öffnende @media-Zeile. Dadurch galten die drei Regeln
+   auf ALLEN Bildschirmbreiten, und die abschließende Klammer verwarfen die
+   Browser als verirrt. Auf dem Desktop setzte das dem Navigations-Streifen
+   zusätzlich zu seinem `top: 100px` ein `bottom: 15px` — er wurde dadurch
+   über die gesamte Fensterhöhe gezogen statt eine kompakte Pille zu bleiben. */
+@media (max-width: 480px) {
     .sidebar-toggle-btn {
         bottom: 15px;
         left: 15px;

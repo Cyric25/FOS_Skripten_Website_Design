@@ -364,6 +364,107 @@ Text Domain: simple-clean-theme
   - Tighter spacing
   - Smaller sidebar width
 
+### Plastischer Look (seit v1.5.62, Umfang festgelegt in v1.5.65)
+
+**Im Theme betrifft das ausschließlich den Navigations-Streifen der
+Seitenleiste** (`.sidebar-toggle-btn`). Kopfleiste, Menü und Mobilmenü bleiben
+schlicht weiß — das war eine bewusste Entscheidung des Nutzers, nachdem eine
+Fassung mit orangem Kopfband und Menüpunkten als Kacheln verworfen wurde.
+**Nicht erneut auf den Header ausweiten**, auch nicht „der Konsistenz wegen".
+
+Im CDB-Plugin nutzen zusätzlich der PDF-Button und die PDF-Werkzeugleiste
+denselben Look (siehe `Plugins/CDB-Designer/CLAUDE.md`).
+
+**Quelle der Rezeptur ist nicht das CSS, sondern die SVG-Erzeugung** in
+`Website/Icons/generate_iconset_local.py` (Ergebnis z. B.
+`Plugins/CDB-Designer/assets/icons/kategorien/*.svg`):
+
+| Element | Wert im SVG |
+|---|---|
+| Verlauf | linear 135°, Basisfarbe → `darken(base, 0.20)` |
+| Glanz | radial `30% 22%`, r 75 %, Weiß 0.35 → 0.08 (45 %) → 0 |
+| Innenkante oben | dunkel, Deckkraft 0.75 |
+| Innenkante unten | weiß, Deckkraft 0.5 |
+| Innenkante rechts | dunkel, Deckkraft 0.25 (nur bei Knöpfen, nicht bei Bändern) |
+| Schlagschatten | `darken(base, 0.55)`, Deckkraft 0.55 |
+
+**Fundstellen:**
+
+- `style.css` `:root` — `--plastic-dark`, `--plastic-shadow`,
+  `--plastic-edge-dark`, `--plastic-drop-shadow`
+- `style.css` `.site-header` — das Band selbst
+- `style.css` `@media (max-width: 768px) .main-navigation` — aufgeklapptes
+  Mobilmenü im selben Look
+- `style.css` `.sidebar-toggle-btn` (+ `:hover`) — der senkrechte
+  „Navigation"-Streifen am linken Rand, **die einzige Stelle im Theme**. Sein
+  Schatten war vorher fest auf `rgba(232, 70, 20, …)` verdrahtet und blieb
+  orange, auch wenn im Customizer eine andere UI-Farbe eingestellt war; jetzt
+  läuft er über `--plastic-drop-shadow` mit.
+
+**Streifen am Desktop (v1.5.66):** durchgehend von Fensterkante zu Fensterkante
+(`top: 0; bottom: 0`, `border-radius: 0`), `z-index: 1001` — **über** der
+Kopfleiste (1000), sonst verschwände der obere Teil hinter ihr. Die drei
+Striche (`.toggle-icon`) sind am Desktop ausgeblendet und nur unter 992px
+sichtbar; dort ist der Streifen wieder eine kompakte runde Pille unten links.
+
+**Schriftschärfe — Falle:** `.sidebar-toggle-btn` hatte `transform:
+translateX(0)` und `opacity: 0.95`. Beides erzeugt dauerhaft eine eigene
+Compositing-Ebene, und darin schaltet der Browser die Subpixel-Glättung ab —
+bei gedrehter Schrift (`writing-mode: vertical-rl`) sichtbar matschig. Jetzt
+`transform: none` (die Einblend-Animation läuft weiter, `none` und
+`translateX(-100%)` sind interpolierbar), `opacity: 1`, kein `text-shadow`,
+Schriftgröße 1rem statt 0.75rem. **Keine Teiltransparenz und kein
+Dauer-Transform hier wieder einbauen** — das holt die unscharfe Schrift zurück.
+- `Plugins/CDB-Designer/assets/js/floating-pdf-button.js` — FAB und
+  Werkzeugleiste, dort als JS-Strings (die Datei stylt inline, nicht per CSS-Datei)
+
+**Immer `background-image`, nie die Kurzschreibweise `background`.** Wird der
+Verlauf ungültig — etwa in einem Browser ohne `color-mix()` —, setzt die
+Kurzschreibweise auch `background-color` mit zurück; die Fläche wäre dann
+**durchsichtig** statt einfarbig. Ein `background-color` davor ist also nur
+dann ein echter Rückfall, wenn die Verlaufsschichten über `background-image`
+kommen. Gilt genauso im JS des PDF-Buttons (`backgroundImage`, nicht
+`background`).
+
+**Farben werden abgeleitet, nicht gesetzt.** Die Stufen entstehen per
+`color-mix()` aus `--color-ui-surface`, damit die Customizer-Farbeinstellung
+weiterwirkt — eine feste Hexfarbe hätte sie für Kopfleiste und PDF-Button
+stillschweigend ausgehebelt. Vor jeder `background`-Zeile mit `color-mix()`
+steht ein einfarbiges `background-color` als Rückfall für Browser ohne
+`color-mix()`.
+
+**Der Hover in der Navigation musste sich ändern:** Er färbte den Link vorher
+orange — auf der jetzt orangen Leiste wäre er unsichtbar. Stattdessen hellt er
+die Fläche unter dem Link auf.
+
+### CSS erreicht den Browser nur mit Cache-Busting (Fix v1.5.64)
+
+`functions.php` hängte das Stylesheet mit fester Version `'1.0'` ein. Die URL
+lautete damit dauerhaft `style.css?ver=1.0` — Browser, Caching-Plugins und CDNs
+lieferten nach einem Theme-Update weiter die **alte** Datei aus. CSS-Änderungen
+kamen schlicht nicht an, obwohl das ZIP korrekt war. Jetzt steht dort
+`filemtime()`, wie beim JavaScript von Anfang an.
+
+**Bei „die Änderung ist nicht zu sehen" zuerst hier prüfen**, nicht am CSS
+zweifeln: Seitenquelltext ansehen, ob `style.css?ver=` eine große Zahl
+(Unix-Zeitstempel) trägt. Steht dort `1.0`, läuft eine alte functions.php.
+
+### Behobener Altfehler in style.css (v1.5.64)
+
+Zwischen dem 992px- und dem 480px-Block **fehlte die öffnende
+`@media (max-width: 480px) {`-Zeile**. Folgen:
+
+- `.sidebar-toggle-btn`, `.toggle-text` und `.page-link` galten auf **allen**
+  Bildschirmgrößen statt nur unter 480px.
+- Die abschließende Klammer verwarfen Browser als verirrt.
+- Sichtbarster Effekt: Der Navigations-Streifen bekam auf dem Desktop
+  zusätzlich zu seinem `top: 100px` ein `bottom: 15px` und wurde dadurch über
+  die **gesamte Fensterhöhe** gezogen, statt eine kompakte Pille zu bleiben.
+
+Der Fehler war vorbestehend (auch in HEAD). Diagnose damals über `postcss`:
+`node -e "postcss.parse(fs.readFileSync('style.css','utf8'))"` meldet die Zeile
+der ersten unbalancierten Klammer — schneller als Durchzählen.
+
 ### Color Scheme
 
 **Primary Colors:**

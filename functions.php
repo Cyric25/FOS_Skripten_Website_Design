@@ -91,7 +91,19 @@ add_action('after_switch_theme', 'simple_clean_auto_assign_menu');
 // Enqueue Styles and Scripts
 function simple_clean_theme_assets() {
     // Enqueue main stylesheet
-    wp_enqueue_style('simple-clean-style', get_stylesheet_uri(), array(), '1.0');
+    //
+    // Version = Änderungszeitpunkt der Datei, NICHT eine feste Zahl. Vorher
+    // stand hier '1.0'; die URL lautete damit dauerhaft style.css?ver=1.0 und
+    // Browser, Caching-Plugins und CDNs lieferten nach einem Theme-Update
+    // weiter die alte Datei aus — CSS-Änderungen kamen schlicht nicht an.
+    // Das JavaScript unten machte es von Anfang an richtig.
+    $css_file = get_stylesheet_directory() . '/style.css';
+    wp_enqueue_style(
+        'simple-clean-style',
+        get_stylesheet_uri(),
+        array(),
+        file_exists($css_file) ? filemtime($css_file) : null
+    );
 
     // Enqueue main JavaScript (from Vite build)
     $js_file = get_template_directory() . '/dist/js/main.js';
