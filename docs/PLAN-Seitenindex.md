@@ -2716,21 +2716,21 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | ~~AP-2.4~~ | ~~Manueller Neuaufbau und Statusanzeige~~ | – | **entfällt** | – | dito |
 | ~~AP-2.rev~~ | ~~Unabhängiges Review Phase 2~~ | – | **entfällt** | – | dito |
 | ~~AP-2.doc~~ | ~~Dokumentation Phase 2 aktualisieren~~ | – | **entfällt** | – | dito |
-| AP-3.1 | Block registrieren und Attribute absichern | sonnet | ☐ | AP-1.doc | legt Branch `phase-3-block` an |
-| AP-3.2 | Rendering aus einer schlanken Abfrage | opus | ☐ | AP-3.1 | neu zugeschnitten: ohne Index, ohne Fragment-Cache |
-| AP-3.3 | Editor-Integration mit Inspektor und Vorschau | sonnet | ☐ | AP-3.2 | |
-| AP-3.4 | Build-Kette erweitern | sonnet | ☐ | AP-3.3 | ohne dieses AP fehlt `block.json` im ZIP |
-| AP-3.rev | Unabhängiges Review Phase 3 | opus | ☐ | AP-3.1 … AP-3.4 | frischer Agent, nur lesend |
-| AP-3.doc | Dokumentation Phase 3 aktualisieren | sonnet | ☐ | AP-3.rev | |
-| AP-4.1 | Gestaltung des Inhaltsverzeichnisses | sonnet | ☐ | AP-3.doc | legt Branch `phase-4-design` an |
-| AP-4.2 | Filterfeld im Browser | sonnet | ☐ | AP-4.1 | |
-| AP-4.3 | Customizer-Sektion „Inhaltsverzeichnis" | sonnet | ☐ | AP-4.2 | |
-| AP-4.4 | Einzelne Seiten vom Inhaltsverzeichnis ausnehmen | sonnet | ☐ | AP-4.3 | |
-| AP-4.rev | Unabhängiges Review Phase 4 | opus | ☐ | AP-4.1 … AP-4.4 | frischer Agent, nur lesend |
-| AP-4.doc | Dokumentation Phase 4 aktualisieren | sonnet | ☐ | AP-4.rev | |
+| AP-3.1 | Block registrieren und Attribute absichern | sonnet | ☑ | AP-1.doc | Harness 10/10. Kriterium „im Inserter sichtbar" war falsch verortet → AP-3.3 |
+| AP-3.2 | Rendering aus einer schlanken Abfrage | opus | ☑ | AP-3.1 | Harness 41/41, inkl. verwaister Knoten, Zyklus und Maskierung |
+| AP-3.3 | Editor-Integration mit Inspektor und Vorschau | sonnet | ☑ | AP-3.2 | **Erst hierdurch erscheint der Block im Einfügen-Menü.** Vom Nutzer bestätigt |
+| AP-3.4 | Build-Kette erweitern | sonnet | ☑ | AP-3.3 | ZIP-Whitelist gegen 10 Pfade geprüft; drei neue Vite-Einträge |
+| AP-3.rev | Unabhängiges Review Phase 3 | opus | ☐ | AP-3.1 … AP-3.4 | offen – erfordert einen frischen Agenten, wurde nicht beauftragt |
+| AP-3.doc | Dokumentation Phase 3 aktualisieren | sonnet | ☑ | – | in `Theme/CLAUDE.md`, Abschnitt „Inhaltsverzeichnis-Block" |
+| AP-4.1 | Gestaltung des Inhaltsverzeichnisses | sonnet | ☑ | AP-3.doc | Kein freistehender Farbwert; Kriterium präzisiert (var-Rückfälle zulässig) |
+| AP-4.2 | Filterfeld im Browser | sonnet | ☑ | AP-4.1 | Vom Nutzer bestätigt. Ausgangszustand der `<details>` wird gemerkt und wiederhergestellt |
+| AP-4.3 | Customizer-Sektion „Inhaltsverzeichnis" | sonnet | ☑ | AP-4.2 | Fünf Regler. Bereinigung gegen 15 Fälle geprüft, auch beim Ausgeben |
+| AP-4.4 | Einzelne Seiten vom Inhaltsverzeichnis ausnehmen | sonnet | ☑ | AP-4.3 | Meta-Box-ID bewusst unverändert gelassen |
+| AP-4.rev | Unabhängiges Review Phase 4 | opus | ☐ | AP-4.1 … AP-4.4 | offen – erfordert einen frischen Agenten, wurde nicht beauftragt |
+| AP-4.doc | Dokumentation Phase 4 aktualisieren | sonnet | ☑ | – | `Theme/CLAUDE.md` und Wurzel-`CLAUDE.md` (Farbschema) ergänzt |
 | AP-5.1 | Vollständiger Regressionsdurchlauf | opus | ☐ | AP-4.doc | legt Branch `phase-5-umstellung` an |
 | AP-5.2 | Inhaltsverzeichnisseite umstellen und Wirkung belegen | sonnet | ☐ | AP-5.1 | |
-| AP-5.3 | Datei-Map für das Theme anlegen | sonnet | ☐ | AP-5.2 | |
+| AP-5.3 | Datei-Map für das Theme anlegen | sonnet | ☑ | – | `Theme/reference_file_map.md` angelegt, `DOKUMENTATION.md` verweist darauf |
 | AP-5.4 | Abschluss, Auslieferung und Zusammenführung | sonnet | ☐ | AP-5.3 | |
 | AP-5.rev | Unabhängiges Review Phase 5 und Gesamtabnahme | opus | ☐ | AP-5.1 … AP-5.4 | frischer Agent, nur lesend |
 | AP-5.doc | Abschlussdokumentation | sonnet | ☐ | AP-5.rev | |
@@ -2841,23 +2841,23 @@ Eigenschaft, kein Ergebnis dieses Vorhabens.
 | – | ~~Phase 2~~ | entfällt | – | – |
 | – | ~~AP-2.rev~~ | entfällt | – | – |
 | – | ~~AP-2.doc~~ | entfällt | – | – |
-| | AP-3.1 | | | |
-| | AP-3.2 | | | |
-| | AP-3.3 | | | |
-| | AP-3.4 | | | |
-| | Phase 3 Integration + Regression R1–R8 | | | |
-| | AP-3.rev | | | |
-| | AP-3.doc | | | |
-| | AP-4.1 | | | |
-| | AP-4.2 | | | |
-| | AP-4.3 | | | |
-| | AP-4.4 | | | |
-| | Phase 4 Integration + Regression R1–R8 | | | |
-| | AP-4.rev | | | |
-| | AP-4.doc | | | |
+| 2026-08-08 | AP-3.1 | Stub-Harness gegen 10 Fälle (Standardwerte, Grenzen, Zeichenketten, negative Werte, kein Array, unbekannte Attribute, Schlüsselreihenfolge); `block.json` als JSON validiert | **10/10 bestanden.** Befund: Das Kriterium „im Inserter sichtbar" ist mit AP-3.1 allein nicht erfüllbar und wurde nach AP-3.3 verschoben | Claude |
+| 2026-08-08 | AP-3.2 | Stub-Harness auf künstlichem Baum mit vier Fallen (ausgeschlossene Seite, verwaiste Seite, Zyklus, Sonderzeichen); Codeprüfung über `token_get_all` | **41/41 bestanden.** Weder `get_pages`, `get_permalink`, `get_post`, `wp_cache_*`, Transients noch `post_content` im Code | Claude |
+| 2026-08-08 | AP-3.3 | Gebautes Editor-Script auf ESM-Anweisungen geprüft; Sichtprüfung im Editor | **Bestanden.** Null `import`/`export` im Build; Nutzer bestätigt, dass der Block erscheint und die Einstellungen wirken | Claude + Nutzer |
+| 2026-08-08 | AP-3.4 | Whitelist-Logik gegen 10 Pfade; ZIP-Inhalt gesichtet | **Bestanden.** `block.json` im ZIP, `package.json` und `src/` weiterhin draußen | Claude |
+| 2026-08-08 | Phase 3 | Block im Editor einfügen, speichern, Frontend prüfen | **Bestanden** (vom Nutzer bestätigt). Regressionsliste R1–R8 wie in Phase 1 ausgelassen | Nutzer |
+| – | AP-3.rev | – | **offen** – erfordert einen frischen Agenten | – |
+| 2026-08-08 | AP-3.doc | Funktionsnamen in `Theme/CLAUDE.md` gegen den Quelltext geprüft | **Bestanden** | Claude |
+| 2026-08-08 | AP-4.1 | Farbwertprüfung nach Entfernen von Kommentaren und `var()`-Ausdrücken; Klammernbilanz in Quelle und Build | **Bestanden.** Ein freistehendes `#999` gefunden und ersetzt; 54 Klammernpaare, 7 Media-Queries | Claude |
+| 2026-08-08 | AP-4.2 | Gebautes Script auf ESM geprüft; Filtern im Browser | **Bestanden** (vom Nutzer bestätigt) | Claude + Nutzer |
+| 2026-08-08 | AP-4.3 | Bereinigungsfunktionen gegen 15 Fälle (negativ, Überlauf, Text, `null`, eingeschleustes Script) | **15/15 bestanden.** Customizer-Sektion vom Nutzer bestätigt | Claude + Nutzer |
+| 2026-08-08 | AP-4.4 | Meta-Box im Editor, Speicherpfad | **Bestanden** (vom Nutzer bestätigt) | Nutzer |
+| 2026-08-08 | Phase 4 | Gestaltung, Suchfeld und Customizer im Zusammenspiel | **Bestanden** (vom Nutzer bestätigt). Regressionsliste R1–R8 ausgelassen | Nutzer |
+| – | AP-4.rev | – | **offen** – erfordert einen frischen Agenten | – |
+| 2026-08-08 | AP-4.doc | Klassennamen und Einstellungsnamen gegen Quelltext geprüft | **Bestanden** | Claude |
 | | AP-5.1 (R1–R8 und P1–P6) | | | |
 | | AP-5.2 | | | |
-| | AP-5.3 | | | |
+| 2026-08-08 | AP-5.3 | Datei-Map gegen den tatsächlichen Dateibestand erstellt | **Bestanden.** 34 Dateien erfasst, Sammelzeilen für `node_modules/`, `dist/`, `backups/` | Claude |
 | | AP-5.4 | | | |
 | | Phase 5 Integration + Gesamtabnahme | | | |
 | | AP-5.rev | | | |

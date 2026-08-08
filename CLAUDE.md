@@ -1132,6 +1132,74 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
 - Menü-Auto-Zuweisung: `simple_clean_auto_assign_menu()` (sucht Menü
   „Skripten Übersicht").
 
+## Inhaltsverzeichnis-Block (`fos/inhaltsverzeichnis`)
+
+Ersetzt den Core-Block „Seitenliste" (`core/page-list`) auf den
+Kapitelübersichten. Code in `includes/page-index.php`, Metadaten in
+`blocks/inhaltsverzeichnis/block.json`.
+
+**Attribute** (Standardwerte in Klammern): `rootPage` (0 = oberste Ebene),
+`maxDepth` (2), `layout` (`cards` | `list` | `columns`), `columns` (3),
+`collapsible` (true), `openByDefault` (false), `showSearch` (true),
+`showCounts` (false). Bereinigt werden sie ausschließlich in
+`simple_clean_page_index_sanitize_attrs()` — bewusst ohne Datenbankzugriff
+und dadurch rein prüfbar.
+
+**Datenbeschaffung:** `simple_clean_page_index_daten()` stellt zwei schlanke
+Abfragen (fünf Spalten, kein `post_content`) und berechnet alle Pfade in
+einem Durchlauf per Breitensuche ab der Wurzel. Der Durchlauf erledigt
+nebenbei zweierlei ohne Sonderbehandlung: Verwaiste Knoten (Elternteil nicht
+veröffentlicht) und Zyklen sind von der Wurzel aus nicht erreichbar und
+fallen samt Unterbaum heraus. Das Ergebnis liegt in einer statischen
+Variablen — mehrere Blöcke auf einer Seite teilen die Abfragen.
+
+**Kein Zwischenspeicher, und das ist Absicht.** Der ursprüngliche Plan sah
+einen vorberechneten Index in `wp_options` mit Versionszähler,
+Invalidierungshooks und Fragment-Cache vor. Eine Messung am 2026-08-08 hat
+das widerlegt: Der Seitenbaum kostet bei 258 Seiten rund 0,03 s. Ein
+Zwischenspeicher würde kein gemessenes Problem lösen, aber Fehlerquellen
+einführen — allen voran veraltete Ausgabe nach Sortierungen im
+Seitenmanager, der `post_parent` und `menu_order` an `save_post` vorbei
+schreibt. Belege in `docs/PLAN-Seitenindex.md`, Abschnitt 11.
+
+**Zwei Registrierungen, beide nötig:**
+
+| Ort | Was sie leistet |
+|---|---|
+| `register_block_type_from_metadata()` in `includes/page-index.php` | Rendering, Block-Supports, Metadaten |
+| `registerBlockType()` in `src/js/page-index-editor.js` | **Sichtbarkeit im Einfügen-Menü** |
+
+Eine rein serverseitige Registrierung genügt **nicht** — der Block wäre im
+Editor schlicht nicht auffindbar. Das hat beim Bauen einen Umweg gekostet.
+
+Ebenfalls bewusst: **kein `"render"` in der `block.json`.** Diese Eigenschaft
+gibt es erst ab WordPress 6.1 und würde auf älteren Versionen stillschweigend
+ignoriert — der Block gäbe nichts aus, ohne Fehlermeldung. Das Theme
+deklariert „Requires at least: 5.0", deshalb `render_callback`.
+
+**Gestaltung:** `src/css/page-index.css`. Klassen: `.page-index`,
+`--cards|--list|--columns`, `--cols-1..4`, `__search`, `__chapters`,
+`__chapter`, `__chapter-link`, `__sub`, `__sub-toggle`, `__pages`, `__page`,
+`__page-link`, `__empty`, `__no-results`, `__status` sowie
+`__chapter--hidden` / `__page--hidden` für den Filter.
+Aufgeklappt wird über natives `<details>` — barrierefrei, tastaturbedienbar,
+funktioniert ohne JavaScript.
+
+**Farben:** sechs `--pidx-*`-Variablen, ausgegeben in
+`simple_clean_customizer_css()`. Fünf davon sind im Customizer unter
+„Inhaltsverzeichnis" einstellbar (Kartenhintergrund, Kartenrahmen,
+Titelfarbe, Eckenradius, Dichte). `--pidx-accent` hat bewusst **keinen**
+eigenen Regler und folgt `--color-ui-surface`.
+Im CSS stehen **keine freistehenden Farbwerte**; Hexwerte nur als Rückfall in
+`var(--x, #wert)`, wo die Customizer-Farbe weiterhin gewinnt.
+Der „plastische Look" bleibt außen vor — er ist dem Navigations-Streifen
+vorbehalten.
+
+**Seiten ausnehmen:** Meta `_simple_clean_hide_from_index`, gesetzt über die
+zweite Checkbox der Meta-Box „Navigation & Inhaltsverzeichnis". Die Seite
+entfällt **samt ihrem gesamten Unterbaum**, bleibt aber erreichbar und in der
+Seitenleiste sichtbar.
+
 ## Diagnose: Wo geht die Zeit hin?
 
 Auf einem Shared Hosting ohne SSH und ohne WP-CLI steht kein Profiler zur
