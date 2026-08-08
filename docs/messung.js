@@ -146,11 +146,24 @@
                       'w3-total-cache', 'wp-super-cache', 'hummingbird', 'swift-performance']
         .filter(n => start.text.toLowerCase().includes(n));
 
-      // Probe 4: Lief wp_footer ueberhaupt? Die Admin-Leiste wird bei
-      // angemeldeten Benutzern GENAU dort ausgegeben. Ist "wpadminbar" im
-      // HTML, hat wp_footer sicher stattgefunden.
-      const footerLief = /wpadminbar/i.test(start.text);
-      const vollstaendig = /<\/body>/i.test(start.text);
+      // Probe 4: Lief wp_footer ueberhaupt?
+      // NICHT ueber "wpadminbar" pruefen - WordPress gibt schon im wp_head
+      // ein <style id="admin-bar-inline-css"> mit #wpadminbar aus, der
+      // Treffer beweist also nichts. Aussagekraeftig ist </body>: das steht
+      // in footer.php direkt NACH wp_footer(). Ist es da, lief wp_footer
+      // vollstaendig durch.
+      const footerLief = /<\/body>/i.test(start.text);
+
+      // Probe 6 (die entscheidende): Laeuft wirklich die NEUE functions.php?
+      // Theme/CLAUDE.md haelt fest: bis v1.5.63 haengte functions.php das
+      // Stylesheet mit fester Version '1.0' ein, seit v1.5.64 mit
+      // filemtime(). Steht in der URL also style.css?ver=1.0, laeuft eine
+      // ALTE functions.php - unabhaengig davon, welche Version in der
+      // style.css selbst steht. Genau dieser Fall trennt "Datei nicht
+      // aktualisiert" von "Bedingung greift nicht".
+      const verTreffer = start.text.match(/\/themes\/[^"']*style\.css\?ver=([^"'&]+)/i);
+      const cssVer = verTreffer ? verTreffer[1] : '(nicht gefunden)';
+      const cssVerIstZeitstempel = /^\d{9,}$/.test(cssVer);
 
       // Probe 5: Kommt der Parameter am Ziel an, oder wird er unterwegs
       // entfernt? fetch folgt Weiterleitungen still - antwort.url zeigt,
@@ -161,10 +174,11 @@
         'HTML-Kommentare in der Seite': kommentare,
         'Berechtigung manage_options':  rechte,
         'Gefundene Optimierer':         spuren.length ? spuren.join(', ') : 'keine',
-        'wp_footer lief (Adminleiste)': footerLief ? 'ja' : 'NEIN',
-        '</body> vorhanden':            vollstaendig ? 'ja' : 'NEIN',
+        'wp_footer lief (</body> da)':  footerLief ? 'ja' : 'NEIN',
         'weitergeleitet':               start.weitergeleitet ? 'ja' : 'nein',
         'sc_perf in der Ziel-URL':      paramAngekommen ? 'ja' : 'NEIN',
+        'style.css?ver=':               cssVer,
+        'functions.php aktuell?':       cssVerIstZeitstempel ? 'ja (filemtime)' : 'NEIN (feste Version)',
       }]);
       log('  angefordert: ' + start.angefordert);
       log('  gelandet bei: ' + start.endgueltig);
@@ -183,14 +197,21 @@
         warn('  ABHILFE: Melde mir das, ich stelle den Ausloeser auf etwas um,');
         warn('  das eine Weiterleitung uebersteht.');
       } else if (!footerLief) {
-        warn('  URSACHE: wp_footer scheint nicht zu laufen - die Admin-Leiste');
-        warn(`  fehlt im HTML und </body> ist ${vollstaendig ? 'vorhanden' : 'AUCH NICHT da'}.`);
-        warn('  Moeglich: die Admin-Leiste ist abgeschaltet (dann ist diese Probe');
-        warn('  aussagelos) oder die Ausgabe bricht vorher ab.');
-        warn('  Bitte melde mir diese Tabelle.');
+        warn('  URSACHE: Die Ausgabe bricht vor </body> ab - wp_footer wird nicht');
+        warn('  vollstaendig durchlaufen. Bitte melde mir diese Tabelle.');
+      } else if (!cssVerIstZeitstempel) {
+        warn(`  URSACHE: Es laeuft eine ALTE functions.php (style.css?ver=${cssVer}).`);
+        warn('  Seit v1.5.64 haengt functions.php das Stylesheet mit filemtime() ein,');
+        warn('  die Version muesste also ein Unix-Zeitstempel sein. Die style.css');
+        warn('  wurde ersetzt, die functions.php aber nicht - oder sie wird noch');
+        warn('  aus einem PHP-Zwischenspeicher (OPcache) bedient.');
+        warn('  ABHILFE: Theme erneut hochladen; bringt das nichts, im All-Inkl-KAS');
+        warn('  den PHP-Zwischenspeicher leeren bzw. kurz die PHP-Version umstellen');
+        warn('  und zurueckstellen - das verwirft den OPcache.');
       } else {
         warn('  Alle Voraussetzungen sind erfuellt: Parameter kommt an, wp_footer');
-        warn('  laeuft, Rechte stimmen, Kommentare werden nicht entfernt.');
+        warn(`  laeuft, Rechte stimmen, functions.php ist aktuell (ver=${cssVer}),`);
+        warn('  Kommentare werden nicht entfernt.');
         warn('  Damit bleibt ein Seiten-Cache als wahrscheinlichste Ursache.');
         warn('  ABHILFE: Cache leeren, dann erneut ausfuehren. Bleibt es dabei,');
         warn('  melde mir bitte diese Tabelle.');
