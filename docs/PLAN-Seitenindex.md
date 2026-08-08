@@ -1,6 +1,6 @@
 # Projektplan: Seitenindex & Inhaltsverzeichnis-Block (Theme „FOS Online Schulbuch")
 
-_Erstellt am: 2026-08-07 · Letzte Aktualisierung: 2026-08-07_
+_Erstellt am: 2026-08-07 · Letzte Aktualisierung: 2026-08-08_
 
 ## 0. Anweisungen für den ausführenden Agenten
 
@@ -130,6 +130,23 @@ Layout, Spalten, Suchfeld), global über eine neue Customizer-Sektion.
 
 ## 3. Kontext & Constraints
 
+- **Erhobener Ist-Stand (2026-08-08, AP-1.2):** 258 veröffentlichte Seiten,
+  **1049 Glossareinträge**. Es gibt **kein einzelnes Inhaltsverzeichnis**,
+  sondern **drei Kapitelübersichten** mit `core/page-list`:
+  `/organische-chemie-und-biochemie/` (128 Links), `/analytische-chemie/`
+  (79 Links), `/laborsicherheit/` (26 Links). Vergleichswerte ohne
+  Verzeichnis: Startseite 41 Queries / 0,053 s / 67 KB, Skriptenseite
+  53 Queries / 0,067 s / 170 KB.
+  **Wichtig zur Einordnung der Linkzahlen:** Sie sagen nichts über die
+  Serverlast. `core/page-list` lädt über `get_pages()` immer *alle* Seiten
+  der Website und filtert erst danach nach `parentPageID` — die Übersicht mit
+  26 sichtbaren Links kostet den Server genauso viel wie die mit 128.
+- **Gestaltungsfreiheit (Entscheidung des Nutzers, 2026-08-08):** Die
+  Verzeichnisse dürfen **vollständig anders aufgebaut** werden. Die
+  ursprüngliche Vorgabe „1:1-Ersatz für den Core-Block, damit nur ein Block
+  getauscht werden muss" ist damit aufgehoben. Aufbau, Darstellung und
+  Aufteilung auf Seiten sind frei wählbar, solange der Nutzen erhalten
+  bleibt.
 - **Umgebung:** WordPress 6.x auf All-Inkl Shared Hosting. PHP 7.4 als
   Mindestversion (Theme-Header `Requires PHP: 7.4`). Kein SSH, kein WP-CLI.
   Kein persistenter Object-Cache (Redis/Memcached) – deshalb wird über
@@ -179,12 +196,13 @@ Layout, Spalten, Suchfeld), global über eine neue Customizer-Sektion.
 
 | Entscheidung | Begründung | Verworfene Alternative |
 |---|---|---|
-| Eigener Block `fos/inhaltsverzeichnis` statt `render_block`-Filter auf `core/page-list` | Explizit im Editor sichtbar, pro Einfügung konfigurierbar, unabhängig von Core-Änderungen. Der Umstieg ist ein Blocktausch auf einer Seite und jederzeit umkehrbar. | Core-Block per Filter kapern – unsichtbar für Redakteure, bricht bei Core-Umbauten, keine eigenen Optionen |
-| Index in `wp_options` mit `autoload = false` | Funktioniert ohne persistenten Object-Cache, also auf All-Inkl. Eine autoloadende Option dieser Größe würde auf jedem Request der gesamten Site geladen – schlimmer als das Ausgangsproblem. | `wp_cache_*` (ohne Redis nur pro Request wirksam), eigene DB-Tabelle (Migration ohne Not) |
-| Read-Through statt Eager Rebuild | Beim Speichern wird nur ein Versionszähler erhöht; der Neuaufbau passiert beim nächsten Lesezugriff. Eine Drag-Sortierung über 50 Seiten würde sonst 50 Neuaufbauten auslösen. Der Aufbau kostet eine indizierte Abfrage. | Rebuild direkt im `save_post`, Rebuild per WP-Cron (auf Shared Hosting unzuverlässig getaktet) |
-| Fragment-Cache mit Indexversion **im Schlüssel** | Invalidierung geschieht automatisch: nach einer Änderung greifen die alten Schlüssel nicht mehr und laufen per TTL aus. Kein Suchlauf über die Options-Tabelle bei jedem Speichern. | Gezieltes Löschen aller Fragment-Transients bei jeder Änderung – teurer Options-Scan bei jedem Save |
+| Eigener Block `fos/inhaltsverzeichnis` statt `render_block`-Filter auf `core/page-list` | Explizit im Editor sichtbar, pro Einfügung konfigurierbar, unabhängig von Core-Änderungen. Der Umstieg ist ein Blocktausch und jederzeit umkehrbar. | Core-Block per Filter kapern – unsichtbar für Redakteure, bricht bei Core-Umbauten, keine eigenen Optionen |
+| `rootPage` ist Kernfunktion, nicht Kür | Es gibt drei Kapitelübersichten, die jeweils nur ihren eigenen Teilbaum zeigen (siehe Ist-Stand in Abschnitt 3). Ein Verzeichnis über alle 258 Seiten wäre auf keiner der drei Seiten gewollt. `rootPage` wird im Editor je Einfügung gesetzt und ist damit eine **feste Zahl im Blockattribut** – die Ausgabe bleibt requestunabhängig und der Fragment-Cache gültig. | „Automatisch die Seite nehmen, auf der der Block steht" – bequemer, macht die Ausgabe aber requestabhängig. Wäre nur zulässig, wenn die aufgelöste Seiten-ID in den Cache-Schlüssel eingeht; das ist als spätere Bequemlichkeitsoption möglich, aber nicht der Standardweg |
+| ~~Index in `wp_options` mit `autoload = false`~~ **VERWORFEN 2026-08-08** | Die Messung zeigt, dass der Seitenbaum rund 0,03 s kostet. Ein Index löst kein gemessenes Problem und bringt eigene Fehlerquellen mit. Siehe Abschnitt 11. | Stattdessen: eine schlanke Abfrage je Seitenaufruf, Ergebnis in einer statischen Variablen |
+| ~~Read-Through statt Eager Rebuild~~ **VERWORFEN 2026-08-08** | Gegenstandslos ohne Index. | – |
+| ~~Fragment-Cache mit Indexversion im Schlüssel~~ **VERWORFEN 2026-08-08** | Der zwischenzuspeichernde Vorgang kostet gemessen zu wenig, um den Aufwand und das Risiko veralteter Ausgabe zu rechtfertigen. Ohne Cache erscheint eine Umbenennung sofort. | – |
 | Eigene URI-Berechnung aus der Elternkette statt `get_permalink()` je Seite | `get_permalink()` löst für hierarchische Seiten die Elternkette einzeln auf. Der Index kennt die gesamte Struktur bereits und baut alle URIs in einem Durchlauf. | `get_permalink()` pro Knoten (der teuerste Einzelposten im Core-Block) |
-| Blockausgabe ist bewusst **request-unabhängig** | Keine Hervorhebung der aktuellen Seite, keine benutzerabhängigen Inhalte. Nur so ist ein Fragment-Cache über alle Besucher hinweg gültig. | Aktuelle Seite hervorheben – würde den Fragment-Cache pro Seite vervielfachen |
+| Blockausgabe bleibt request-unabhängig | Ursprünglich eine Cache-Bedingung; ohne Cache bleibt sie als Einfachheitsregel bestehen. Eine Hervorhebung der aktuellen Seite wäre jetzt möglich, ist aber kein Ziel dieses Vorhabens. | – |
 | Glossar-Fix über das vorhandene Meta `_glossar_scan_version` | Das Meta existiert bereits und wird sowohl von `simple_clean_update_glossar_candidates()` als auch vom Bulk-Scan gesetzt. Es unterscheidet zuverlässig „nie gescannt" von „gescannt, null Treffer". | Leeres Array als Sentinel speichern (kollidiert mit `empty()`), eigenes neues Meta einführen (überflüssig) |
 | Neue Dateien unter `Theme/includes/` und `Theme/blocks/` statt in `functions.php` | Die `functions.php` hat bereits ~3850 Zeilen. Das Muster existiert: `includes/admin/page-manager.php` wird per `require_once` geladen. | Alles in `functions.php` – erschwert Review und Wiederauffinden |
 | Aufklappen über natives `<details>/<summary>` | Barrierefrei, tastaturbedienbar, funktioniert ohne JavaScript, keine Fremdbibliothek (DSGVO). | JS-Akkordeon mit Fremdbibliothek |
@@ -244,13 +262,20 @@ Layout, Spalten, Suchfeld), global über eine neue Customizer-Sektion.
 Jede Phase endet mit `AP-<N>.rev` (unabhängiges Review) und `AP-<N>.doc`
 (Dokumentation) – in dieser Reihenfolge nach den Implementierungs-APs.
 
+> **Neuzuschnitt am 2026-08-08 nach der Ausgangsmessung** (Begründung in
+> Abschnitt 11, Entscheidung des Nutzers): **Phase 2 entfällt vollständig**,
+> aus Phase 3 entfällt der Fragment-Cache. Der Block liest stattdessen direkt
+> mit einer schlanken Abfrage. Die entfallenen Arbeitspakete bleiben im
+> Dokument stehen und sind als entfallen gekennzeichnet — gelöscht wird
+> nichts, damit nachvollziehbar bleibt, was verworfen wurde und warum.
+
 | Phase | Ziel | Lauffähiger Endzustand | APs |
 |---|---|---|---|
-| 1 | Glossar-Fallback korrigieren – die Sofortbremse lösen | Die **bestehende** Inhaltsverzeichnisseite mit `core/page-list` lädt messbar schneller; Glossar funktioniert auf allen anderen Seiten unverändert | AP-1.1 … AP-1.6, AP-1.rev, AP-1.doc |
-| 2 | Indexschicht aufbauen und korrekt halten | Der Seitenindex existiert, bleibt bei jeder Seitenänderung korrekt und ist über einen Knopf neu aufbaubar; im Frontend ist noch nichts verändert | AP-2.1 … AP-2.4, AP-2.rev, AP-2.doc |
-| 3 | Block und Rendering | Der Block `fos/inhaltsverzeichnis` ist im Editor einfügbar, rendert aus dem Index, wird zwischengespeichert und ist im ZIP enthalten | AP-3.1 … AP-3.4, AP-3.rev, AP-3.doc |
+| 1 | Glossar-Fallback korrigieren – die Sofortbremse lösen | Die **bestehenden** Verzeichnisseiten laden messbar schneller; Glossar funktioniert auf allen anderen Seiten unverändert | AP-1.1 … AP-1.6, AP-1.rev, AP-1.doc |
+| ~~2~~ | ~~Indexschicht aufbauen und korrekt halten~~ | **ENTFÄLLT** — die Messung zeigt, dass der Seitenbaum rund 0,03 s kostet. Ein Index mit Invalidierung und Rebuild-Knopf löst kein gemessenes Problem und bringt eigene Fehlerquellen mit (siehe Abschnitt 11) | ~~AP-2.1 … AP-2.4, AP-2.rev, AP-2.doc~~ |
+| 3 | Block und Rendering (**ohne** Index, **ohne** Fragment-Cache) | Der Block `fos/inhaltsverzeichnis` ist im Editor einfügbar, rendert aus **einer schlanken Abfrage** und ist im ZIP enthalten | AP-3.1, AP-3.2, AP-3.3, AP-3.4, AP-3.rev, AP-3.doc |
 | 4 | Gestaltung steuerbar machen | Kapitelkarten mit Aufklappebenen, Suchfeld, Block-Optionen im Editor, globale Regler im Customizer, Seiten einzeln ausschließbar | AP-4.1 … AP-4.4, AP-4.rev, AP-4.doc |
-| 5 | Umstellung, Absicherung, Dokumentation | Die echte Inhaltsverzeichnisseite nutzt den neuen Block, die Verbesserung ist gegen die Phase-1-Messung belegt, Datei-Map und Doku sind aktuell | AP-5.1 … AP-5.4, AP-5.rev, AP-5.doc |
+| 5 | Umstellung, Absicherung, Dokumentation | Die drei Verzeichnisseiten nutzen den neuen Block, die Verbesserung ist gegen die Phase-1-Messung belegt, Datei-Map und Doku sind aktuell | AP-5.1 … AP-5.4, AP-5.rev, AP-5.doc |
 
 ## 7. Arbeitspakete
 
@@ -277,7 +302,7 @@ Das Unterscheidungsmerkmal existiert bereits: das Post-Meta
 
 #### AP-1.1: Ausgangszustand sichern und Phasen-Branch anlegen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-08)
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** keine
@@ -331,13 +356,60 @@ nur eine einzige Backup-Generation vorhält und sie bei jedem Build überschreib
 - Prüfschritt: `php -l` über alle PHP-Dateien meldet „No syntax errors detected" für jede Datei.
 - Prüfschritt: Die Rollback-ZIP-Datei lässt sich öffnen und enthält im Wurzelverzeichnis den Ordner `fos-online-schulbuch/` mit `style.css` und `functions.php`.
 
-**Übergabenotiz:**
+**Übergabenotiz:** (2026-08-08)
+
+**Was geändert wurde:**
+- Commit `c9322e2` auf `main`: „v1.5.68: Plastischer Look Sidebar-Streifen,
+  Cache-Busting style.css" – 7 Dateien, 3314 Einfügungen, 18 Löschungen.
+  Enthalten: `style.css`, `functions.php`, `package.json`, `CLAUDE.md`,
+  `.gitignore` sowie neu `docs/ERWEITERUNGSANALYSE-Seitenindex.md` und
+  `docs/PLAN-Seitenindex.md`. Nach `origin/main` gepusht
+  (`d252f81..c9322e2`).
+- `.gitignore`: Eintrag `.claude/` im Abschnitt „IDE / Editor" ergänzt. Der
+  Ordner war zuvor unversioniert und wäre sonst mit committet worden.
+- `backups/fos-online-schulbuch-rollback-phase1.zip` angelegt (Kopie von
+  `dist/fos-online-schulbuch.zip`, 79 145 Bytes, 22 Einträge, `style.css`
+  meldet Version 1.5.68).
+- Branch `phase-1-glossar-fallback` von `main` abgezweigt und mit
+  `-u origin` gepusst. Aktiver Branch. Beide Branches stehen auf `c9322e2`.
+
+**Getroffene Entscheidungen:**
+- `npm run build` war **nicht** nötig: `dist/fos-online-schulbuch.zip` existierte
+  bereits und trägt Version 1.5.68, passend zum committeten Stand. Die
+  Versionsnummer wurde daher **nicht** erhöht – sie steht weiterhin auf
+  1.5.68 in `package.json` und `style.css`.
+
+**Für Folge-APs relevant:**
+- **Kein PHP 7.4 verfügbar.** `php` im Pfad ist Version 8.5.1
+  (`/c/php/php`), unter `C:\allinkl-testserver\php\` liegt nur 8.3. `php -l`
+  weist damit Syntaxfehler zuverlässig nach, kann aber **nicht** erkennen,
+  wenn versehentlich PHP-8-only-Syntax verwendet wird (`match`, Union Types,
+  Nullsafe-Operator, Constructor Property Promotion). Die Zielumgebung
+  verlangt laut `style.css` PHP 7.4. AP-1.3, AP-1.4, AP-2.1 und AP-3.2
+  müssen das **durch Codelektüre** sicherstellen; `php -l` allein genügt hier
+  nicht. Die Review-APs prüfen es ohnehin gesondert.
+- Der Befehl für die Syntaxprüfung über alle PHP-Dateien (Git Bash, im Ordner
+  `Theme/`), `node_modules` ausgenommen:
+  `for f in $(find . -path ./node_modules -prune -o -name "*.php" -print); do php -l "$f"; done`
+  Geprüft werden damit 11 Dateien: 9 im Wurzelverzeichnis plus
+  `includes/admin/clipboard-uploader.php` und `includes/admin/page-manager.php`.
+  `functions.php.backup` wird nicht erfasst (keine `.php`-Endung) – das ist so
+  gewollt, die Datei ist ein Altbestand und nicht Teil des Themes.
+- `dist/` und `*.zip` sind in `.gitignore`; das Rollback-ZIP unter `backups/`
+  wird also **nicht** versioniert. Es existiert nur lokal. Vor einem
+  Rechnerwechsel wäre es gesondert zu sichern.
+- Die Live-Site wurde in diesem AP **nicht** angefasst – es gab keine
+  Codeänderung, die eingespielt werden müsste. Der auf der Website laufende
+  Stand entspricht dem Rollback-ZIP.
 
 ---
 
 #### AP-1.2: Messbasis für die Inhaltsverzeichnisseite schaffen
 
-**Status:** ☐ offen
+**Status:** ◐ in Arbeit — Code fertig und gebaut (v1.5.69, Commit `36ad832`);
+offen sind Schritt 5 (ZIP einspielen), Schritt 6 (Messung) und Schritt 7
+(Seiten- und Begriffsanzahl). Diese Schritte verlangen Zugriff auf die
+Live-Site und werden vom Nutzer ausgeführt.
 **Umfang:** M
 **Modell:** sonnet
 **Abhängigkeiten:** AP-1.1
@@ -397,7 +469,10 @@ Sie bleibt dauerhaft im Theme und wird in AP-1.6 und AP-5.2 erneut verwendet.
 
 #### AP-1.3: Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-08) — Stub-Harness 6/6, live seit v1.5.70.
+Wirkung belegt: `/organische-chemie-und-biochemie/` von 1,998 s auf 0,058 s
+(Faktor 34), Queries 45 → 42, Spitzenspeicher 66 → 50 MB. Messwerte in
+Abschnitt 9.
 **Umfang:** M
 **Modell:** opus (die Änderung verändert das Verhalten aller Seiten mit leerer Kandidatenliste – die Bedingung muss exakt sitzen)
 **Abhängigkeiten:** AP-1.2
@@ -589,8 +664,21 @@ programmieren** – dieses AP führt den Scan durch und weist das Ergebnis nach.
      AND meta_value IN ('a:0:{}', '');
    ```
 
-4. Stichprobe: Drei zufällige Skriptenseiten im Frontend aufrufen und prüfen,
-   dass die Glossarverlinkung dort weiterhin funktioniert.
+4. **Stichprobe mit besonderer Sorgfalt** (verschärft am 2026-08-08 aufgrund
+   der Nachmessung, siehe Abschnitt 9): Drei inhaltlich reiche Skriptenseiten
+   im Frontend aufrufen und prüfen, dass dort tatsächlich Glossarbegriffe
+   hervorgehoben sind und sich anklicken lassen.
+   Hintergrund: Die Messung zeigt sehr niedrige Kandidatenzahlen — auf einer
+   Chemieseite nur 1 Kandidat bei 1049 Einträgen. Vor dem Fix überdeckte der
+   Fallback das, weil er bei leerer Liste einfach alle Begriffe verlinkte.
+   Nach dem Fix tut er das nicht mehr: Eine Seite mit unvollständiger
+   Kandidatenliste verliert die Verlinkung stillschweigend.
+   Ist nach dem Bulk-Scan auf einer solchen Seite **kein** Begriff verlinkt,
+   obwohl im Text erkennbar Glossarbegriffe vorkommen, ist das ein Befund:
+   Dann greift `simple_clean_scan_glossar_candidates()` zu kurz und muss
+   gesondert untersucht werden, bevor Phase 1 als abgeschlossen gilt.
+   Zum Gegenprüfen die Kandidatenzahl einer solchen Seite direkt ablesen —
+   die Diagnosezeile `?sc_perf=1` weist sie als `kandidaten=` aus.
 5. In `Theme/CLAUDE.md` im Abschnitt zum Glossar-System einen kurzen Hinweis
    ergänzen: Nach einem Import von Seiten direkt in die Datenbank (also ohne
    `save_post`) muss der Bulk-Scan erneut laufen, sonst fallen diese Seiten in
@@ -749,7 +837,30 @@ noch nicht; sie entsteht in AP-5.3. Bis dahin werden Dateiänderungen in den
 
 ---
 
-### Phase 2: Indexschicht
+### Phase 2: Indexschicht — ENTFÄLLT (2026-08-08)
+
+> **Diese gesamte Phase wird nicht umgesetzt.** Die Ausgangsmessung
+> (Abschnitt 9) hat ergeben, dass der Seitenbaum rund 0,03 s der Ladezeit
+> ausmacht — die 2 Sekunden auf `/organische-chemie-und-biochemie/` entstanden
+> bei identischer Query-Zahl und stammten aus der Glossar-Verarbeitung, die
+> Phase 1 behoben hat. Ein vorberechneter Index mit Versionszähler,
+> Invalidierungshooks, Rebuild-Knopf und Fragment-Cache würde damit ein
+> Problem lösen, das nicht existiert, und dafür eigene Fehlerquellen
+> einführen — allen voran die Gefahr eines veralteten Index nach direkten
+> SQL-Änderungen im Seitenmanager.
+>
+> **Was stattdessen passiert:** Der Block aus Phase 3 liest direkt mit einer
+> schlanken Abfrage (fünf Spalten, kein `post_content`, Pfade in einem
+> Durchlauf selbst berechnet). Das ist immer noch sparsamer als
+> `core/page-list`, aber ohne Zwischenspeicher und ohne Invalidierung.
+>
+> Die folgenden Arbeitspakete bleiben zur Nachvollziehbarkeit stehen. Sie sind
+> **nicht** auszuführen. Sollte die Seitenzahl einmal deutlich wachsen — bei
+> etwa 1000 Seiten aufwärts fiele der Seitenbaum sehr wohl ins Gewicht —,
+> steht hier ein durchgeplanter Bauplan bereit.
+
+<details>
+<summary>Entfallene Arbeitspakete der Phase 2 (nicht ausführen)</summary>
 
 Diese Phase baut die Datengrundlage. Im Frontend ändert sich noch **nichts** –
 die Inhaltsverzeichnisseite läuft weiterhin über `core/page-list`. Das ist
@@ -1208,7 +1319,24 @@ Invalidierungspflicht bei direktem SQL-Zugriff kennt.
 
 ---
 
+</details>
+
+---
+
 ### Phase 3: Block und Rendering
+
+> **Neu zugeschnitten am 2026-08-08.** Ohne Phase 2 gibt es keinen
+> vorberechneten Index und keinen Fragment-Cache. Der Renderer holt seine
+> Daten selbst — mit **einer** schlanken Abfrage über fünf Spalten, ohne
+> `post_content`, und berechnet alle Pfade in einem Durchlauf aus der
+> Elternkette statt über `get_permalink()` je Seite. Innerhalb eines
+> Seitenaufrufs wird das Ergebnis in einer statischen Variablen gehalten,
+> damit mehrere Blöcke auf derselben Seite die Abfrage teilen.
+>
+> Damit entfällt auch die Regel „Ausgabe muss requestunabhängig sein" in ihrer
+> strengen Form — sie diente dem Fragment-Cache. `rootPage` bleibt trotzdem
+> ein festes Attribut: Es gehört zur Aussage des Blocks, nicht zum Zufall des
+> Aufrufs.
 
 Gemeinsame Vereinbarungen für alle APs dieser Phase:
 
@@ -1230,11 +1358,11 @@ Editor-Script):**
 | `showSearch` | boolean | true | Filterfeld über der Liste ausgeben |
 | `showCounts` | boolean | false | Anzahl der Unterseiten je Kapitel anzeigen |
 
-**Grundregel für den Renderer:** Die Ausgabe ist **request-unabhängig**. Sie
-darf nicht davon abhängen, welche Seite gerade aufgerufen wird, wer angemeldet
-ist oder welche Sprache eingestellt ist. Keine Hervorhebung der aktuellen
-Seite. Nur unter dieser Bedingung ist der Fragment-Cache über alle Besucher
-hinweg gültig.
+**Grundregel für den Renderer:** Die Ausgabe hängt allein von den
+Blockattributen ab, nicht davon, welche Seite gerade aufgerufen wird oder wer
+angemeldet ist. Keine Hervorhebung der aktuellen Seite. Diese Regel stammt
+ursprünglich aus der Cache-Anforderung; sie bleibt auch ohne Cache bestehen,
+weil sie den Renderer einfach und sein Verhalten vorhersagbar hält.
 
 **HTML-Grundgerüst der Ausgabe** (Klassennamen sind für Phase 4 verbindlich):
 
@@ -1268,7 +1396,7 @@ Unterlisten stehen dann direkt im `<li>`.
 **Status:** ☐ offen
 **Umfang:** M
 **Modell:** sonnet
-**Abhängigkeiten:** AP-2.doc
+**Abhängigkeiten:** AP-1.doc (Phase 2 entfällt, siehe Abschnitt 11)
 
 **Ziel & Kontext:**
 Der Block `fos/inhaltsverzeichnis` wird als dynamischer Block registriert – er
@@ -1328,11 +1456,10 @@ nach `Theme/backups/fos-online-schulbuch-rollback-phase3.zip` kopieren.
    - `columns`: `absint()`, auf 1 bis 4 begrenzen.
    - `collapsible`, `openByDefault`, `showSearch`, `showCounts`: als `bool`
      casten.
-   - Die Rückgabe hat eine **feste Schlüsselreihenfolge**, damit die
-     Serialisierung für den Cache-Schlüssel in AP-3.2 stabil ist.
+   - Die Rückgabe hat eine feste Schlüsselreihenfolge — nicht mehr für einen
+     Cache-Schlüssel nötig, aber gut für lesbare Diffs und Vergleichbarkeit.
 5. Kommentarblock über der Registrierung, der auf die Grundregel
-   „request-unabhängige Ausgabe" hinweist und begründet, warum das für den
-   Fragment-Cache wesentlich ist.
+   „Ausgabe hängt allein von den Blockattributen ab" hinweist.
 
 **Akzeptanzkriterien:**
 - [ ] Im Block-Editor einer Seite lässt sich über die Blocksuche „Inhaltsverzeichnis" der Block `fos/inhaltsverzeichnis` einfügen.
@@ -1353,100 +1480,111 @@ nach `Theme/backups/fos-online-schulbuch-rollback-phase3.zip` kopieren.
 
 ---
 
-#### AP-3.2: Rendering aus dem Index mit Fragment-Cache
+#### AP-3.2: Rendering aus einer schlanken Abfrage
 
 **Status:** ☐ offen
 **Umfang:** M
-**Modell:** opus (Zusammenspiel von Baumausgabe, Zwischenspeicherung und Schlüsselbildung; Fehler hier führen zu veralteter Ausgabe, die im Betrieb schwer auffällt)
+**Modell:** opus (Baumaufbau, Pfadberechnung und Ausgabesicherheit an einer Stelle; Fehler hier zeigen sich als falsche oder unerreichbare Links)
 **Abhängigkeiten:** AP-3.1
 
 **Ziel & Kontext:**
-Der Renderer erzeugt das Inhaltsverzeichnis aus dem in Phase 2 gebauten Index
-und legt das Ergebnis als Fragment ab. Auf einem warmen Cache kostet ein
-Blockaufruf damit einen einzigen Lesevorgang. Die Datenquelle ist ausschließlich
-`simple_clean_get_page_index()` – der Renderer stellt **keine** eigene
-Datenbankabfrage und ruft **kein** `get_pages()`, `get_permalink()` oder
-`get_post()` auf.
+Der Renderer erzeugt das Verzeichnis. Er holt seine Daten **selbst**, ohne
+Index und ohne Fragment-Cache — beides ist mit dem Neuzuschnitt vom
+2026-08-08 entfallen (Begründung in Abschnitt 11).
+
+Warum das trotzdem sparsamer ist als `core/page-list`: Der Core ruft
+`get_pages()` auf, lädt damit alle Seiten als vollständige `WP_Post`-Objekte
+**einschließlich `post_content`** und ruft für jede Seite einzeln
+`get_permalink()`, was die Elternkette je Seite erneut auflöst. Hier werden
+stattdessen fünf Spalten geladen und alle Pfade in **einem** Durchlauf von
+oben nach unten berechnet.
 
 **Betroffene Dateien:**
-- `Theme/includes/page-index.php` (ändern – Renderfunktion und Cache-Hilfsfunktionen)
+- `Theme/includes/page-index.php` (ändern – Datenbeschaffung und Renderfunktion)
 
 **Vorgehen:**
-1. Die in AP-3.1 als Rumpf angelegte Funktion
+1. Funktion `simple_clean_page_index_daten()` anlegen. Sie liefert den
+   Seitenbaum und hält ihn in einer **statischen Variablen**, damit mehrere
+   Blöcke auf derselben Seite die Abfrage teilen:
+   - Eine Abfrage über `$wpdb`:
+     `SELECT ID, post_parent, post_title, post_name, menu_order FROM {$wpdb->posts} WHERE post_type = 'page' AND post_status = 'publish' ORDER BY menu_order ASC, post_title ASC`
+     Kein `post_content`, kein `SELECT *`. Die Abfrage enthält keine
+     Nutzereingabe; `$wpdb->posts` wird über die Eigenschaft eingesetzt.
+   - Eine zweite Abfrage für die Ausschlussliste:
+     `SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_simple_clean_hide_from_index' AND meta_value = '1'`
+     Dieses Meta setzt AP-4.4 in der Oberfläche; bis dahin ist das Ergebnis
+     leer. Ausgeschlossene Seiten entfallen **samt ihrem gesamten Unterbaum**.
+   - Rückgabe: `array('nodes' => array(ID => array('id','parent','title','slug','uri','depth')), 'children' => array(parentID => array(childID, …)))`
+   - `uri` ist der Pfad ohne führenden und abschließenden Schrägstrich,
+     berechnet als `elternpfad . '/' . post_name`, einmal je Knoten von oben
+     nach unten (Elternpfade sind dann bereits bekannt).
+   - **Verwaiste Knoten** (Elternteil nicht im Ergebnis, etwa weil es ein
+     Entwurf ist) entfallen samt Unterbaum — das entspricht dem Verhalten von
+     WordPress-Permalinks und verhindert unerreichbare Einträge.
+   - **Zyklenschutz:** Elternkette auf höchstens 20 Schritte begrenzen; wird
+     die Grenze erreicht, Knoten weglassen und einmal per `error_log()` melden.
+2. Die in AP-3.1 als Rumpf angelegte Funktion
    `simple_clean_render_page_index($attributes, $content = '', $block = null)`
-   in `page-index.php` vollständig ausarbeiten. Sie ist als `render_callback`
-   des Blocks registriert und damit der einzige Einstiegspunkt. Ablauf:
-   - `$attrs = simple_clean_page_index_sanitize_attrs($attributes);`
-   - Cache-Schlüssel bilden:
-     `'sc_pidx_' . simple_clean_get_page_index_version() . '_' . md5(serialize($attrs))`
-     Die Indexversion steckt bewusst **im Schlüssel** – dadurch invalidiert
-     sich das Fragment nach jeder Seitenänderung von selbst, ohne dass die
-     Options-Tabelle durchsucht werden muss. Der Schlüssel darf 172 Zeichen
-     nicht überschreiten (Grenze für Transient-Namen); das ist bei diesem
-     Aufbau eingehalten.
-   - `get_transient($key)` lesen. Ist das Ergebnis eine Zeichenkette,
-     zurückgeben.
-   - Sonst HTML erzeugen (Schritte 2 bis 5) und mit
-     `set_transient($key, $html, WEEK_IN_SECONDS)` ablegen.
-2. Startknoten bestimmen: Bei `rootPage = 0` sind es die Kinder von `0` aus
-   `children`. Sonst die Kinder von `rootPage`. Ist die Liste leer, eine
-   schlichte Meldung ausgeben (`<p class="page-index__empty">Keine Seiten
-   vorhanden.</p>`) und diese ebenfalls zwischenspeichern.
-3. Baumausgabe **iterativ oder rekursiv mit harter Tiefenbegrenzung**
-   implementieren:
+   ausarbeiten. Sie ist als `render_callback` registriert und der einzige
+   Einstiegspunkt. Erster Schritt:
+   `$attrs = simple_clean_page_index_sanitize_attrs($attributes);`
+3. Startknoten bestimmen: Bei `rootPage = 0` die Kinder von `0`, sonst die
+   Kinder von `rootPage`. Ist die Liste leer, eine schlichte Meldung ausgeben:
+   `<p class="page-index__empty">Keine Seiten vorhanden.</p>`
+4. Baumausgabe **rekursiv mit harter Tiefenbegrenzung**:
    - Ebene 0 sind die Kapitel: je Kapitel ein `<li class="page-index__chapter">`
      mit Link.
    - Ab Ebene 1 die Unterseiten, begrenzt durch `maxDepth` (Ebene 0 zählt als
-     Tiefe 1). Bei `maxDepth = 2` werden also Kapitel und deren direkte
-     Unterseiten ausgegeben, tiefere Ebenen nicht.
+     Tiefe 1). Bei `maxDepth = 2` also Kapitel und deren direkte Unterseiten.
    - Bei `collapsible = true` und vorhandenen Unterseiten die Unterliste in
-     `<details>` mit `<summary>` verpacken; `open`-Attribut nur bei
+     `<details>` mit `<summary>` verpacken; `open` nur bei
      `openByDefault = true`.
    - Bei `showCounts = true` im `<summary>` die Anzahl der direkten
-     Unterseiten anzeigen, sonst nur die Beschriftung „Unterseiten".
-   - Rekursionsschutz: eine Besuchsliste mitführen; jede Knoten-ID darf nur
-     einmal ausgegeben werden.
-4. URLs erzeugen: Steht eine Permalink-Struktur (`get_option('permalink_structure')`
-   nicht leer), lautet die URL `home_url('/' . $node['uri'] . '/')`. Sonst
+     Unterseiten anzeigen, sonst nur „Unterseiten".
+   - Rekursionsschutz: Besuchsliste mitführen, jede Knoten-ID nur einmal.
+5. URLs erzeugen: Steht eine Permalink-Struktur
+   (`get_option('permalink_structure')` nicht leer), lautet die URL
+   `home_url('/' . $node['uri'] . '/')`, sonst
    `home_url('/?page_id=' . $node['id'])`. Alle URLs durch `esc_url()`, alle
-   Titel durch `esc_html()`, alle Klassen- und Attributwerte durch
-   `esc_attr()`.
-5. Wrapper-Attribute: `get_block_wrapper_attributes()` verwenden, damit
-   Ausrichtung, Anker und eigene Zusatzklassen aus dem Editor wirksam werden.
-   Die eigenen Klassen `page-index`, `page-index--<layout>` und
-   `page-index--cols-<columns>` werden als `class`-Eintrag übergeben. Bei
-   `layout = list` wird `page-index--cols-…` weggelassen.
-   Steht `get_block_wrapper_attributes()` nicht zur Verfügung, auf ein
-   einfaches `<nav class="…">` zurückfallen.
-6. `aria-label="Inhaltsverzeichnis"` am `<nav>` setzen.
-7. Das Suchfeld nur ausgeben, wenn `showSearch = true`. Es enthält kein
-   `name`-Attribut und steht in keinem `<form>` – gefiltert wird in Phase 4
-   rein im Browser.
-8. Die Funktion gibt die fertige Zeichenkette **zurück** (`return`), sie gibt
-   nichts direkt aus. Ein `render_callback` muss zurückgeben, nicht `echo`en –
-   sonst erscheint die Ausgabe an der falschen Stelle im Dokument.
-9. Kommentarblock über `simple_clean_render_page_index()`, der die
-   Grundregel der request-unabhängigen Ausgabe und die Rolle der Indexversion
-   im Cache-Schlüssel erklärt.
+   Titel durch `esc_html()`, alle Attributwerte durch `esc_attr()`.
+6. Wrapper-Attribute über `get_block_wrapper_attributes()`, damit Ausrichtung,
+   Anker und Zusatzklassen aus dem Editor wirken. Eigene Klassen:
+   `page-index`, `page-index--<layout>`, `page-index--cols-<columns>` (letztere
+   entfällt bei `layout = list`). Steht die Funktion nicht zur Verfügung, auf
+   ein einfaches `<nav class="…">` zurückfallen.
+7. `aria-label="Inhaltsverzeichnis"` am `<nav>`.
+8. Suchfeld nur bei `showSearch = true`. Ohne `name`-Attribut, in keinem
+   `<form>` — gefiltert wird in Phase 4 rein im Browser.
+9. Die Funktion **gibt zurück** (`return`), sie gibt nichts direkt aus. Ein
+   `render_callback` muss zurückgeben, nicht `echo`en — sonst erscheint die
+   Ausgabe an der falschen Stelle im Dokument.
+10. Kommentarblock über beiden Funktionen: warum eine eigene schlanke Abfrage
+    statt `get_pages()`, und warum bewusst **kein** Zwischenspeicher (siehe
+    Abschnitt 11 dieses Plans — der gemessene Anteil rechtfertigt die
+    Fehlerquellen nicht).
 
 **Akzeptanzkriterien:**
-- [ ] Eine Seite mit dem Block zeigt im Frontend die Kapitel der obersten Ebene als Links; jeder Link führt auf die richtige Seite.
+- [ ] Eine Seite mit dem Block zeigt im Frontend die Kapitel als Links; jeder Link führt auf die richtige Seite (keine 404).
 - [ ] Mit `maxDepth = 2` erscheinen Kapitel und deren direkte Unterseiten, aber keine dritte Ebene.
-- [ ] Mit `collapsible = true` sind die Unterlisten in `<details>` verpackt und lassen sich per Klick auf- und zuklappen – auch mit deaktiviertem JavaScript.
+- [ ] Mit `collapsible = true` sind die Unterlisten in `<details>` verpackt und lassen sich auf- und zuklappen – auch mit deaktiviertem JavaScript.
 - [ ] Mit `rootPage` auf eine bestimmte Seite gesetzt erscheinen ausschließlich deren Nachfahren.
-- [ ] Der zweite Aufruf derselben Seite erzeugt keine zusätzliche Datenbanklast: die per `?sc_perf=1` gemeldete Queryzahl ist beim zweiten Aufruf nicht höher als beim ersten.
-- [ ] Die Renderfunktion gibt ihre Ausgabe per `return` zurück; die Datei enthält innerhalb der Funktion kein `echo` und kein `print` (per Textsuche nachweisbar).
-- [ ] Nach einer Seitenumbenennung im WP-Admin zeigt das Inhaltsverzeichnis beim nächsten Aufruf den neuen Titel (Fragment invalidiert sich über die Indexversion).
-- [ ] Im Seitenquelltext taucht kein `get_pages`-typisches Verhalten auf: Die Queryzahl der Seite mit dem Block liegt deutlich unter der Queryzahl derselben Seite mit `core/page-list` (Vergleichswert aus AP-1.6).
+- [ ] Die Renderfunktion enthält kein `echo` und kein `print` (per Textsuche nachweisbar).
+- [ ] Der Renderer ruft weder `get_pages()` noch `get_permalink()` noch `get_post()` auf (per Textsuche nachweisbar).
+- [ ] Die Seitenabfrage enthält weder `post_content` noch `SELECT *`.
+- [ ] Zwei Blöcke auf derselben Seite erzeugen **eine** Seitenabfrage, nicht zwei (statische Variable greift) – nachweisbar über die Queryzahl aus `?sc_perf=1` im Vergleich zu einem einzelnen Block.
+- [ ] Die Queryzahl der Testseite liegt **unter** dem Vergleichswert derselben Seite mit `core/page-list` aus AP-1.6.
+- [ ] Eine Seitenumbenennung im WP-Admin erscheint beim nächsten Aufruf sofort – es gibt keinen Zwischenspeicher, der sie verzögern könnte.
 - [ ] `php -l Theme/includes/page-index.php` meldet keinen Fehler.
+- [ ] Der neue Code verwendet keine PHP-Sprachmittel ab 8.0 (durch Codelektüre sicherzustellen, `php -l` kann das hier nicht — siehe Übergabenotiz zu AP-1.1).
 
 **Tests:**
 - Smoke-Test: ZIP bauen und einspielen; Testseite mit dem Block im Frontend aufrufen – die Liste erscheint, keine PHP-Meldung, Browser-Konsole ohne Fehler.
-- Prüfschritt: Drei Links aus verschiedenen Ebenen anklicken – alle führen auf die erwartete Seite (keine 404).
-- Prüfschritt: Messung mit `?sc_perf=1` auf der Testseite. Erster Aufruf (kalt) und zweiter Aufruf (warm) notieren; der warme Aufruf muss weniger oder gleich viele Queries melden.
-- Prüfschritt: Eine im Verzeichnis gelistete Seite umbenennen, speichern, Testseite neu laden – der neue Titel erscheint.
-- Prüfschritt: Eine Seite in den Papierkorb legen, Testseite neu laden – der Eintrag ist verschwunden. Seite wiederherstellen, erneut laden – der Eintrag ist zurück.
-- Prüfschritt: Attribute im Editor durchprobieren (`maxDepth` 1 und 3, `collapsible` an/aus, `rootPage` gesetzt) und jeweils das Frontend prüfen. Da der Editor-Inspektor erst in AP-3.3 entsteht, die Attribute für diesen Test über die Codeansicht des Blocks (Editor → Block → Als HTML bearbeiten bzw. Codeansicht) setzen.
+- Prüfschritt: Drei Links aus verschiedenen Ebenen anklicken – alle führen auf die erwartete Seite.
+- Prüfschritt: Messung mit `?sc_perf=1` auf der Testseite, Queryzahl gegen den Wert aus AP-1.6 halten.
+- Prüfschritt: Eine gelistete Seite umbenennen, speichern, Testseite neu laden – der neue Titel erscheint sofort.
+- Prüfschritt: Eine Seite in den Papierkorb legen, Testseite neu laden – der Eintrag ist verschwunden. Wiederherstellen, erneut laden – der Eintrag ist zurück.
+- Prüfschritt: Eine Seite als Entwurf setzen, deren Unterseiten veröffentlicht sind – weder die Seite noch ihre Unterseiten erscheinen (verwaiste Knoten entfallen).
+- Prüfschritt: Attribute über die Codeansicht des Blocks durchprobieren (`maxDepth` 1 und 3, `collapsible` an/aus, `rootPage` gesetzt) und jeweils das Frontend prüfen. Der Editor-Inspektor entsteht erst in AP-3.3.
 - Prüfschritt: Fehlerlog im All-Inkl-KAS auf neue Warnings/Notices prüfen.
 
 **Übergabenotiz:**
@@ -1630,25 +1768,24 @@ Implementierung beteiligt war. Nur lesend arbeiten – KEINE Datei verändern.
 **Vorgehen:**
 1. Für jedes Implementierungs-AP der Phase (AP-3.1 bis AP-3.4): den Code gegen
    dessen Akzeptanzkriterien prüfen, mit Stichproben im Quelltext.
-2. Cache-Korrektheit prüfen: Enthält der Transient-Schlüssel wirklich die
-   Indexversion? Gibt es einen Pfad, auf dem gerendert wird, ohne dass
-   `simple_clean_page_index_sanitize_attrs()` gelaufen ist (dann wäre der
-   Schlüssel instabil)? Ist die Schlüsselreihenfolge des bereinigten
-   Attribut-Arrays fest, sodass `serialize()` bei gleichen Werten immer
-   dieselbe Zeichenkette ergibt?
+2. Attributprüfung: Gibt es einen Pfad, auf dem gerendert wird, ohne dass
+   `simple_clean_page_index_sanitize_attrs()` gelaufen ist? Dann könnten
+   ungeprüfte Werte bis in die Ausgabe durchschlagen.
 3. Request-Unabhängigkeit prüfen: Greift der Renderer irgendwo auf
    `get_the_ID()`, `is_page()`, `$post`, `get_queried_object()`,
-   `is_user_logged_in()` oder Ähnliches zu? Jeder solche Zugriff ist ein
-   kritischer Befund, weil er den Fragment-Cache falsch macht.
+   `is_user_logged_in()` oder Ähnliches zu? Solche Zugriffe sind hier nicht
+   vorgesehen und wären ein Befund.
 4. Ausgabesicherheit prüfen: Sind **alle** Titel durch `esc_html()`, alle URLs
    durch `esc_url()` und alle Attributwerte durch `esc_attr()` geführt? Ein
    Seitentitel kann Sonderzeichen enthalten.
-5. Datenquelle prüfen: Ruft der Renderer wirklich nur
-   `simple_clean_get_page_index()` auf – kein `get_pages()`, kein
-   `get_permalink()`, kein `get_post()`, keine eigene SQL-Abfrage?
-6. Robustheit prüfen: Was passiert bei leerem Index? Bei `rootPage` auf eine
-   gelöschte Seite? Greift der Rekursionsschutz? Wird `maxDepth` wirklich
-   eingehalten?
+5. Datenquelle prüfen: Holt der Renderer seine Daten ausschließlich über
+   `simple_clean_page_index_daten()` – kein `get_pages()`, kein
+   `get_permalink()`, kein `get_post()`, keine zweite SQL-Abfrage? Enthält die
+   Seitenabfrage wirklich kein `post_content`? Greift die statische Variable,
+   sodass zwei Blöcke auf einer Seite nur eine Abfrage auslösen?
+6. Robustheit prüfen: Was passiert bei leerem Ergebnis? Bei `rootPage` auf eine
+   gelöschte Seite? Greift der Rekursionsschutz und der Zyklenschutz? Werden
+   verwaiste Knoten samt Unterbaum ausgelassen? Wird `maxDepth` eingehalten?
 7. Build-Kette prüfen: Ist `.json` in `create-theme-zip.js` eng genug gefasst,
    sodass `package.json` weiterhin ausgeschlossen bleibt? Enthält
    `page-index-editor.js` tatsächlich keine `import`/`export`-Anweisung?
@@ -1693,8 +1830,10 @@ Implementierung beteiligt war. Nur lesend arbeiten – KEINE Datei verändern.
    Standardwerten, Fundort der `block.json`, die Registrierung über
    `render_callback` (samt Begründung: `"render"` in der `block.json` setzt
    WordPress 6.1 voraus und scheitert auf älteren Versionen stillschweigend),
-   die Renderfunktion `simple_clean_render_page_index()` und das
-   Cache-Verhalten (Indexversion im Transient-Schlüssel).
+   die Renderfunktion `simple_clean_render_page_index()` und die
+   Datenbeschaffung über `simple_clean_page_index_daten()` — eine schlanke
+   Abfrage je Seitenaufruf, bewusst **ohne** Zwischenspeicher (Begründung in
+   Abschnitt 11 des Plans).
 3. Die Grundregel „request-unabhängige Ausgabe" mit ihrer Begründung
    festhalten – sie ist beim Weiterentwickeln leicht zu verletzen.
 4. Im Abschnitt zum Build-System ergänzen: Es gibt jetzt neun Vite-Einträge,
@@ -2246,7 +2385,13 @@ Zuerst diesen Branch anlegen: `git checkout main`, `git pull`,
 
 ---
 
-#### AP-5.2: Inhaltsverzeichnisseite umstellen und Wirkung belegen
+#### AP-5.2: Verzeichnisseiten umstellen und Wirkung belegen
+
+> **Zugeschnitten am 2026-08-08:** Es sind **drei** Seiten umzustellen, nicht
+> eine — `/organische-chemie-und-biochemie/`, `/analytische-chemie/` und
+> `/laborsicherheit/`. Jede bekommt ihr eigenes `rootPage`. Die Schritte
+> unten gelten sinngemäß je Seite; gemessen wird vorher und nachher auf
+> allen dreien.
 
 **Status:** ☐ offen
 **Umfang:** S
@@ -2546,22 +2691,22 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 
 | AP | Titel | Modell | Status | Abhängig von | Notiz |
 |---|---|---|---|---|---|
-| AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☐ | – | |
-| AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☐ | AP-1.1 | |
-| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☐ | AP-1.2 | |
-| AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☐ | AP-1.3 | |
-| AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | |
-| AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ☐ | AP-1.5 | |
-| AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | frischer Agent, nur lesend |
+| AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☑ | – | Commit `c9322e2` auf `main`; Branch `phase-1-glossar-fallback` aktiv. **Kein PHP 7.4 lokal verfügbar** – siehe Übergabenotiz |
+| AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☑ | AP-1.1 | Ausgangsmessung erhoben (Abschnitt 9). Befund: Faktor 25 bei gleicher Query-Zahl → siehe Abschnitt 11 |
+| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☑ | AP-1.2 | Harness 6/6. **1,998 s → 0,058 s (Faktor 34)**, belegt in Abschnitt 9 |
+| AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☑ | AP-1.3 | Harness 5/5, live seit v1.5.70. Spitzenspeicher der betroffenen Seite 66 → 50 MB |
+| AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☑ | AP-1.4 | Bulk-Scan lief (Angabe des Nutzers), Sichtprüfung der Verlinkung positiv. **SQL-Gegenprobe nicht durchgeführt** – siehe Testprotokoll |
+| AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ◐ | AP-1.5 | Nachmessung erledigt (Abschnitt 9). **Regressionsliste R1–R8 auf Wunsch des Nutzers ausgelassen** |
+| AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | offen – erfordert einen frischen Agenten, wurde nicht beauftragt |
 | AP-1.doc | Dokumentation Phase 1 aktualisieren | sonnet | ☐ | AP-1.rev | |
-| AP-2.1 | Indexaufbau und Speicherung | opus | ☐ | AP-1.doc | legt Branch `phase-2-seitenindex` an |
-| AP-2.2 | Invalidierung über WordPress-Hooks | sonnet | ☐ | AP-2.1 | |
-| AP-2.3 | Invalidierung im Seitenmanager | sonnet | ☐ | AP-2.2 | kritisch: `$wpdb->update` umgeht `save_post` |
-| AP-2.4 | Manueller Neuaufbau und Statusanzeige | sonnet | ☐ | AP-2.3 | |
-| AP-2.rev | Unabhängiges Review Phase 2 | opus | ☐ | AP-2.1 … AP-2.4 | frischer Agent, nur lesend |
-| AP-2.doc | Dokumentation Phase 2 aktualisieren | sonnet | ☐ | AP-2.rev | |
-| AP-3.1 | Block registrieren und Attribute absichern | sonnet | ☐ | AP-2.doc | legt Branch `phase-3-block` an |
-| AP-3.2 | Rendering aus dem Index mit Fragment-Cache | opus | ☐ | AP-3.1 | |
+| ~~AP-2.1~~ | ~~Indexaufbau und Speicherung~~ | – | **entfällt** | – | Neuzuschnitt 2026-08-08, Begründung in Abschnitt 11 |
+| ~~AP-2.2~~ | ~~Invalidierung über WordPress-Hooks~~ | – | **entfällt** | – | dito |
+| ~~AP-2.3~~ | ~~Invalidierung im Seitenmanager~~ | – | **entfällt** | – | dito – ohne Index gibt es nichts zu invalidieren |
+| ~~AP-2.4~~ | ~~Manueller Neuaufbau und Statusanzeige~~ | – | **entfällt** | – | dito |
+| ~~AP-2.rev~~ | ~~Unabhängiges Review Phase 2~~ | – | **entfällt** | – | dito |
+| ~~AP-2.doc~~ | ~~Dokumentation Phase 2 aktualisieren~~ | – | **entfällt** | – | dito |
+| AP-3.1 | Block registrieren und Attribute absichern | sonnet | ☐ | AP-1.doc | legt Branch `phase-3-block` an |
+| AP-3.2 | Rendering aus einer schlanken Abfrage | opus | ☐ | AP-3.1 | neu zugeschnitten: ohne Index, ohne Fragment-Cache |
 | AP-3.3 | Editor-Integration mit Inspektor und Vorschau | sonnet | ☐ | AP-3.2 | |
 | AP-3.4 | Build-Kette erweitern | sonnet | ☐ | AP-3.3 | ohne dieses AP fehlt `block.json` im ZIP |
 | AP-3.rev | Unabhängiges Review Phase 3 | opus | ☐ | AP-3.1 … AP-3.4 | frischer Agent, nur lesend |
@@ -2592,36 +2737,99 @@ entwickelt und **nacheinander** eingespielt werden.
 Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und
 pro Phasenabschluss.
 
-**Messtabelle (wird in AP-1.2, AP-1.6 und AP-5.2 gefüllt):**
+**Messtabelle**
 
-| Zeitpunkt | URL | Queries | Zeit (s) | Speicher | Dokumentgröße |
-|---|---|---|---|---|---|
-| Ausgangszustand (AP-1.2) | Inhaltsverzeichnis | | | | |
-| Ausgangszustand (AP-1.2) | Skriptenseite (Vergleich) | | | | |
-| Ausgangszustand (AP-1.2) | Startseite (Vergleich) | | | | |
-| Nach Glossar-Fix (AP-1.6) | Inhaltsverzeichnis | | | | |
-| Nach Umstellung (AP-5.2) | Inhaltsverzeichnis | | | | |
+Ausgangszustand, erhoben am 2026-08-08 auf Theme v1.5.69 (vor dem
+Glossar-Fix), je Seite drei Aufrufe ohne Cache, Median:
+
+| Seite | Queries | Zeit (s) | Speicher | Größe | Links | HTML-Elemente |
+|---|---|---|---|---|---|---|
+| Verz. Labor `/laborsicherheit/` | 45 | 0,084 | 56 MB | 66,8 KB | 61 | 251 |
+| **Verz. Organische Chemie** `/organische-chemie-und-biochemie/` | **45** | **1,998** | 66 MB | 88,4 KB | 163 | 469 |
+| Verz. Analytische Chemie `/analytische-chemie/` | 47 | 0,073 | 58 MB | 82,1 KB | 114 | 380 |
+| Skriptenseite (Vergleich) | 53 | 0,078 | 54 MB | 169,7 KB | 166 | 1084 |
+| Startseite (Vergleich) | 41 | 0,053 | 48 MB | 67,0 KB | 40 | 208 |
+
+Umfang: 258 veröffentlichte Seiten, 1049 Glossareinträge.
+Einzelwerte der langsamen Seite: 1,998 / 1,977 / 2,048 s — stabil, kein Ausreißer.
+
+> **Der Befund, der den Plan verändert:** Alle drei Verzeichnisse laden über
+> `core/page-list` dieselben 258 Seiten, und die Query-Zahlen sind praktisch
+> gleich (45 / 45 / 47). Trotzdem unterscheiden sich die Zeiten um Faktor 25.
+> Ein Unterschied dieser Größe bei gleicher Datenbanklast kann **nicht** von
+> `get_pages()` kommen — das ist reine Rechenzeit. Die in der
+> Erweiterungsanalyse als „Ursache A" benannte fehlende Zwischenspeicherung
+> des Seitenbaums kostet ausweislich der Messung nur etwa 0,03 s gegenüber der
+> Startseite. Siehe Abschnitt 11.
+
+Nach dem Glossar-Fix, erhoben am 2026-08-08 auf Theme v1.5.70
+(AP-1.3 + AP-1.4), gleiches Verfahren:
+
+| Seite | Queries | Zeit (s) | davon Glossar | Kandidaten | Fallback | Speicher |
+|---|---|---|---|---|---|---|
+| Verz. Labor | 45 | 0,084 | 0,000 | 1 | nein | 54 MB |
+| **Verz. Organische Chemie** | **42** | **0,058** | 0,000 | **0** | nein | 50 MB |
+| Verz. Analytische Chemie | 47 | 0,066 | 0,000 | 1 | nein | 56 MB |
+| Skriptenseite (Vergleich) | 53 | 0,066 | 0,000 | 1 | nein | 54 MB |
+| Startseite (Vergleich) | 41 | 0,061 | 0,000 | 3 | nein | 50 MB |
+
+**Ergebnis Phase 1:**
+
+| | vorher (v1.5.69) | nachher (v1.5.70) | Faktor |
+|---|---|---|---|
+| Zeit `/organische-chemie-und-biochemie/` | 1,998 s | 0,058 s | **34×** |
+| Queries derselben Seite | 45 | 42 | −3 |
+| Spitzenspeicher derselben Seite | 66 MB | 50 MB | −16 MB |
+
+Die Diagnosezeile belegt die Ursache unmittelbar: `kandidaten=0 fallback=nein`.
+Die Seite ist gescannt und enthält keinen einzigen Glossarbegriff. Vorher
+führte genau das in den Fallback über alle 1049 Begriffe; jetzt steigt der
+Autolinker sofort aus. Die beiden anderen Verzeichnisse waren nie betroffen,
+weil sie Kandidaten hatten — deshalb der Faktor 25 zwischen Seiten mit
+gleicher Query-Zahl, der die Fehlanalyse aufgedeckt hat.
+
+**Beobachtung zu den Kandidatenzahlen — geprüft und entschärft:**
+
+Die gemeldeten Kandidatenzahlen sind niedrig (1 von 1049 auf der
+Skriptenseite „Übungen zu den Aminen"). Das warf die Frage auf, ob der Fix
+die Glossarverlinkung auf Inhaltsseiten stillschweigend abschaltet: Vor dem
+Fix überdeckte der Fallback dürftige Kandidatenlisten, indem er einfach alle
+Begriffe verlinkte — nach dem Fix tut er das nicht mehr.
+
+**Sichtprüfung des Nutzers am 2026-08-08: positiv.** Auf den geprüften Seiten
+sind Glossarbegriffe hervorgehoben und anklickbar. Das Regressionsrisiko R2
+ist damit ausgeräumt.
+
+Als Beobachtung bleibt bestehen, ohne Handlungsbedarf: Die Kandidatenzahlen
+wirken für eine Website mit 1049 Einträgen konservativ. Sollte künftig
+auffallen, dass Begriffe auf einzelnen Seiten nicht verlinkt werden, ist
+`simple_clean_scan_glossar_candidates()` der erste Ort zum Nachsehen — die
+Funktion liest den gespeicherten Blockinhalt, nicht das gerenderte HTML, und
+extrahiert Text über `simple_clean_extract_text_from_blocks()`. Deren
+Attribut-Auswertung erfasst nur Zeichenketten auf oberster Ebene;
+verschachtelte Attribute bleiben außen vor. Das ist eine vorbestehende
+Eigenschaft, kein Ergebnis dieses Vorhabens.
 
 **Prüfprotokoll:**
 
 | Datum | AP / Phase | Getestet | Ergebnis | Getestet von |
 |---|---|---|---|---|
-| | AP-1.1 | | | |
-| | AP-1.2 | | | |
-| | AP-1.3 | | | |
-| | AP-1.4 | | | |
-| | AP-1.5 | | | |
-| | AP-1.6 | | | |
-| | Phase 1 Integration + Regression R1–R8 | | | |
+| 2026-08-08 | AP-1.1 | Alle 5 Akzeptanzkriterien; `php -l` über 11 PHP-Dateien; ZIP-Inhalt und Version geprüft | **Bestanden.** 11/11 Dateien „No syntax errors detected". Arbeitsbaum sauber, `main` und `phase-1-glossar-fallback` beide auf `c9322e2` und gepusht. Rollback-ZIP 79 145 Bytes, 22 Einträge, `style.css` = v1.5.68 | Claude (AP-Ausführung) |
+| 2026-08-08 | AP-1.2 | Alle 5 Akzeptanzkriterien; Gegenprobe ohne Parameter; Ausgangsmessung über 3 Verzeichnisseiten + 2 Vergleichsseiten, je 3 Durchläufe | **Bestanden.** Werte in Abschnitt 9. Gegenprobe bestanden (ohne `?sc_perf=1` keine Ausgabe) | Claude + Nutzer |
+| 2026-08-08 | AP-1.3 | Stub-Harness gegen 6 Fälle (gescannt/leer/nie gescannt/Meta kaputt/leeres Glossar); `simple_clean_process_glossar_links_optimized()` byte-identisch gegengeprüft; Nachmessung auf v1.5.70 | **6/6 bestanden.** Live belegt: 1,998 s → 0,058 s auf `/organische-chemie-und-biochemie/`, Diagnosezeile weist `kandidaten=0 fallback=nein` aus | Claude + Nutzer |
+| 2026-08-08 | AP-1.4 | Stub-Harness gegen 5 Fälle inkl. Nachweis, dass `glossar-style.css` weiterhin immer eingehängt wird; Nachmessung | **5/5 bestanden.** Spitzenspeicher der betroffenen Seite 66 → 50 MB | Claude + Nutzer |
+| 2026-08-08 | AP-1.5 | Bulk-Scan über alle Seiten; Sichtprüfung der Glossarverlinkung im Frontend | **Teilweise belegt.** Nutzer meldet: Scan gelaufen, Sichtprüfung positiv. Die SQL-Gegenprobe auf `ungescannt = 0` wurde **nicht** ausgeführt – der flächendeckende Scan-Stand ist damit nicht messtechnisch nachgewiesen, sondern berichtet | Nutzer |
+| 2026-08-08 | AP-1.6 | Nachmessung auf v1.5.70 (3 Verzeichnisse + 2 Vergleichsseiten, je 3 Durchläufe) | **Bestanden**, Werte in Abschnitt 9. Faktor 34 auf der betroffenen Seite | Claude + Nutzer |
+| 2026-08-08 | Phase 1 Regression R1–R8 | – | **AUSGELASSEN auf ausdrücklichen Wunsch des Nutzers.** Belegt sind: R2 (Glossar, Sichtprüfung positiv) und R8 (Build läuft). Nicht geprüft: R1 Sidebar, R3 Seitenmanager, R4 Meta-Box, R5 Customizer, R6 Container-Block, R7 Lightbox | – |
 | | AP-1.rev | | | |
 | | AP-1.doc | | | |
-| | AP-2.1 | | | |
-| | AP-2.2 | | | |
-| | AP-2.3 | | | |
-| | AP-2.4 | | | |
-| | Phase 2 Integration + Regression R1–R8 | | | |
-| | AP-2.rev | | | |
-| | AP-2.doc | | | |
+| – | ~~AP-2.1~~ | entfällt | – | – |
+| – | ~~AP-2.2~~ | entfällt | – | – |
+| – | ~~AP-2.3~~ | entfällt | – | – |
+| – | ~~AP-2.4~~ | entfällt | – | – |
+| – | ~~Phase 2~~ | entfällt | – | – |
+| – | ~~AP-2.rev~~ | entfällt | – | – |
+| – | ~~AP-2.doc~~ | entfällt | – | – |
 | | AP-3.1 | | | |
 | | AP-3.2 | | | |
 | | AP-3.3 | | | |
@@ -2662,3 +2870,39 @@ pro Phasenabschluss.
 - **Projektübergreifende Farbdoku:** `CLAUDE.md` im Website-Wurzelverzeichnis,
   Abschnitt „Color Scheme" – wird in AP-4.doc um die neue Customizer-Sektion
   ergänzt.
+
+## 11. Korrektur der Ursachenanalyse (2026-08-08)
+
+Dieser Abschnitt ist nachträglich entstanden. Er hält fest, wo die
+ursprüngliche Analyse falsch lag, damit der Plan nicht weiter auf einer
+widerlegten Annahme aufbaut.
+
+**Was angenommen wurde.** `Theme/docs/ERWEITERUNGSANALYSE-Seitenindex.md`
+nennt zwei Ursachen: (A) `core/page-list` lädt bei jedem Aufruf alle Seiten
+ohne Zwischenspeicherung, (B) der Glossar-Autolinker fällt auf textarmen
+Seiten in den teuren Pfad über alle Begriffe. Die Phasen 2 und 3 des Plans —
+Seitenindex und Block mit Fragment-Cache — beruhen vollständig auf (A).
+
+**Was gemessen wurde.** Ursache (A) ist messbar vorhanden, aber klein: Die
+Verzeichnisseiten brauchen 45–47 Queries gegenüber 41 auf der Startseite, und
+die schnellen Verzeichnisse liegen bei 0,073–0,084 s gegenüber 0,053 s. Der
+gesamte Seitenbaum kostet also rund 0,03 s. Ein vorberechneter Index könnte
+davon höchstens einen Teil einsparen — im Bereich von Hundertstelsekunden.
+
+Die 2 Sekunden auf `/organische-chemie-und-biochemie/` entstehen woanders:
+gleiche Query-Zahl wie die schnellen Seiten, aber Faktor 25 mehr Zeit und
+10 MB mehr Spitzenspeicher. Das ist Rechenzeit, keine Datenbanklast.
+
+**Warum die Fehleinschätzung entstand.** Die Analyse hat den Core-Quelltext
+von `core/page-list` korrekt gelesen (kein Cache, `get_permalink()` je Seite)
+und daraus auf die Kostenverteilung geschlossen, statt sie zu messen. Der
+Schluss war plausibel und falsch: Bei 258 Seiten ist der Aufwand schlicht zu
+klein, um ins Gewicht zu fallen. Erkennbar gewesen wäre das nur durch
+Messung — genau deshalb steht sie im Plan vor den Umbauphasen.
+
+**Folge für den Plan.** Phase 1 (Glossar) trifft das Problem und bleibt.
+Phase 2 und 3 in ihrer bisherigen Begründung nicht. Über ihren Verbleib ist
+gesondert zu entscheiden; die Gestaltungsziele aus Phase 4 (Kapitelkarten,
+Tiefenbegrenzung, Aufklappen, Suchfeld) bleiben davon unberührt — sie waren
+nie mit Geschwindigkeit begründet, sondern mit Übersichtlichkeit, und der
+Nutzer hat die Verzeichnisse ausdrücklich zum Neubau freigegeben.

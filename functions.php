@@ -923,13 +923,34 @@ function simple_clean_glossar_assets() {
 
     // Determine which terms this page actually needs (modal display only).
     // Full term list with definitions on every page is too heavy with 500+ terms.
+    //
+    // Die Entscheidung MUSS dieselbe sein wie im Autolinker
+    // simple_clean_glossar_auto_link_content_optimized(). Sonst kann es
+    // passieren, dass der Autolinker auf einer Seite nichts verlinkt, hier
+    // aber trotzdem alle Begriffe samt Definitionen als glossarData an den
+    // Browser gehen - bei ueber tausend Eintraegen eine erhebliche Datenmenge
+    // ganz ohne Nutzen, denn ohne verlinkte Begriffe gibt es nichts
+    // anzuklicken.
+    //
+    // Massgeblich ist deshalb auch hier _glossar_scan_version: Ist es
+    // gesetzt, gilt die Kandidatenliste - eine leere Liste bedeutet dann
+    // "auf dieser Seite kommt kein Begriff vor" und nicht "noch nicht
+    // geprueft". Siehe den ausfuehrlichen Kommentar im Autolinker.
     $terms_for_page = array();
     if (is_singular() && !is_singular('glossar')) {
-        $candidates = get_post_meta(get_the_ID(), '_glossar_term_candidates', true);
-        if (is_array($candidates)) {
-            $terms_for_page = simple_clean_get_glossar_terms_by_ids($candidates);
+        $post_id      = get_the_ID();
+        $candidates   = get_post_meta($post_id, '_glossar_term_candidates', true);
+        $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
+
+        if (!empty($scan_version) && is_array($candidates)) {
+            // Gescannt: Kandidatenliste gilt. Ist sie leer, bleibt
+            // $terms_for_page leer und weiter unten wird weder das Skript
+            // noch glossarData ausgeliefert.
+            $terms_for_page = empty($candidates)
+                ? array()
+                : simple_clean_get_glossar_terms_by_ids($candidates);
         } else {
-            // Not scanned yet: same fallback as the server-side linking
+            // Nie gescannt (oder Meta beschaedigt): Fallback wie im Autolinker.
             $terms_for_page = simple_clean_get_glossar_terms();
         }
     }
@@ -1441,14 +1462,68 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
     // Kandidaten aus Post-Meta laden
     $candidates = get_post_meta($post_id, '_glossar_term_candidates', true);
 
-    // Fallback: Keine Kandidaten gefunden
-    // Dies kann passieren wenn Post noch nicht gescannt wurde
-    // In diesem Fall: Verwende ALLE Begriffe als Fallback (langsamer aber funktioniert)
-    if (empty($candidates) || !is_array($candidates)) {
-        // Log für Debugging
+    // Wurde diese Seite schon einmal gescannt?
+    //
+    // ACHTUNG - hier steckt der Unterschied, auf den es ankommt: Ein LEERES
+    // Kandidaten-Array ist ein GÜLTIGES Scan-Ergebnis und bedeutet "auf dieser
+    // Seite kommt kein einziger Glossarbegriff vor". Eine Prüfung mit empty()
+    // allein kann das nicht von "noch nie gescannt" unterscheiden - beides
+    // sieht gleich aus. Genau daran hing ein teurer Fehler:
+    //
+    // Seiten mit wenig oder gar keinem Fließtext (z. B. eine Seite, deren
+    // Inhalt praktisch nur aus einem Block-Kommentar besteht) liefern beim
+    // Scan korrekt ein leeres Array. Mit der alten Bedingung fielen sie
+    // trotzdem in den Fallback: ALLE Glossarbegriffe wurden geladen, über
+    // simple_clean_get_glossar_term_variants() in Wortvarianten expandiert,
+    // zu einem einzigen großen Alternations-Regex zusammengesetzt und über
+    // das gesamte gerenderte HTML geschickt. Bei mehreren hundert Begriffen
+    // kostet das je Seitenaufruf ein Vielfaches der eigentlichen Ausgabe.
+    //
+    // Das Unterscheidungsmerkmal ist das Meta _glossar_scan_version. Es wird
+    // gesetzt von simple_clean_update_glossar_candidates() (Hook save_post)
+    // und von simple_clean_glossar_bulk_scan_batch_ajax() (Bulk-Scan auf der
+    // Glossar-Einstellungsseite). Ist es vorhanden, sind die Kandidaten
+    // maßgeblich - auch wenn die Liste leer ist.
+    //
+    // Diese Bedingung bitte NICHT zu einem empty() "vereinfachen".
+    // get_post_meta() liefert '' zurück, wenn das Meta nicht existiert.
+    // Geschrieben wird immer der Wert 1, ein leerer Wert bedeutet also
+    // zuverlässig "nie gescannt".
+    $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
+    $is_scanned   = !empty($scan_version);
+
+    // Kennzahlen fuer die Diagnoseausgabe (?sc_perf=1). Sie beantworten die
+    // Frage, die sich bei einer langsamen Seite zuerst stellt: Wie viel Zeit
+    // geht in die Glossar-Verlinkung, mit wie vielen Begriffen, und wurde der
+    // teure Fallback ueber ALLE Begriffe ausgeloest?
+    if (!isset($GLOBALS['sc_glossar_stats'])) {
+        $GLOBALS['sc_glossar_stats'] = array(
+            'aufrufe'    => 0,
+            'kandidaten' => 0,
+            'fallback'   => 0,
+            'begriffe'   => 0,
+            'zeit'       => 0.0,
+        );
+    }
+    $GLOBALS['sc_glossar_stats']['aufrufe']++;
+    $GLOBALS['sc_glossar_stats']['kandidaten'] = is_array($candidates) ? count($candidates) : -1;
+
+    if ($is_scanned && is_array($candidates)) {
+        // Gescannt: Die Kandidatenliste gilt.
+        if (empty($candidates)) {
+            // Gescannt und nichts gefunden -> hier gibt es nichts zu verlinken.
+            // Früher Ausstieg, ohne den Content überhaupt anzufassen.
+            return $content;
+        }
+    } else {
+        // Nie gescannt (oder Meta beschädigt): Fallback über alle Begriffe.
+        // Langsam, aber besser als gar keine Verlinkung. Ein Bulk-Scan über
+        // die Glossar-Einstellungsseite beseitigt diesen Zustand dauerhaft.
+        $GLOBALS['sc_glossar_stats']['fallback']++;
+
         if (defined('GLOSSAR_DEBUG') && GLOSSAR_DEBUG) {
             error_log(sprintf(
-                'Glossar: Post %d hat keine Kandidaten - verwende alle Begriffe als Fallback',
+                'Glossar: Post %d wurde nie gescannt (kein _glossar_scan_version) - verwende alle Begriffe als Fallback. Abhilfe: Bulk-Scan auf der Glossar-Einstellungsseite ausführen.',
                 $post_id
             ));
         }
@@ -1464,7 +1539,10 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
     }
 
     // Optimierte Verarbeitung mit nur relevanten Begriffen
+    $sc_t0 = microtime(true);
     $processed = simple_clean_process_glossar_links_optimized($content, $candidates);
+    $GLOBALS['sc_glossar_stats']['zeit']    += microtime(true) - $sc_t0;
+    $GLOBALS['sc_glossar_stats']['begriffe'] = count($candidates);
 
     return $processed['content'];
 }
@@ -3819,3 +3897,93 @@ function simple_clean_custom_lightbox( $block_content, $parsed_block ) {
 
     return $block_content;
 }
+
+// ===================================================================
+// DIAGNOSE: PERFORMANCE-MESSUNG
+// ===================================================================
+
+/**
+ * Gibt Kennzahlen des aktuellen Seitenaufbaus als HTML-Kommentar aus.
+ *
+ * WOZU: Vorher-/Nachher-Vergleiche ohne Fremd-Plugin. Die Zielumgebung ist
+ * ein Shared Hosting ohne SSH und ohne WP-CLI, ein Profiler steht dort nicht
+ * zur Verfuegung. Diese wenigen Zeilen beantworten die Frage, auf die es bei
+ * Performance-Fragen zuerst ankommt: Wie viele Datenbankabfragen, wie viel
+ * Zeit und wie viel Speicher kostet ein Seitenaufruf?
+ *
+ * AUFRUF: beliebige URL mit ?sc_perf=1 als angemeldeter Administrator.
+ * Im Seitenquelltext steht das Ergebnis dann als eine Zeile, z. B.:
+ *
+ *     <!-- SC-PERF queries=142 time=1.873s peak=48 MB -->
+ *
+ * Fuer belastbare Werte dieselbe URL dreimal mit hartem Neuladen aufrufen
+ * (Strg+Shift+R) und den mittleren Wert nehmen.
+ *
+ * ABSICHERUNG: Es wird nur ausgegeben, wenn BEIDE Bedingungen erfuellt sind -
+ * der ausdrueckliche Parameter und die Berechtigung manage_options. Fuer nicht
+ * angemeldete Besucher ist die Funktion vollstaendig unsichtbar; ohne den
+ * Parameter auch fuer Administratoren.
+ *
+ * Diese Funktion bleibt bewusst dauerhaft im Theme, siehe CLAUDE.md,
+ * Abschnitt "Diagnose".
+ */
+function simple_clean_perf_footer() {
+    // Parameter zuerst pruefen: billiger als die Rechtepruefung und trifft
+    // auf praktisch jeden Seitenaufruf zu.
+    if ( ! isset( $_GET['sc_perf'] ) ) {
+        return;
+    }
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
+    // ACHTUNG - nicht auf timer_stop() und size_format() umstellen:
+    // Beide formatieren ueber number_format_i18n() und richten sich damit nach
+    // der Sprache der Installation. In einer deutschen WordPress-Installation
+    // kommt dabei ein KOMMA als Dezimaltrennzeichen heraus ("time=1,873s").
+    // Fuer Menschen ist das richtig, fuer maschinelles Auswerten unbrauchbar -
+    // das Auswerteskript hat die Zeile deshalb nicht gefunden, obwohl sie
+    // ausgegeben wurde.
+    //
+    // Deshalb hier bewusst selbst gerechnet und mit ausdruecklichen
+    // Trennzeichen formatiert. number_format() mit explizitem Punkt ist
+    // unabhaengig von Sprache und PHP-Version; der Speicher wird als reine
+    // Bytezahl ausgegeben und erst beim Auswerten lesbar gemacht.
+    //
+    // Alle Werte werden intern erzeugt und enthalten keine Nutzereingaben -
+    // der Wert des Parameters selbst wird nie ausgegeben.
+    global $timestart;
+    $dauer = isset( $timestart ) ? ( microtime( true ) - $timestart ) : 0;
+
+    printf(
+        "\n<!-- SC-PERF queries=%d time=%ss peak=%d -->\n",
+        (int) get_num_queries(),
+        number_format( $dauer, 3, '.', '' ),
+        (int) memory_get_peak_usage( true )
+    );
+
+    // Zweite Zeile: Woher kommt die Zeit? Bei einer langsamen Seite ist die
+    // Glossar-Verlinkung der erste Verdaechtige, weil ihr Aufwand mit der
+    // Zahl der Begriffe UND der Laenge des gerenderten HTML waechst.
+    //   aufrufe    - wie oft der the_content-Filter lief
+    //   kandidaten - Eintraege in _glossar_term_candidates (-1 = kein Array)
+    //   fallback   - wie oft auf ALLE Begriffe zurueckgefallen wurde
+    //   begriffe   - Begriffe, mit denen tatsaechlich gearbeitet wurde
+    //   zeit       - Sekunden allein in simple_clean_process_glossar_links_optimized()
+    $g = isset( $GLOBALS['sc_glossar_stats'] ) ? $GLOBALS['sc_glossar_stats'] : null;
+    if ( is_array( $g ) ) {
+        printf(
+            "<!-- SC-GLOSSAR aufrufe=%d kandidaten=%d fallback=%d begriffe=%d zeit=%ss -->\n",
+            (int) $g['aufrufe'],
+            (int) $g['kandidaten'],
+            (int) $g['fallback'],
+            (int) $g['begriffe'],
+            number_format( $g['zeit'], 3, '.', '' )
+        );
+    } else {
+        // Der Filter lief gar nicht - auch das ist eine Aussage.
+        echo "<!-- SC-GLOSSAR nicht-gelaufen -->\n";
+    }
+}
+add_action( 'wp_footer', 'simple_clean_perf_footer', 9999 );
