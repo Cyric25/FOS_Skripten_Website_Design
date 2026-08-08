@@ -2788,15 +2788,27 @@ Autolinker sofort aus. Die beiden anderen Verzeichnisse waren nie betroffen,
 weil sie Kandidaten hatten — deshalb der Faktor 25 zwischen Seiten mit
 gleicher Query-Zahl, der die Fehlanalyse aufgedeckt hat.
 
-> **Offene Beobachtung für AP-1.5:** Die Kandidatenzahlen sind auffällig
-> niedrig — die Skriptenseite „Übungen zu den Aminen" meldet **1** Kandidat
-> bei 1049 Glossareinträgen. Für eine Chemieseite ist das wenig. Möglich ist
-> beides: Die Kandidatenlisten sind veraltet (der Bulk-Scan aus AP-1.5 lief
-> noch nicht), oder der Scan greift zu kurz. Vor dem Fix fiel das nicht auf,
-> weil der Fallback fehlende Kandidaten überdeckte — er verlinkte einfach
-> alles. **Nach dem Fix tut er das nicht mehr.** AP-1.5 muss deshalb nicht nur
-> den Scan ausführen, sondern anschließend prüfen, ob auf einer inhaltlich
-> reichen Seite tatsächlich Glossarbegriffe verlinkt sind.
+**Beobachtung zu den Kandidatenzahlen — geprüft und entschärft:**
+
+Die gemeldeten Kandidatenzahlen sind niedrig (1 von 1049 auf der
+Skriptenseite „Übungen zu den Aminen"). Das warf die Frage auf, ob der Fix
+die Glossarverlinkung auf Inhaltsseiten stillschweigend abschaltet: Vor dem
+Fix überdeckte der Fallback dürftige Kandidatenlisten, indem er einfach alle
+Begriffe verlinkte — nach dem Fix tut er das nicht mehr.
+
+**Sichtprüfung des Nutzers am 2026-08-08: positiv.** Auf den geprüften Seiten
+sind Glossarbegriffe hervorgehoben und anklickbar. Das Regressionsrisiko R2
+ist damit ausgeräumt.
+
+Als Beobachtung bleibt bestehen, ohne Handlungsbedarf: Die Kandidatenzahlen
+wirken für eine Website mit 1049 Einträgen konservativ. Sollte künftig
+auffallen, dass Begriffe auf einzelnen Seiten nicht verlinkt werden, ist
+`simple_clean_scan_glossar_candidates()` der erste Ort zum Nachsehen — die
+Funktion liest den gespeicherten Blockinhalt, nicht das gerenderte HTML, und
+extrahiert Text über `simple_clean_extract_text_from_blocks()`. Deren
+Attribut-Auswertung erfasst nur Zeichenketten auf oberster Ebene;
+verschachtelte Attribute bleiben außen vor. Das ist eine vorbestehende
+Eigenschaft, kein Ergebnis dieses Vorhabens.
 
 **Prüfprotokoll:**
 
