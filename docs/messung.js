@@ -306,40 +306,39 @@
     return gefunden;
   }
 
-  if (!CONFIG.inhaltsverzeichnis) {
-    log('Suche die Seite mit dem Block "Seitenliste" (core/page-list) …');
-    // Erst die oberste Ebene pruefen - dort steht sie am wahrscheinlichsten -,
-    // dann den Rest.
+  // Es kann MEHRERE Verzeichnisseiten geben - auf dieser Website sind es drei
+  // Kapiteluebersichten statt eines Gesamtverzeichnisses. Dann werden alle
+  // gemessen, statt eine auszuwaehlen: der serverseitige Aufwand ist bei
+  // core/page-list naemlich auf allen gleich gross. Der Core laedt ueber
+  // get_pages() immer ALLE Seiten der Website und filtert erst danach nach
+  // parentPageID. Eine Uebersicht mit 26 sichtbaren Links kostet den Server
+  // also genauso viel wie eine mit 128.
+  let verzeichnisse = [];
+  if (CONFIG.inhaltsverzeichnis) {
+    verzeichnisse = [{ titel: '(konfiguriert)', pfad: CONFIG.inhaltsverzeichnis }];
+  } else {
+    log('Suche Seiten mit dem Block "Seitenliste" (core/page-list) …');
     const oberste = seiten.filter(s => s.parent === 0);
     const rest    = seiten.filter(s => s.parent !== 0);
-    let treffer = await findePageListSeiten(oberste);
-    if (!treffer.length) {
-      log('  Auf oberster Ebene nichts gefunden, pruefe alle uebrigen Seiten …');
-      treffer = await findePageListSeiten(rest);
-    }
+    verzeichnisse = await findePageListSeiten(oberste);
+    const weitere = await findePageListSeiten(rest);
+    verzeichnisse = verzeichnisse.concat(weitere);
 
-    if (treffer.length === 1) {
-      CONFIG.inhaltsverzeichnis = treffer[0].pfad;
-      log(`Inhaltsverzeichnis gefunden: "${treffer[0].titel}" -> ${CONFIG.inhaltsverzeichnis}` +
-          `  (${treffer[0].links} Links im Block-Bereich)`);
-    } else if (treffer.length > 1) {
-      warn('Mehrere Seiten enthalten den Block "Seitenliste":');
-      console.table(treffer);
-      warn('Bitte oben bei CONFIG.inhaltsverzeichnis den gewuenschten Pfad eintragen.');
-      return;
-    } else {
+    if (!verzeichnisse.length) {
       warn('Keine Seite mit dem Block "Seitenliste" gefunden.');
       warn('Moeglich: das Verzeichnis steckt in einem Container-Block, der');
       warn('den Inhalt anders ablegt, oder es wurde anders gebaut.');
       warn('Bitte oben bei CONFIG.inhaltsverzeichnis den Pfad von Hand eintragen.');
-      warn('Seiten der obersten Ebene zur Orientierung:');
       console.table(oberste.map(s => ({ Titel: titelVon(s), Pfad: pfadVon(s) })));
       return;
     }
+    log(`${verzeichnisse.length} Verzeichnisseite(n) gefunden:`);
+    console.table(verzeichnisse);
   }
 
   if (!CONFIG.skriptenseite) {
-    const kandidat = seiten.find(s => s.parent > 0 && pfadVon(s) !== CONFIG.inhaltsverzeichnis);
+    const verzPfade = verzeichnisse.map(v => v.pfad);
+    const kandidat = seiten.find(s => s.parent > 0 && !verzPfade.includes(pfadVon(s)));
     if (!kandidat) { warn('Keine Unterseite gefunden. Bitte CONFIG.skriptenseite eintragen.'); return; }
     CONFIG.skriptenseite = pfadVon(kandidat);
     log(`Skriptenseite gewaehlt: "${titelVon(kandidat)}" -> ${CONFIG.skriptenseite}`);
@@ -383,19 +382,20 @@
   }
 
   log(`Messe je ${CONFIG.durchlaeufe} Durchlaeufe …`);
+  const zumMessen = verzeichnisse.map((v, i) =>
+    [`a${verzeichnisse.length > 1 ? i + 1 : ''}) Verz. ${v.titel}`, v.pfad]);
+  zumMessen.push(['b) Skriptenseite', CONFIG.skriptenseite]);
+  zumMessen.push(['c) Startseite',    CONFIG.startseite]);
+
   const zeilen = [];
-  for (const [name, pfad] of [
-    ['a) Inhaltsverzeichnis', CONFIG.inhaltsverzeichnis],
-    ['b) Skriptenseite',      CONFIG.skriptenseite],
-    ['c) Startseite',         CONFIG.startseite],
-  ]) {
+  for (const [name, pfad] of zumMessen) {
     const r = await miss(name, pfad);
     if (r) zeilen.push(r);
   }
   if (!zeilen.length) { warn('Keine Messwerte erhalten. Abbruch.'); return; }
 
   // Gegenprobe: ohne Parameter darf nichts ausgegeben werden
-  const ohne = await hole(CONFIG.inhaltsverzeichnis, false);
+  const ohne = await hole(verzeichnisse[0].pfad, false);
   const gegenprobe = ohne.treffer
     ? 'FEHLGESCHLAGEN - SC-PERF erscheint auch OHNE ?sc_perf=1'
     : 'bestanden (ohne ?sc_perf=1 keine Ausgabe)';
@@ -417,7 +417,7 @@
       `groesse=${z['Groesse (KB)']} KB  links=${z.Links}  elemente=${z['HTML-Elemente']}` +
       `   (${z.Einzelwerte})`),
     '',
-    'Pfad Inhaltsverzeichnis: ' + CONFIG.inhaltsverzeichnis,
+    'Verzeichnisseiten: ' + verzeichnisse.map(v => `${v.titel} (${v.pfad})`).join(' | '),
     'Pfad Skriptenseite:      ' + CONFIG.skriptenseite,
     'Veroeffentlichte Seiten: ' + seitenZahl,
     'Glossareintraege:        ' + glossarZahl,
