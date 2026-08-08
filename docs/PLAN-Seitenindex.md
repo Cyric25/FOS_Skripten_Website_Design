@@ -381,7 +381,10 @@ nur eine einzige Backup-Generation vorhält und sie bei jedem Build überschreib
 
 #### AP-1.2: Messbasis für die Inhaltsverzeichnisseite schaffen
 
-**Status:** ☐ offen
+**Status:** ◐ in Arbeit — Code fertig und gebaut (v1.5.69, Commit `36ad832`);
+offen sind Schritt 5 (ZIP einspielen), Schritt 6 (Messung) und Schritt 7
+(Seiten- und Begriffsanzahl). Diese Schritte verlangen Zugriff auf die
+Live-Site und werden vom Nutzer ausgeführt.
 **Umfang:** M
 **Modell:** sonnet
 **Abhängigkeiten:** AP-1.1
@@ -2591,7 +2594,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP | Titel | Modell | Status | Abhängig von | Notiz |
 |---|---|---|---|---|---|
 | AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☑ | – | Commit `c9322e2` auf `main`; Branch `phase-1-glossar-fallback` aktiv. **Kein PHP 7.4 lokal verfügbar** – siehe Übergabenotiz |
-| AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☐ | AP-1.1 | |
+| AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ◐ | AP-1.1 | Code fertig (`36ad832`, v1.5.69). Offen: ZIP einspielen + Messung durch den Nutzer |
 | AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☐ | AP-1.2 | |
 | AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☐ | AP-1.3 | |
 | AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | |
