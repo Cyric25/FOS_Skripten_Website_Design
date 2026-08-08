@@ -3819,3 +3819,55 @@ function simple_clean_custom_lightbox( $block_content, $parsed_block ) {
 
     return $block_content;
 }
+
+// ===================================================================
+// DIAGNOSE: PERFORMANCE-MESSUNG
+// ===================================================================
+
+/**
+ * Gibt Kennzahlen des aktuellen Seitenaufbaus als HTML-Kommentar aus.
+ *
+ * WOZU: Vorher-/Nachher-Vergleiche ohne Fremd-Plugin. Die Zielumgebung ist
+ * ein Shared Hosting ohne SSH und ohne WP-CLI, ein Profiler steht dort nicht
+ * zur Verfuegung. Diese wenigen Zeilen beantworten die Frage, auf die es bei
+ * Performance-Fragen zuerst ankommt: Wie viele Datenbankabfragen, wie viel
+ * Zeit und wie viel Speicher kostet ein Seitenaufruf?
+ *
+ * AUFRUF: beliebige URL mit ?sc_perf=1 als angemeldeter Administrator.
+ * Im Seitenquelltext steht das Ergebnis dann als eine Zeile, z. B.:
+ *
+ *     <!-- SC-PERF queries=142 time=1.873s peak=48 MB -->
+ *
+ * Fuer belastbare Werte dieselbe URL dreimal mit hartem Neuladen aufrufen
+ * (Strg+Shift+R) und den mittleren Wert nehmen.
+ *
+ * ABSICHERUNG: Es wird nur ausgegeben, wenn BEIDE Bedingungen erfuellt sind -
+ * der ausdrueckliche Parameter und die Berechtigung manage_options. Fuer nicht
+ * angemeldete Besucher ist die Funktion vollstaendig unsichtbar; ohne den
+ * Parameter auch fuer Administratoren.
+ *
+ * Diese Funktion bleibt bewusst dauerhaft im Theme, siehe CLAUDE.md,
+ * Abschnitt "Diagnose".
+ */
+function simple_clean_perf_footer() {
+    // Parameter zuerst pruefen: billiger als die Rechtepruefung und trifft
+    // auf praktisch jeden Seitenaufruf zu.
+    if ( ! isset( $_GET['sc_perf'] ) ) {
+        return;
+    }
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
+    // timer_stop( 0, 3 ) gibt den Wert zurueck, statt ihn auszugeben.
+    // Alle drei Werte werden intern erzeugt und enthalten keine
+    // Nutzereingaben - der Parameterwert selbst wird nie ausgegeben.
+    printf(
+        "\n<!-- SC-PERF queries=%d time=%ss peak=%s -->\n",
+        (int) get_num_queries(),
+        timer_stop( 0, 3 ),
+        size_format( memory_get_peak_usage( true ) )
+    );
+}
+add_action( 'wp_footer', 'simple_clean_perf_footer', 9999 );
