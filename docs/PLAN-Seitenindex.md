@@ -469,11 +469,10 @@ Sie bleibt dauerhaft im Theme und wird in AP-1.6 und AP-5.2 erneut verwendet.
 
 #### AP-1.3: Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln
 
-**Status:** ◐ in Arbeit — Code fertig, Verzweigungslogik mit einem Stub-Harness
-gegen 6 Fälle geprüft (alle bestanden). Offen: Build und Live-Prüfung. Diese
-warten bewusst, bis die Ausgangsmessung aus AP-1.2 auf v1.5.69 vorliegt —
-sobald der Fix ausgeliefert ist, lässt sich der Vorher-Wert nicht mehr
-erheben.
+**Status:** ☑ erledigt (2026-08-08) — Stub-Harness 6/6, live seit v1.5.70.
+Wirkung belegt: `/organische-chemie-und-biochemie/` von 1,998 s auf 0,058 s
+(Faktor 34), Queries 45 → 42, Spitzenspeicher 66 → 50 MB. Messwerte in
+Abschnitt 9.
 **Umfang:** M
 **Modell:** opus (die Änderung verändert das Verhalten aller Seiten mit leerer Kandidatenliste – die Bedingung muss exakt sitzen)
 **Abhängigkeiten:** AP-1.2
@@ -665,8 +664,21 @@ programmieren** – dieses AP führt den Scan durch und weist das Ergebnis nach.
      AND meta_value IN ('a:0:{}', '');
    ```
 
-4. Stichprobe: Drei zufällige Skriptenseiten im Frontend aufrufen und prüfen,
-   dass die Glossarverlinkung dort weiterhin funktioniert.
+4. **Stichprobe mit besonderer Sorgfalt** (verschärft am 2026-08-08 aufgrund
+   der Nachmessung, siehe Abschnitt 9): Drei inhaltlich reiche Skriptenseiten
+   im Frontend aufrufen und prüfen, dass dort tatsächlich Glossarbegriffe
+   hervorgehoben sind und sich anklicken lassen.
+   Hintergrund: Die Messung zeigt sehr niedrige Kandidatenzahlen — auf einer
+   Chemieseite nur 1 Kandidat bei 1049 Einträgen. Vor dem Fix überdeckte der
+   Fallback das, weil er bei leerer Liste einfach alle Begriffe verlinkte.
+   Nach dem Fix tut er das nicht mehr: Eine Seite mit unvollständiger
+   Kandidatenliste verliert die Verlinkung stillschweigend.
+   Ist nach dem Bulk-Scan auf einer solchen Seite **kein** Begriff verlinkt,
+   obwohl im Text erkennbar Glossarbegriffe vorkommen, ist das ein Befund:
+   Dann greift `simple_clean_scan_glossar_candidates()` zu kurz und muss
+   gesondert untersucht werden, bevor Phase 1 als abgeschlossen gilt.
+   Zum Gegenprüfen die Kandidatenzahl einer solchen Seite direkt ablesen —
+   die Diagnosezeile `?sc_perf=1` weist sie als `kandidaten=` aus.
 5. In `Theme/CLAUDE.md` im Abschnitt zum Glossar-System einen kurzen Hinweis
    ergänzen: Nach einem Import von Seiten direkt in die Datenbank (also ohne
    `save_post`) muss der Bulk-Scan erneut laufen, sonst fallen diese Seiten in
@@ -2681,9 +2693,9 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 |---|---|---|---|---|---|
 | AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☑ | – | Commit `c9322e2` auf `main`; Branch `phase-1-glossar-fallback` aktiv. **Kein PHP 7.4 lokal verfügbar** – siehe Übergabenotiz |
 | AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☑ | AP-1.1 | Ausgangsmessung erhoben (Abschnitt 9). Befund: Faktor 25 bei gleicher Query-Zahl → siehe Abschnitt 11 |
-| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ◐ | AP-1.2 | Harness 6/6, v1.5.70 live. Nutzer meldet deutliche Beschleunigung; Messwerte zur Bestätigung stehen aus |
-| AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ◐ | AP-1.3 | Harness 5/5, v1.5.70 live. Messwerte zur Bestätigung stehen aus |
-| AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | |
+| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☑ | AP-1.2 | Harness 6/6. **1,998 s → 0,058 s (Faktor 34)**, belegt in Abschnitt 9 |
+| AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☑ | AP-1.3 | Harness 5/5, live seit v1.5.70. Spitzenspeicher der betroffenen Seite 66 → 50 MB |
+| AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | **Verschärft:** Kandidatenzahlen wirken zu niedrig (1 von 1049 auf einer Chemieseite). Verlinkung nach dem Scan stichprobenartig belegen, siehe Abschnitt 9 |
 | AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ☐ | AP-1.5 | |
 | AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | frischer Agent, nur lesend |
 | AP-1.doc | Dokumentation Phase 1 aktualisieren | sonnet | ☐ | AP-1.rev | |
@@ -2750,17 +2762,41 @@ Einzelwerte der langsamen Seite: 1,998 / 1,977 / 2,048 s — stabil, kein Ausrei
 > des Seitenbaums kostet ausweislich der Messung nur etwa 0,03 s gegenüber der
 > Startseite. Siehe Abschnitt 11.
 
-Nach dem Glossar-Fix (Theme v1.5.70, AP-1.3 + AP-1.4):
+Nach dem Glossar-Fix, erhoben am 2026-08-08 auf Theme v1.5.70
+(AP-1.3 + AP-1.4), gleiches Verfahren:
 
-| Seite | Queries | Zeit (s) | davon Glossar | Speicher | Größe |
-|---|---|---|---|---|---|
-| Verz. Labor | | | | | |
-| Verz. Organische Chemie | | | | | |
-| Verz. Analytische Chemie | | | | | |
-| Skriptenseite (Vergleich) | | | | | |
+| Seite | Queries | Zeit (s) | davon Glossar | Kandidaten | Fallback | Speicher |
+|---|---|---|---|---|---|---|
+| Verz. Labor | 45 | 0,084 | 0,000 | 1 | nein | 54 MB |
+| **Verz. Organische Chemie** | **42** | **0,058** | 0,000 | **0** | nein | 50 MB |
+| Verz. Analytische Chemie | 47 | 0,066 | 0,000 | 1 | nein | 56 MB |
+| Skriptenseite (Vergleich) | 53 | 0,066 | 0,000 | 1 | nein | 54 MB |
+| Startseite (Vergleich) | 41 | 0,061 | 0,000 | 3 | nein | 50 MB |
 
-_Rückmeldung des Nutzers am 2026-08-08 nach dem Einspielen von v1.5.70:
-„subjektiv läuft die Seite jetzt sehr viel schneller". Zahlen stehen noch aus._
+**Ergebnis Phase 1:**
+
+| | vorher (v1.5.69) | nachher (v1.5.70) | Faktor |
+|---|---|---|---|
+| Zeit `/organische-chemie-und-biochemie/` | 1,998 s | 0,058 s | **34×** |
+| Queries derselben Seite | 45 | 42 | −3 |
+| Spitzenspeicher derselben Seite | 66 MB | 50 MB | −16 MB |
+
+Die Diagnosezeile belegt die Ursache unmittelbar: `kandidaten=0 fallback=nein`.
+Die Seite ist gescannt und enthält keinen einzigen Glossarbegriff. Vorher
+führte genau das in den Fallback über alle 1049 Begriffe; jetzt steigt der
+Autolinker sofort aus. Die beiden anderen Verzeichnisse waren nie betroffen,
+weil sie Kandidaten hatten — deshalb der Faktor 25 zwischen Seiten mit
+gleicher Query-Zahl, der die Fehlanalyse aufgedeckt hat.
+
+> **Offene Beobachtung für AP-1.5:** Die Kandidatenzahlen sind auffällig
+> niedrig — die Skriptenseite „Übungen zu den Aminen" meldet **1** Kandidat
+> bei 1049 Glossareinträgen. Für eine Chemieseite ist das wenig. Möglich ist
+> beides: Die Kandidatenlisten sind veraltet (der Bulk-Scan aus AP-1.5 lief
+> noch nicht), oder der Scan greift zu kurz. Vor dem Fix fiel das nicht auf,
+> weil der Fallback fehlende Kandidaten überdeckte — er verlinkte einfach
+> alles. **Nach dem Fix tut er das nicht mehr.** AP-1.5 muss deshalb nicht nur
+> den Scan ausführen, sondern anschließend prüfen, ob auf einer inhaltlich
+> reichen Seite tatsächlich Glossarbegriffe verlinkt sind.
 
 **Prüfprotokoll:**
 
@@ -2768,8 +2804,8 @@ _Rückmeldung des Nutzers am 2026-08-08 nach dem Einspielen von v1.5.70:
 |---|---|---|---|---|
 | 2026-08-08 | AP-1.1 | Alle 5 Akzeptanzkriterien; `php -l` über 11 PHP-Dateien; ZIP-Inhalt und Version geprüft | **Bestanden.** 11/11 Dateien „No syntax errors detected". Arbeitsbaum sauber, `main` und `phase-1-glossar-fallback` beide auf `c9322e2` und gepusht. Rollback-ZIP 79 145 Bytes, 22 Einträge, `style.css` = v1.5.68 | Claude (AP-Ausführung) |
 | 2026-08-08 | AP-1.2 | Alle 5 Akzeptanzkriterien; Gegenprobe ohne Parameter; Ausgangsmessung über 3 Verzeichnisseiten + 2 Vergleichsseiten, je 3 Durchläufe | **Bestanden.** Werte in Abschnitt 9. Gegenprobe bestanden (ohne `?sc_perf=1` keine Ausgabe) | Claude + Nutzer |
-| 2026-08-08 | AP-1.3 | Stub-Harness gegen 6 Fälle (gescannt/leer/nie gescannt/Meta kaputt/leeres Glossar); `simple_clean_process_glossar_links_optimized()` byte-identisch gegengeprüft | **6/6 bestanden.** Live seit v1.5.70; Nutzer meldet „subjektiv sehr viel schneller". Zahlen ausstehend | Claude |
-| 2026-08-08 | AP-1.4 | Stub-Harness gegen 5 Fälle inkl. Nachweis, dass `glossar-style.css` weiterhin immer eingehängt wird | **5/5 bestanden.** Live seit v1.5.70 | Claude |
+| 2026-08-08 | AP-1.3 | Stub-Harness gegen 6 Fälle (gescannt/leer/nie gescannt/Meta kaputt/leeres Glossar); `simple_clean_process_glossar_links_optimized()` byte-identisch gegengeprüft; Nachmessung auf v1.5.70 | **6/6 bestanden.** Live belegt: 1,998 s → 0,058 s auf `/organische-chemie-und-biochemie/`, Diagnosezeile weist `kandidaten=0 fallback=nein` aus | Claude + Nutzer |
+| 2026-08-08 | AP-1.4 | Stub-Harness gegen 5 Fälle inkl. Nachweis, dass `glossar-style.css` weiterhin immer eingehängt wird; Nachmessung | **5/5 bestanden.** Spitzenspeicher der betroffenen Seite 66 → 50 MB | Claude + Nutzer |
 | | AP-1.5 | | | |
 | | AP-1.6 | | | |
 | | Phase 1 Integration + Regression R1–R8 | | | |
