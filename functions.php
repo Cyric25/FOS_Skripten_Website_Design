@@ -923,13 +923,34 @@ function simple_clean_glossar_assets() {
 
     // Determine which terms this page actually needs (modal display only).
     // Full term list with definitions on every page is too heavy with 500+ terms.
+    //
+    // Die Entscheidung MUSS dieselbe sein wie im Autolinker
+    // simple_clean_glossar_auto_link_content_optimized(). Sonst kann es
+    // passieren, dass der Autolinker auf einer Seite nichts verlinkt, hier
+    // aber trotzdem alle Begriffe samt Definitionen als glossarData an den
+    // Browser gehen - bei ueber tausend Eintraegen eine erhebliche Datenmenge
+    // ganz ohne Nutzen, denn ohne verlinkte Begriffe gibt es nichts
+    // anzuklicken.
+    //
+    // Massgeblich ist deshalb auch hier _glossar_scan_version: Ist es
+    // gesetzt, gilt die Kandidatenliste - eine leere Liste bedeutet dann
+    // "auf dieser Seite kommt kein Begriff vor" und nicht "noch nicht
+    // geprueft". Siehe den ausfuehrlichen Kommentar im Autolinker.
     $terms_for_page = array();
     if (is_singular() && !is_singular('glossar')) {
-        $candidates = get_post_meta(get_the_ID(), '_glossar_term_candidates', true);
-        if (is_array($candidates)) {
-            $terms_for_page = simple_clean_get_glossar_terms_by_ids($candidates);
+        $post_id      = get_the_ID();
+        $candidates   = get_post_meta($post_id, '_glossar_term_candidates', true);
+        $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
+
+        if (!empty($scan_version) && is_array($candidates)) {
+            // Gescannt: Kandidatenliste gilt. Ist sie leer, bleibt
+            // $terms_for_page leer und weiter unten wird weder das Skript
+            // noch glossarData ausgeliefert.
+            $terms_for_page = empty($candidates)
+                ? array()
+                : simple_clean_get_glossar_terms_by_ids($candidates);
         } else {
-            // Not scanned yet: same fallback as the server-side linking
+            // Nie gescannt (oder Meta beschaedigt): Fallback wie im Autolinker.
             $terms_for_page = simple_clean_get_glossar_terms();
         }
     }
@@ -1471,6 +1492,22 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
     $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
     $is_scanned   = !empty($scan_version);
 
+    // Kennzahlen fuer die Diagnoseausgabe (?sc_perf=1). Sie beantworten die
+    // Frage, die sich bei einer langsamen Seite zuerst stellt: Wie viel Zeit
+    // geht in die Glossar-Verlinkung, mit wie vielen Begriffen, und wurde der
+    // teure Fallback ueber ALLE Begriffe ausgeloest?
+    if (!isset($GLOBALS['sc_glossar_stats'])) {
+        $GLOBALS['sc_glossar_stats'] = array(
+            'aufrufe'    => 0,
+            'kandidaten' => 0,
+            'fallback'   => 0,
+            'begriffe'   => 0,
+            'zeit'       => 0.0,
+        );
+    }
+    $GLOBALS['sc_glossar_stats']['aufrufe']++;
+    $GLOBALS['sc_glossar_stats']['kandidaten'] = is_array($candidates) ? count($candidates) : -1;
+
     if ($is_scanned && is_array($candidates)) {
         // Gescannt: Die Kandidatenliste gilt.
         if (empty($candidates)) {
@@ -1482,6 +1519,8 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
         // Nie gescannt (oder Meta beschädigt): Fallback über alle Begriffe.
         // Langsam, aber besser als gar keine Verlinkung. Ein Bulk-Scan über
         // die Glossar-Einstellungsseite beseitigt diesen Zustand dauerhaft.
+        $GLOBALS['sc_glossar_stats']['fallback']++;
+
         if (defined('GLOSSAR_DEBUG') && GLOSSAR_DEBUG) {
             error_log(sprintf(
                 'Glossar: Post %d wurde nie gescannt (kein _glossar_scan_version) - verwende alle Begriffe als Fallback. Abhilfe: Bulk-Scan auf der Glossar-Einstellungsseite ausführen.',
@@ -1500,7 +1539,10 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
     }
 
     // Optimierte Verarbeitung mit nur relevanten Begriffen
+    $sc_t0 = microtime(true);
     $processed = simple_clean_process_glossar_links_optimized($content, $candidates);
+    $GLOBALS['sc_glossar_stats']['zeit']    += microtime(true) - $sc_t0;
+    $GLOBALS['sc_glossar_stats']['begriffe'] = count($candidates);
 
     return $processed['content'];
 }
@@ -3920,5 +3962,28 @@ function simple_clean_perf_footer() {
         number_format( $dauer, 3, '.', '' ),
         (int) memory_get_peak_usage( true )
     );
+
+    // Zweite Zeile: Woher kommt die Zeit? Bei einer langsamen Seite ist die
+    // Glossar-Verlinkung der erste Verdaechtige, weil ihr Aufwand mit der
+    // Zahl der Begriffe UND der Laenge des gerenderten HTML waechst.
+    //   aufrufe    - wie oft der the_content-Filter lief
+    //   kandidaten - Eintraege in _glossar_term_candidates (-1 = kein Array)
+    //   fallback   - wie oft auf ALLE Begriffe zurueckgefallen wurde
+    //   begriffe   - Begriffe, mit denen tatsaechlich gearbeitet wurde
+    //   zeit       - Sekunden allein in simple_clean_process_glossar_links_optimized()
+    $g = isset( $GLOBALS['sc_glossar_stats'] ) ? $GLOBALS['sc_glossar_stats'] : null;
+    if ( is_array( $g ) ) {
+        printf(
+            "<!-- SC-GLOSSAR aufrufe=%d kandidaten=%d fallback=%d begriffe=%d zeit=%ss -->\n",
+            (int) $g['aufrufe'],
+            (int) $g['kandidaten'],
+            (int) $g['fallback'],
+            (int) $g['begriffe'],
+            number_format( $g['zeit'], 3, '.', '' )
+        );
+    } else {
+        // Der Filter lief gar nicht - auch das ist eine Aussage.
+        echo "<!-- SC-GLOSSAR nicht-gelaufen -->\n";
+    }
 }
 add_action( 'wp_footer', 'simple_clean_perf_footer', 9999 );

@@ -33,6 +33,9 @@
   // Ebenso beim Speicher: "50331648" (Bytes, neu) oder "48 MB" (alt).
   const RE = /<!--\s*SC-PERF\s+queries=(\d+)\s+time=([\d.,]+)s\s+peak=(.+?)\s*-->/;
 
+  // Zweite Zeile ab Theme v1.5.70: Aufschluesselung der Glossar-Verlinkung.
+  const RE_G = /<!--\s*SC-GLOSSAR\s+aufrufe=(\d+)\s+kandidaten=(-?\d+)\s+fallback=(\d+)\s+begriffe=(\d+)\s+zeit=([\d.,]+)s\s*-->/;
+
   // "1,873" -> 1.873 ; "1.873" -> 1.873 ; "1.234,567" -> 1234.567
   // Enthaelt die Zahl ein Komma, ist das Komma das Dezimaltrennzeichen und
   // Punkte sind Tausendertrennzeichen. Sonst ist der Punkt das Dezimalzeichen.
@@ -73,6 +76,7 @@
       weitergeleitet: antwort.redirected,
       bytes: new TextEncoder().encode(text).length,
       treffer: text.match(RE),
+      glossar: text.match(RE_G),
     };
   }
 
@@ -350,8 +354,8 @@
   const median = (werte) => [...werte].sort((a, b) => a - b)[Math.floor(werte.length / 2)];
 
   async function miss(name, pfad) {
-    const queries = [], zeiten = [], groessen = [];
-    let peak = '?', links = 0, elemente = 0;
+    const queries = [], zeiten = [], groessen = [], glossarZeiten = [];
+    let peak = '?', links = 0, elemente = 0, g = null;
     for (let i = 0; i < CONFIG.durchlaeufe; i++) {
       const r = await hole(pfad);
       if (r.status !== 200) { warn(`${name}: HTTP ${r.status} bei ${pfad}`); return null; }
@@ -360,24 +364,37 @@
       zeiten.push(zahl(r.treffer[2]));
       peak = speicher(r.treffer[3]);
       groessen.push(r.bytes);
+      if (r.glossar) {
+        g = { kandidaten: +r.glossar[2], fallback: +r.glossar[3], begriffe: +r.glossar[4] };
+        glossarZeiten.push(zahl(r.glossar[5]));
+      }
       // DOM-Umfang: bei einem Inhaltsverzeichnis oft der eigentliche
       // Bremsklotz - der Server ist schnell fertig, der Browser nicht.
       links    = (r.text.match(/<a\b/gi) || []).length;
       elemente = (r.text.match(/<[a-z][a-z0-9]*\b/gi) || []).length;
     }
+    const gZeit = glossarZeiten.length ? median(glossarZeiten) : null;
+    const gesamt = median(zeiten);
     const e = {
       Seite: name,
       Pfad: pfad,
       Queries: median(queries),
-      'Zeit (s)': median(zeiten),
+      'Zeit (s)': gesamt,
+      'davon Glossar (s)': gZeit === null ? '?' : gZeit,
+      'Glossar %': gZeit === null ? '?' : (gZeit / gesamt * 100).toFixed(0) + '%',
+      Begriffe: g ? g.begriffe : '?',
+      Kandidaten: g ? g.kandidaten : '?',
+      Fallback: g ? (g.fallback > 0 ? 'JA' : 'nein') : '?',
       Speicher: peak,
       'Groesse (KB)': (median(groessen) / 1024).toFixed(1),
       Links: links,
       'HTML-Elemente': elemente,
       Einzelwerte: `q:[${queries}] t:[${zeiten}]`,
     };
-    log(`${name}: ${e.Queries} Queries, ${e['Zeit (s)']} s, ${peak}, ` +
-        `${e['Groesse (KB)']} KB, ${links} Links, ${elemente} Elemente`);
+    log(`${name}: ${e.Queries} Queries, ${gesamt} s` +
+        (gZeit === null ? '' : ` (davon Glossar ${gZeit} s = ${e['Glossar %']}, ` +
+         `${e.Begriffe} Begriffe, Fallback ${e.Fallback})`) +
+        `, ${peak}, ${e['Groesse (KB)']} KB, ${links} Links, ${elemente} Elemente`);
     return e;
   }
 
@@ -413,9 +430,10 @@
     '',
     ...zeilen.map(z =>
       `${z.Seite.padEnd(24)} queries=${String(z.Queries).padStart(4)}  ` +
-      `time=${String(z['Zeit (s)']).padStart(7)}s  peak=${z.Speicher}  ` +
-      `groesse=${z['Groesse (KB)']} KB  links=${z.Links}  elemente=${z['HTML-Elemente']}` +
-      `   (${z.Einzelwerte})`),
+      `time=${String(z['Zeit (s)']).padStart(7)}s  glossar=${String(z['davon Glossar (s)']).padStart(7)}s` +
+      ` (${z['Glossar %']}, ${z.Begriffe} Begriffe, Fallback ${z.Fallback})  ` +
+      `peak=${z.Speicher}  groesse=${z['Groesse (KB)']} KB  links=${z.Links}  ` +
+      `elemente=${z['HTML-Elemente']}   (${z.Einzelwerte})`),
     '',
     'Verzeichnisseiten: ' + verzeichnisse.map(v => `${v.titel} (${v.pfad})`).join(' | '),
     'Pfad Skriptenseite:      ' + CONFIG.skriptenseite,
