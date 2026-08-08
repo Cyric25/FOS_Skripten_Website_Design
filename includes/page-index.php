@@ -433,3 +433,41 @@ function simple_clean_register_page_index_block() {
     );
 }
 add_action('init', 'simple_clean_register_page_index_block');
+
+/**
+ * Hängt das Editor-Script ein.
+ *
+ * OHNE DIESES SCRIPT ERSCHEINT DER BLOCK NICHT IM EINFÜGEN-MENÜ.
+ * Die serverseitige Registrierung oben liefert Rendering, Block-Supports und
+ * Metadaten — die Auffindbarkeit im Inserter entsteht aber erst durch
+ * `registerBlockType()` im Editor. Beides gehört zusammen.
+ *
+ * Das Script wird nicht über die block.json-Eigenschaft `editorScript`
+ * eingebunden, weil dort nur Pfade relativ zum Blockordner auflösbar sind;
+ * die gebaute Datei liegt in dist/js/.
+ *
+ * Muster übernommen von simple_clean_glossar_editor_assets() in functions.php.
+ */
+function simple_clean_page_index_editor_assets() {
+    $js_datei = get_template_directory() . '/dist/js/page-index-editor.js';
+
+    if (!file_exists($js_datei)) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'simple-clean-page-index-editor',
+        get_template_directory_uri() . '/dist/js/page-index-editor.js',
+        array(
+            'wp-blocks',
+            'wp-element',
+            'wp-block-editor',
+            'wp-components',
+            'wp-data',
+            'wp-server-side-render',
+        ),
+        filemtime($js_datei),
+        true
+    );
+}
+add_action('enqueue_block_editor_assets', 'simple_clean_page_index_editor_assets');

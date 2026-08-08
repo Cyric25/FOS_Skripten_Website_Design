@@ -1,0 +1,13 @@
+/*
+ * Gestaltung des Blocks fos/inhaltsverzeichnis.
+ *
+ * Platzhalter - Kapitelkarten, Aufklappebenen und Reaktionsfaehigkeit
+ * entstehen in Phase 4 (AP-4.1).
+ *
+ * Regel fuer Phase 4: keine festen Farbwerte. Alle Farben leiten sich aus
+ * den CSS-Variablen des Themes ab, damit die Customizer-Einstellung
+ * durchschlaegt.
+ */
+.page-index {
+	display: block;
+}

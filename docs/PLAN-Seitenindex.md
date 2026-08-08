@@ -1461,9 +1461,20 @@ nach `Theme/backups/fos-online-schulbuch-rollback-phase3.zip` kopieren.
 5. Kommentarblock über der Registrierung, der auf die Grundregel
    „Ausgabe hängt allein von den Blockattributen ab" hinweist.
 
+> **Korrektur am 2026-08-08:** Die ersten beiden Akzeptanzkriterien waren
+> falsch — sie sind mit AP-3.1 allein nicht erfüllbar. Eine rein
+> serverseitige Registrierung macht einen Block **nicht** im Einfügen-Menü
+> sichtbar; sie liefert Rendering, Block-Supports und Metadaten. Die
+> Auffindbarkeit im Inserter entsteht erst durch die clientseitige
+> Registrierung per `registerBlockType()` — also durch **AP-3.3**.
+> (Ausnahme wäre das `autoRegister`-Support-Flag neuerer WordPress-Versionen;
+> das Theme deklariert „Requires at least: 5.0" und nutzt es deshalb nicht.)
+> Die beiden Kriterien wandern zu AP-3.3, hier bleibt die serverseitige
+> Registrierung.
+
 **Akzeptanzkriterien:**
-- [ ] Im Block-Editor einer Seite lässt sich über die Blocksuche „Inhaltsverzeichnis" der Block `fos/inhaltsverzeichnis` einfügen.
-- [ ] Der eingefügte Block lässt sich speichern; der Beitragsinhalt enthält danach `<!-- wp:fos/inhaltsverzeichnis ... /-->` ohne gespeichertes HTML.
+- [ ] `register_block_type_from_metadata()` läuft ohne Fehler; `WP_Block_Type_Registry::get_instance()->is_registered('fos/inhaltsverzeichnis')` liefert `true`.
+- [ ] _(verschoben nach AP-3.3: Einfügbarkeit im Editor und Speichern)_
 - [ ] `simple_clean_page_index_sanitize_attrs(array())` liefert ein Array mit genau acht Schlüsseln und den Standardwerten aus der Tabelle.
 - [ ] `simple_clean_page_index_sanitize_attrs(array('maxDepth' => 99, 'layout' => 'foo', 'columns' => 0))` liefert `maxDepth = 5`, `layout = 'cards'`, `columns = 1`.
 - [ ] `Theme/blocks/inhaltsverzeichnis/block.json` ist gültiges JSON (per `node -e "JSON.parse(require('fs').readFileSync('blocks/inhaltsverzeichnis/block.json','utf8'))"` im Ordner `Theme/` nachweisbar).

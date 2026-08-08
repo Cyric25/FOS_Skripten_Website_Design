@@ -16,7 +16,10 @@ export default defineConfig({
         'glossar-editor': resolve(__dirname, 'src/js/glossar-editor.js'),
         'glossar-style': resolve(__dirname, 'src/css/glossar.css'),
         'page-manager': resolve(__dirname, 'src/js/page-manager.js'),
-        'page-manager-style': resolve(__dirname, 'src/css/page-manager.css')
+        'page-manager-style': resolve(__dirname, 'src/css/page-manager.css'),
+        'page-index-editor': resolve(__dirname, 'src/js/page-index-editor.js'),
+        'page-index': resolve(__dirname, 'src/js/page-index.js'),
+        'page-index-style': resolve(__dirname, 'src/css/page-index.css')
       },
       output: {
         // Output format
