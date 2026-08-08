@@ -1040,6 +1040,31 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   legt Term-IDs in Post-Meta `_glossar_term_candidates` ab; beim Rendern werden
   nur diese Terms geladen (Object-Cache `glossar_terms`/`simple_clean_glossar`).
   Überspringt korrekt `<a>`, `<script>`, `<style>`, `<code>`, `<pre>`.
+
+  **`_glossar_scan_version` entscheidet, nicht die Kandidatenliste allein
+  (Fix v1.5.70) — bitte nicht „vereinfachen":**
+  Ein **leeres** Kandidaten-Array ist ein gültiges Scan-Ergebnis und bedeutet
+  „auf dieser Seite kommt kein Begriff vor". Eine Prüfung mit `empty()` kann
+  das nicht von „noch nie gescannt" unterscheiden — beides sieht gleich aus.
+  Genau daran hing ein teurer Fehler: Textarme Seiten (etwa eine Übersicht,
+  deren Inhalt praktisch nur aus einem Block-Kommentar besteht) fielen in den
+  Fallback, luden **alle** Glossarbegriffe, expandierten sie über
+  `simple_clean_get_glossar_term_variants()` in Wortvarianten und schickten
+  einen einzigen Alternations-Regex über das gesamte gerenderte HTML.
+  Gemessen: **1,998 s statt 0,058 s** bei 1049 Begriffen — Faktor 34, bei
+  identischer Query-Zahl.
+  Maßgeblich ist deshalb das Meta `_glossar_scan_version` (gesetzt von
+  `simple_clean_update_glossar_candidates()` und vom Bulk-Scan). Ist es
+  vorhanden, gilt die Kandidatenliste; ist sie leer, wird der Inhalt
+  unverändert zurückgegeben. Der Fallback greift nur noch ohne dieses Meta.
+  Dieselbe Entscheidung trifft `simple_clean_glossar_assets()` für
+  `glossarData` — beide müssen übereinstimmen, sonst liefert die eine Seite
+  1049 Begriffe samt Definitionen an den Browser, während die andere nichts
+  verlinkt.
+
+  **Folge, die man kennen muss:** Seiten, die nie gescannt wurden, sind
+  langsam. Nach einem Import direkt in die Datenbank (also ohne `save_post`)
+  gehört der Bulk-Scan auf der Glossar-Einstellungsseite ausgeführt.
 - **Einstellungen:** Optionen `glossar_modal_type` (tooltip|sidebar),
   `glossar_auto_link`, `glossar_first_only`, `glossar_case_sensitive`,
   `glossar_auto_rebuild`; Admin-Seite `simple_clean_glossar_settings_page()`
@@ -1106,6 +1131,54 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   Root-CLAUDE.md „Color Scheme").
 - Menü-Auto-Zuweisung: `simple_clean_auto_assign_menu()` (sucht Menü
   „Skripten Übersicht").
+
+## Diagnose: Wo geht die Zeit hin?
+
+Auf einem Shared Hosting ohne SSH und ohne WP-CLI steht kein Profiler zur
+Verfügung. Das Theme bringt deshalb eine kleine eigene Messausgabe mit —
+`simple_clean_perf_footer()`, eingehängt auf `wp_footer` mit Priorität 9999.
+
+**Aufruf:** beliebige URL mit `?sc_perf=1` als angemeldeter Administrator.
+Im Seitenquelltext stehen dann zwei Zeilen:
+
+```
+<!-- SC-PERF queries=42 time=0.058s peak=52428800 -->
+<!-- SC-GLOSSAR aufrufe=1 kandidaten=0 fallback=0 begriffe=0 zeit=0.000s -->
+```
+
+| Wert | Bedeutung |
+|---|---|
+| `queries` | Datenbankabfragen des Seitenaufbaus |
+| `time` | Sekunden seit `$timestart` |
+| `peak` | Spitzenspeicher in Bytes |
+| `kandidaten` | Einträge in `_glossar_term_candidates` (`-1` = kein Array) |
+| `fallback` | wie oft auf **alle** Glossarbegriffe zurückgefallen wurde |
+| `begriffe` | Begriffe, mit denen tatsächlich gearbeitet wurde |
+| `zeit` | Sekunden allein in `simple_clean_process_glossar_links_optimized()` |
+
+Die zweite Zeile trennt die häufigste Ursache von allen anderen: Ist `zeit`
+groß oder `fallback` größer als 0, liegt es am Glossar. Ist beides klein und
+die Seite trotzdem langsam, liegt es woanders.
+
+**Doppelt abgesichert:** Ohne die Berechtigung `manage_options` **und** ohne
+den ausdrücklichen Parameter wird nichts ausgegeben. Für nicht angemeldete
+Besucher ist die Ausgabe unsichtbar.
+
+**Zahlen unterwegs:** Die Werte werden bewusst mit
+`number_format($wert, 3, '.', '')` und als reine Bytezahl ausgegeben, **nicht**
+über `timer_stop()` und `size_format()`. Beide formatieren über
+`number_format_i18n()` und liefern in einer deutschen Installation ein Komma
+als Dezimaltrennzeichen (`time=1,873s`) — für Menschen richtig, für
+maschinelles Auswerten unbrauchbar. Das hat schon einmal eine halbe Stunde
+Fehlersuche gekostet, weil das Auswerteskript die Zeile nicht fand, obwohl sie
+dastand.
+
+**Auswertung:** `docs/messung.js` in die Browser-Konsole einfügen (als
+Administrator, auf der Website). Das Skript prüft zuerst die Voraussetzungen
+und nennt die Ursache, wenn etwas fehlt; danach misst es alle Seiten mit dem
+Block „Seitenliste" plus zwei Vergleichsseiten, je drei Aufrufe, und gibt einen
+fertigen Textblock aus. Es fällt **nicht** ins Verteilungs-ZIP (`docs/` ist in
+`create-theme-zip.js` nicht freigegeben).
 
 ## Additional Documentation
 

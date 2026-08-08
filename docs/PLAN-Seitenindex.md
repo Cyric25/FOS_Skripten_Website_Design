@@ -2695,9 +2695,9 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ☑ | AP-1.1 | Ausgangsmessung erhoben (Abschnitt 9). Befund: Faktor 25 bei gleicher Query-Zahl → siehe Abschnitt 11 |
 | AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☑ | AP-1.2 | Harness 6/6. **1,998 s → 0,058 s (Faktor 34)**, belegt in Abschnitt 9 |
 | AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☑ | AP-1.3 | Harness 5/5, live seit v1.5.70. Spitzenspeicher der betroffenen Seite 66 → 50 MB |
-| AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | **Verschärft:** Kandidatenzahlen wirken zu niedrig (1 von 1049 auf einer Chemieseite). Verlinkung nach dem Scan stichprobenartig belegen, siehe Abschnitt 9 |
-| AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ☐ | AP-1.5 | |
-| AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | frischer Agent, nur lesend |
+| AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☑ | AP-1.4 | Bulk-Scan lief (Angabe des Nutzers), Sichtprüfung der Verlinkung positiv. **SQL-Gegenprobe nicht durchgeführt** – siehe Testprotokoll |
+| AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ◐ | AP-1.5 | Nachmessung erledigt (Abschnitt 9). **Regressionsliste R1–R8 auf Wunsch des Nutzers ausgelassen** |
+| AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | offen – erfordert einen frischen Agenten, wurde nicht beauftragt |
 | AP-1.doc | Dokumentation Phase 1 aktualisieren | sonnet | ☐ | AP-1.rev | |
 | ~~AP-2.1~~ | ~~Indexaufbau und Speicherung~~ | – | **entfällt** | – | Neuzuschnitt 2026-08-08, Begründung in Abschnitt 11 |
 | ~~AP-2.2~~ | ~~Invalidierung über WordPress-Hooks~~ | – | **entfällt** | – | dito |
@@ -2818,9 +2818,9 @@ Eigenschaft, kein Ergebnis dieses Vorhabens.
 | 2026-08-08 | AP-1.2 | Alle 5 Akzeptanzkriterien; Gegenprobe ohne Parameter; Ausgangsmessung über 3 Verzeichnisseiten + 2 Vergleichsseiten, je 3 Durchläufe | **Bestanden.** Werte in Abschnitt 9. Gegenprobe bestanden (ohne `?sc_perf=1` keine Ausgabe) | Claude + Nutzer |
 | 2026-08-08 | AP-1.3 | Stub-Harness gegen 6 Fälle (gescannt/leer/nie gescannt/Meta kaputt/leeres Glossar); `simple_clean_process_glossar_links_optimized()` byte-identisch gegengeprüft; Nachmessung auf v1.5.70 | **6/6 bestanden.** Live belegt: 1,998 s → 0,058 s auf `/organische-chemie-und-biochemie/`, Diagnosezeile weist `kandidaten=0 fallback=nein` aus | Claude + Nutzer |
 | 2026-08-08 | AP-1.4 | Stub-Harness gegen 5 Fälle inkl. Nachweis, dass `glossar-style.css` weiterhin immer eingehängt wird; Nachmessung | **5/5 bestanden.** Spitzenspeicher der betroffenen Seite 66 → 50 MB | Claude + Nutzer |
-| | AP-1.5 | | | |
-| | AP-1.6 | | | |
-| | Phase 1 Integration + Regression R1–R8 | | | |
+| 2026-08-08 | AP-1.5 | Bulk-Scan über alle Seiten; Sichtprüfung der Glossarverlinkung im Frontend | **Teilweise belegt.** Nutzer meldet: Scan gelaufen, Sichtprüfung positiv. Die SQL-Gegenprobe auf `ungescannt = 0` wurde **nicht** ausgeführt – der flächendeckende Scan-Stand ist damit nicht messtechnisch nachgewiesen, sondern berichtet | Nutzer |
+| 2026-08-08 | AP-1.6 | Nachmessung auf v1.5.70 (3 Verzeichnisse + 2 Vergleichsseiten, je 3 Durchläufe) | **Bestanden**, Werte in Abschnitt 9. Faktor 34 auf der betroffenen Seite | Claude + Nutzer |
+| 2026-08-08 | Phase 1 Regression R1–R8 | – | **AUSGELASSEN auf ausdrücklichen Wunsch des Nutzers.** Belegt sind: R2 (Glossar, Sichtprüfung positiv) und R8 (Build läuft). Nicht geprüft: R1 Sidebar, R3 Seitenmanager, R4 Meta-Box, R5 Customizer, R6 Container-Block, R7 Lightbox | – |
 | | AP-1.rev | | | |
 | | AP-1.doc | | | |
 | – | ~~AP-2.1~~ | entfällt | – | – |
