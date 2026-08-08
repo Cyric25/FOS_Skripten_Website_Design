@@ -130,6 +130,23 @@ Layout, Spalten, Suchfeld), global über eine neue Customizer-Sektion.
 
 ## 3. Kontext & Constraints
 
+- **Erhobener Ist-Stand (2026-08-08, AP-1.2):** 258 veröffentlichte Seiten,
+  **1049 Glossareinträge**. Es gibt **kein einzelnes Inhaltsverzeichnis**,
+  sondern **drei Kapitelübersichten** mit `core/page-list`:
+  `/organische-chemie-und-biochemie/` (128 Links), `/analytische-chemie/`
+  (79 Links), `/laborsicherheit/` (26 Links). Vergleichswerte ohne
+  Verzeichnis: Startseite 41 Queries / 0,053 s / 67 KB, Skriptenseite
+  53 Queries / 0,067 s / 170 KB.
+  **Wichtig zur Einordnung der Linkzahlen:** Sie sagen nichts über die
+  Serverlast. `core/page-list` lädt über `get_pages()` immer *alle* Seiten
+  der Website und filtert erst danach nach `parentPageID` — die Übersicht mit
+  26 sichtbaren Links kostet den Server genauso viel wie die mit 128.
+- **Gestaltungsfreiheit (Entscheidung des Nutzers, 2026-08-08):** Die
+  Verzeichnisse dürfen **vollständig anders aufgebaut** werden. Die
+  ursprüngliche Vorgabe „1:1-Ersatz für den Core-Block, damit nur ein Block
+  getauscht werden muss" ist damit aufgehoben. Aufbau, Darstellung und
+  Aufteilung auf Seiten sind frei wählbar, solange der Nutzen erhalten
+  bleibt.
 - **Umgebung:** WordPress 6.x auf All-Inkl Shared Hosting. PHP 7.4 als
   Mindestversion (Theme-Header `Requires PHP: 7.4`). Kein SSH, kein WP-CLI.
   Kein persistenter Object-Cache (Redis/Memcached) – deshalb wird über
@@ -179,7 +196,8 @@ Layout, Spalten, Suchfeld), global über eine neue Customizer-Sektion.
 
 | Entscheidung | Begründung | Verworfene Alternative |
 |---|---|---|
-| Eigener Block `fos/inhaltsverzeichnis` statt `render_block`-Filter auf `core/page-list` | Explizit im Editor sichtbar, pro Einfügung konfigurierbar, unabhängig von Core-Änderungen. Der Umstieg ist ein Blocktausch auf einer Seite und jederzeit umkehrbar. | Core-Block per Filter kapern – unsichtbar für Redakteure, bricht bei Core-Umbauten, keine eigenen Optionen |
+| Eigener Block `fos/inhaltsverzeichnis` statt `render_block`-Filter auf `core/page-list` | Explizit im Editor sichtbar, pro Einfügung konfigurierbar, unabhängig von Core-Änderungen. Der Umstieg ist ein Blocktausch und jederzeit umkehrbar. | Core-Block per Filter kapern – unsichtbar für Redakteure, bricht bei Core-Umbauten, keine eigenen Optionen |
+| `rootPage` ist Kernfunktion, nicht Kür | Es gibt drei Kapitelübersichten, die jeweils nur ihren eigenen Teilbaum zeigen (siehe Ist-Stand in Abschnitt 3). Ein Verzeichnis über alle 258 Seiten wäre auf keiner der drei Seiten gewollt. `rootPage` wird im Editor je Einfügung gesetzt und ist damit eine **feste Zahl im Blockattribut** – die Ausgabe bleibt requestunabhängig und der Fragment-Cache gültig. | „Automatisch die Seite nehmen, auf der der Block steht" – bequemer, macht die Ausgabe aber requestabhängig. Wäre nur zulässig, wenn die aufgelöste Seiten-ID in den Cache-Schlüssel eingeht; das ist als spätere Bequemlichkeitsoption möglich, aber nicht der Standardweg |
 | Index in `wp_options` mit `autoload = false` | Funktioniert ohne persistenten Object-Cache, also auf All-Inkl. Eine autoloadende Option dieser Größe würde auf jedem Request der gesamten Site geladen – schlimmer als das Ausgangsproblem. | `wp_cache_*` (ohne Redis nur pro Request wirksam), eigene DB-Tabelle (Migration ohne Not) |
 | Read-Through statt Eager Rebuild | Beim Speichern wird nur ein Versionszähler erhöht; der Neuaufbau passiert beim nächsten Lesezugriff. Eine Drag-Sortierung über 50 Seiten würde sonst 50 Neuaufbauten auslösen. Der Aufbau kostet eine indizierte Abfrage. | Rebuild direkt im `save_post`, Rebuild per WP-Cron (auf Shared Hosting unzuverlässig getaktet) |
 | Fragment-Cache mit Indexversion **im Schlüssel** | Invalidierung geschieht automatisch: nach einer Änderung greifen die alten Schlüssel nicht mehr und laufen per TTL aus. Kein Suchlauf über die Options-Tabelle bei jedem Speichern. | Gezieltes Löschen aller Fragment-Transients bei jeder Änderung – teurer Options-Scan bei jedem Save |
@@ -2297,7 +2315,13 @@ Zuerst diesen Branch anlegen: `git checkout main`, `git pull`,
 
 ---
 
-#### AP-5.2: Inhaltsverzeichnisseite umstellen und Wirkung belegen
+#### AP-5.2: Verzeichnisseiten umstellen und Wirkung belegen
+
+> **Zugeschnitten am 2026-08-08:** Es sind **drei** Seiten umzustellen, nicht
+> eine — `/organische-chemie-und-biochemie/`, `/analytische-chemie/` und
+> `/laborsicherheit/`. Jede bekommt ihr eigenes `rootPage`. Die Schritte
+> unten gelten sinngemäß je Seite; gemessen wird vorher und nachher auf
+> allen dreien.
 
 **Status:** ☐ offen
 **Umfang:** S
