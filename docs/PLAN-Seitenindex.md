@@ -1970,7 +1970,7 @@ nach `Theme/backups/fos-online-schulbuch-rollback-phase4.zip` kopieren.
 13. `@media (prefers-reduced-motion: reduce)`: Übergänge abschalten.
 
 **Akzeptanzkriterien:**
-- [ ] `Theme/src/css/page-index.css` enthält keinen einzigen festen Hexfarbwert (Textsuche nach `#` liefert nur Treffer in Kommentaren).
+- [ ] `Theme/src/css/page-index.css` enthält keinen **freistehenden** Farbwert. Hexwerte sind ausschließlich als Rückfall innerhalb von `var(--variable, #wert)` zulässig — dort gewinnt die Customizer-Farbe weiterhin, weil der Rückfall nur greift, wenn die Variable fehlt. Prüfung: Kommentare und `var(…)`-Ausdrücke entfernen, dann darf kein `#`-Wert und kein `rgb(` übrig bleiben. _(Kriterium am 2026-08-08 präzisiert — die ursprüngliche Fassung „kein einziger Hexwert" hätte auch sinnvolle Rückfälle verboten.)_
 - [ ] Nach `npm run build` existiert `Theme/dist/css/page-index-style.css` und ist größer als 1 KB.
 - [ ] Auf einem Bildschirm über 1200px erscheinen die Kapitel bei `columns = 3` dreispaltig.
 - [ ] Unter 480px erscheinen sie einspaltig.

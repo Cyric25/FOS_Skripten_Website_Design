@@ -471,3 +471,48 @@ function simple_clean_page_index_editor_assets() {
     );
 }
 add_action('enqueue_block_editor_assets', 'simple_clean_page_index_editor_assets');
+
+/**
+ * Hängt Stylesheet und Frontend-Script ein — nur dort, wo der Block vorkommt.
+ *
+ * `has_block()` durchsucht den gespeicherten Beitragsinhalt und findet den
+ * Block auch dann, wenn er in einem Container-Block des CDB-Plugins
+ * verschachtelt ist: Der Blockkommentar steht in beiden Fällen im
+ * `post_content`. Die zusätzliche Prüfung auf den Container ist trotzdem
+ * eine sinnvolle Absicherung für den Fall, dass ein Container seinen Inhalt
+ * einmal anders ablegt.
+ */
+function simple_clean_page_index_frontend_assets() {
+    if (is_admin() || !is_singular()) {
+        return;
+    }
+
+    $hat_block = has_block('fos/inhaltsverzeichnis')
+        || has_block('container-block-designer/container');
+
+    if (!$hat_block) {
+        return;
+    }
+
+    $css_datei = get_template_directory() . '/dist/css/page-index-style.css';
+    if (file_exists($css_datei)) {
+        wp_enqueue_style(
+            'simple-clean-page-index-style',
+            get_template_directory_uri() . '/dist/css/page-index-style.css',
+            array(),
+            filemtime($css_datei)
+        );
+    }
+
+    $js_datei = get_template_directory() . '/dist/js/page-index.js';
+    if (file_exists($js_datei)) {
+        wp_enqueue_script(
+            'simple-clean-page-index',
+            get_template_directory_uri() . '/dist/js/page-index.js',
+            array(),
+            filemtime($js_datei),
+            true
+        );
+    }
+}
+add_action('wp_enqueue_scripts', 'simple_clean_page_index_frontend_assets');
