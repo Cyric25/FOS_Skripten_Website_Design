@@ -113,14 +113,243 @@ function simple_clean_page_index_sanitize_attrs($attrs) {
 }
 
 /**
+ * Liefert den Seitenbaum als schlanke Struktur.
+ *
+ * Zwei Abfragen, danach alles in PHP. Der Rückgabewert wird in einer
+ * statischen Variablen gehalten, damit mehrere Blöcke auf derselben Seite
+ * die Abfragen teilen.
+ *
+ * Bewusst NICHT über get_pages(): Das lädt vollständige WP_Post-Objekte
+ * einschließlich post_content. Hier werden fünf Spalten geholt und alle
+ * Pfade in einem Durchlauf von oben nach unten berechnet, statt je Seite
+ * get_permalink() zu rufen (was die Elternkette jedes Mal neu auflöst).
+ *
+ * Aufbau des Rückgabewerts:
+ *   array(
+ *     'nodes'    => array( ID => array('id','parent','title','slug','uri','depth') ),
+ *     'children' => array( ElternID => array(KindID, …) )   // bereits sortiert
+ *   )
+ *
+ * @return array
+ */
+function simple_clean_page_index_daten() {
+    static $daten = null;
+
+    if ($daten !== null) {
+        return $daten;
+    }
+
+    global $wpdb;
+
+    // Keine Nutzereingaben in der Abfrage; $wpdb->posts kommt über die
+    // Eigenschaft, nicht als zusammengebaute Zeichenkette.
+    $zeilen = $wpdb->get_results(
+        "SELECT ID, post_parent, post_title, post_name
+         FROM {$wpdb->posts}
+         WHERE post_type = 'page' AND post_status = 'publish'
+         ORDER BY menu_order ASC, post_title ASC"
+    );
+
+    // Seiten, die per Meta aus dem Verzeichnis genommen wurden. Das Meta setzt
+    // die Meta-Box (AP-4.4); bis dahin ist das Ergebnis leer — das ist so
+    // gewollt, damit später keine Änderung an dieser Datei nötig ist.
+    $ausgeschlossen = $wpdb->get_col(
+        "SELECT post_id FROM {$wpdb->postmeta}
+         WHERE meta_key = '_simple_clean_hide_from_index' AND meta_value = '1'"
+    );
+    // array_flip, damit die Prüfung unten ein isset() ist und keine Suche.
+    $ausgeschlossen = array_flip(array_map('intval', (array) $ausgeschlossen));
+
+    $roh    = array();
+    $kinder = array();
+    foreach ($zeilen as $zeile) {
+        $id     = (int) $zeile->ID;
+        $parent = (int) $zeile->post_parent;
+
+        $roh[$id] = array(
+            'id'     => $id,
+            'parent' => $parent,
+            'title'  => $zeile->post_title,
+            'slug'   => $zeile->post_name,
+        );
+        // Reihenfolge der SQL-Sortierung bleibt erhalten.
+        $kinder[$parent][] = $id;
+    }
+
+    // Baum von oben nach unten durchlaufen (Breitensuche ab Wurzel 0).
+    //
+    // Der Durchlauf leistet drei Dinge auf einmal:
+    //  - Pfade: der Elternpfad ist bereits bekannt, wenn ein Kind an die Reihe
+    //    kommt. Ein Anhängen genügt, kein erneutes Auflösen der Elternkette.
+    //  - Verwaiste Knoten: Wessen Elternteil nicht im Ergebnis steht (etwa
+    //    weil es ein Entwurf ist), wird von der Wurzel aus nie erreicht und
+    //    fällt samt Unterbaum heraus. Das entspricht dem Verhalten von
+    //    WordPress-Permalinks und verhindert unerreichbare Einträge.
+    //  - Zyklen: Ein Ring aus Eltern-Kind-Beziehungen ist von der Wurzel aus
+    //    ebenfalls nicht erreichbar. Die Besuchsliste sichert zusätzlich ab.
+    $nodes     = array();
+    $besucht   = array();
+    $schlange  = array();
+    $zeiger    = 0;
+    $max_tiefe = 20;
+
+    $wurzeln = isset($kinder[0]) ? $kinder[0] : array();
+    foreach ($wurzeln as $id) {
+        $schlange[] = array($id, 0, '');
+    }
+
+    while ($zeiger < count($schlange)) {
+        list($id, $tiefe, $elternpfad) = $schlange[$zeiger];
+        $zeiger++;
+
+        if (isset($besucht[$id]) || !isset($roh[$id])) {
+            continue;
+        }
+        // Ausgeschlossene Seiten samt Unterbaum überspringen: Der Knoten wird
+        // nicht aufgenommen und seine Kinder gelangen nie in die Schlange.
+        if (isset($ausgeschlossen[$id])) {
+            continue;
+        }
+        if ($tiefe > $max_tiefe) {
+            error_log(sprintf(
+                'Seitenindex: Verschachtelung tiefer als %d Ebenen bei Seite %d - Zweig ausgelassen.',
+                $max_tiefe,
+                $id
+            ));
+            continue;
+        }
+
+        $besucht[$id] = true;
+
+        $slug = $roh[$id]['slug'];
+        $uri  = ('' === $elternpfad) ? $slug : $elternpfad . '/' . $slug;
+
+        $nodes[$id] = array(
+            'id'     => $id,
+            'parent' => $roh[$id]['parent'],
+            'title'  => $roh[$id]['title'],
+            'slug'   => $slug,
+            'uri'    => $uri,
+            'depth'  => $tiefe,
+        );
+
+        if (isset($kinder[$id])) {
+            foreach ($kinder[$id] as $kind_id) {
+                $schlange[] = array($kind_id, $tiefe + 1, $uri);
+            }
+        }
+    }
+
+    // Kinderliste neu aufbauen — nur mit den Knoten, die den Durchlauf
+    // überstanden haben. Die Reihenfolge bleibt korrekt, weil die
+    // Breitensuche Geschwister eines Elternteils zusammenhängend und in der
+    // ursprünglichen Sortierung abarbeitet.
+    $kinder_gefiltert = array();
+    foreach ($nodes as $id => $node) {
+        $kinder_gefiltert[$node['parent']][] = $id;
+    }
+
+    $daten = array(
+        'nodes'    => $nodes,
+        'children' => $kinder_gefiltert,
+    );
+
+    return $daten;
+}
+
+/**
+ * Baut die öffentliche URL eines Knotens.
+ *
+ * @param array $node Knoten aus simple_clean_page_index_daten().
+ * @return string
+ */
+function simple_clean_page_index_url($node) {
+    static $sprechend = null;
+    if ($sprechend === null) {
+        $sprechend = (bool) get_option('permalink_structure');
+    }
+
+    return $sprechend
+        ? home_url('/' . $node['uri'] . '/')
+        : home_url('/?page_id=' . $node['id']);
+}
+
+/**
+ * Rendert eine Liste von Knoten samt Unterebenen.
+ *
+ * Ebene 0 sind die Kapitel, alles darunter sind Unterseiten. $ebene ist der
+ * Index (0-basiert), $attrs['maxDepth'] die Anzahl der Ebenen — bei
+ * maxDepth = 2 wird also Ebene 0 und Ebene 1 ausgegeben.
+ *
+ * @param array $ids     IDs der auszugebenden Knoten.
+ * @param array $daten   Rückgabewert von simple_clean_page_index_daten().
+ * @param array $attrs   Bereinigte Blockattribute.
+ * @param int   $ebene   Aktuelle Ebene, 0-basiert.
+ * @param array $besucht Referenz auf die Besuchsliste (Rekursionsschutz).
+ * @return string HTML oder leere Zeichenkette.
+ */
+function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht) {
+    if (empty($ids) || $ebene >= $attrs['maxDepth']) {
+        return '';
+    }
+
+    $ist_kapitel = (0 === $ebene);
+    $listen_klasse = $ist_kapitel ? 'page-index__chapters' : 'page-index__pages';
+    $eintrag_klasse = $ist_kapitel ? 'page-index__chapter' : 'page-index__page';
+    $link_klasse = $ist_kapitel ? 'page-index__chapter-link' : 'page-index__page-link';
+
+    $html = '<ul class="' . esc_attr($listen_klasse) . '">';
+
+    foreach ($ids as $id) {
+        if (!isset($daten['nodes'][$id]) || isset($besucht[$id])) {
+            continue;
+        }
+        $besucht[$id] = true;
+
+        $node = $daten['nodes'][$id];
+
+        $html .= '<li class="' . esc_attr($eintrag_klasse) . '">';
+        $html .= '<a class="' . esc_attr($link_klasse) . '" href="'
+            . esc_url(simple_clean_page_index_url($node)) . '">'
+            . esc_html($node['title']) . '</a>';
+
+        $kind_ids = isset($daten['children'][$id]) ? $daten['children'][$id] : array();
+        $unterliste = simple_clean_page_index_liste($kind_ids, $daten, $attrs, $ebene + 1, $besucht);
+
+        if ('' !== $unterliste) {
+            if ($attrs['collapsible']) {
+                $beschriftung = $attrs['showCounts']
+                    ? sprintf(
+                        /* translators: %d: Anzahl der Unterseiten */
+                        _n('%d Unterseite', '%d Unterseiten', count($kind_ids), 'fos-online-schulbuch'),
+                        count($kind_ids)
+                    )
+                    : __('Unterseiten', 'fos-online-schulbuch');
+
+                $html .= '<details class="page-index__sub"' . ($attrs['openByDefault'] ? ' open' : '') . '>';
+                $html .= '<summary class="page-index__sub-toggle">' . esc_html($beschriftung) . '</summary>';
+                $html .= $unterliste;
+                $html .= '</details>';
+            } else {
+                $html .= $unterliste;
+            }
+        }
+
+        $html .= '</li>';
+    }
+
+    $html .= '</ul>';
+
+    return $html;
+}
+
+/**
  * Rendert den Block.
  *
  * Signatur entspricht dem, was WordPress einem render_callback übergibt.
  * Die Funktion GIBT ZURÜCK und gibt nichts direkt aus — ein render_callback,
  * der echo verwendet, platziert seine Ausgabe an der falschen Stelle im
  * Dokument.
- *
- * Wird in AP-3.2 vollständig ausgearbeitet.
  *
  * @param array    $attributes Blockattribute.
  * @param string   $content    Innerer Inhalt (hier ungenutzt).
@@ -129,12 +358,53 @@ function simple_clean_page_index_sanitize_attrs($attrs) {
  */
 function simple_clean_render_page_index($attributes = array(), $content = '', $block = null) {
     $attrs = simple_clean_page_index_sanitize_attrs($attributes);
+    $daten = simple_clean_page_index_daten();
 
-    // AP-3.2 füllt hier die Baumausgabe ein. Bis dahin bewusst leer, damit
-    // eine Seite mit dem Block weder bricht noch etwas Halbfertiges zeigt.
-    unset($attrs);
+    // Zeigt rootPage auf eine Seite, die es nicht (mehr) gibt, auf die oberste
+    // Ebene zurückfallen statt eine leere Seite auszugeben.
+    $wurzel = $attrs['rootPage'];
+    if ($wurzel > 0 && !isset($daten['nodes'][$wurzel])) {
+        $wurzel = 0;
+    }
 
-    return '';
+    $start_ids = isset($daten['children'][$wurzel]) ? $daten['children'][$wurzel] : array();
+
+    $besucht = array();
+    $liste   = simple_clean_page_index_liste($start_ids, $daten, $attrs, 0, $besucht);
+
+    $inhalt = '';
+
+    if ($attrs['showSearch'] && '' !== $liste) {
+        // Kein name-Attribut und kein <form>: gefiltert wird rein im Browser
+        // (Phase 4). Ohne JavaScript bleibt das Feld wirkungslos, die Liste
+        // darunter aber vollständig nutzbar.
+        $inhalt .= '<div class="page-index__search-wrap">';
+        $inhalt .= '<input type="search" class="page-index__search"'
+            . ' placeholder="' . esc_attr__('Seite suchen …', 'fos-online-schulbuch') . '"'
+            . ' aria-label="' . esc_attr__('Inhaltsverzeichnis durchsuchen', 'fos-online-schulbuch') . '">';
+        $inhalt .= '</div>';
+    }
+
+    $inhalt .= ('' !== $liste)
+        ? $liste
+        : '<p class="page-index__empty">' . esc_html__('Keine Seiten vorhanden.', 'fos-online-schulbuch') . '</p>';
+
+    $klassen = array('page-index', 'page-index--' . $attrs['layout']);
+    if ('list' !== $attrs['layout']) {
+        $klassen[] = 'page-index--cols-' . $attrs['columns'];
+    }
+
+    if (function_exists('get_block_wrapper_attributes')) {
+        $wrapper = get_block_wrapper_attributes(array('class' => implode(' ', $klassen)));
+    } else {
+        // Rückfall für WordPress vor 5.6
+        $wrapper = 'class="' . esc_attr(implode(' ', $klassen)) . '"';
+    }
+
+    return '<nav ' . $wrapper . ' aria-label="'
+        . esc_attr__('Inhaltsverzeichnis', 'fos-online-schulbuch') . '">'
+        . $inhalt
+        . '</nav>';
 }
 
 /**
