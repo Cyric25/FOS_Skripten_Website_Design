@@ -38,7 +38,8 @@
   };
 
   async function hole(pfad, mitParam = true) {
-    const antwort = await fetch(url(pfad, mitParam), {
+    const angefordert = url(pfad, mitParam);
+    const antwort = await fetch(angefordert, {
       cache: 'no-store',
       credentials: 'same-origin',
     });
@@ -46,6 +47,9 @@
     return {
       status: antwort.status,
       text,
+      angefordert,
+      endgueltig: antwort.url,          // nach eventuellen Weiterleitungen
+      weitergeleitet: antwort.redirected,
       bytes: new TextEncoder().encode(text).length,
       treffer: text.match(RE),
     };
@@ -142,11 +146,28 @@
                       'w3-total-cache', 'wp-super-cache', 'hummingbird', 'swift-performance']
         .filter(n => start.text.toLowerCase().includes(n));
 
+      // Probe 4: Lief wp_footer ueberhaupt? Die Admin-Leiste wird bei
+      // angemeldeten Benutzern GENAU dort ausgegeben. Ist "wpadminbar" im
+      // HTML, hat wp_footer sicher stattgefunden.
+      const footerLief = /wpadminbar/i.test(start.text);
+      const vollstaendig = /<\/body>/i.test(start.text);
+
+      // Probe 5: Kommt der Parameter am Ziel an, oder wird er unterwegs
+      // entfernt? fetch folgt Weiterleitungen still - antwort.url zeigt,
+      // wo die Anfrage tatsaechlich gelandet ist.
+      const paramAngekommen = start.endgueltig.includes('sc_perf');
+
       console.table([{
         'HTML-Kommentare in der Seite': kommentare,
         'Berechtigung manage_options':  rechte,
         'Gefundene Optimierer':         spuren.length ? spuren.join(', ') : 'keine',
+        'wp_footer lief (Adminleiste)': footerLief ? 'ja' : 'NEIN',
+        '</body> vorhanden':            vollstaendig ? 'ja' : 'NEIN',
+        'weitergeleitet':               start.weitergeleitet ? 'ja' : 'nein',
+        'sc_perf in der Ziel-URL':      paramAngekommen ? 'ja' : 'NEIN',
       }]);
+      log('  angefordert: ' + start.angefordert);
+      log('  gelandet bei: ' + start.endgueltig);
 
       if (rechte === 'FEHLT') {
         warn('  URSACHE: Dein Konto hat kein manage_options.');
@@ -155,13 +176,22 @@
         warn('  URSACHE: In der ausgelieferten Seite steht KEIN einziger HTML-Kommentar.');
         warn('  Etwas entfernt sie - vermutlich ein Optimierungs-/Cache-Plugin' +
              (spuren.length ? ` (${spuren.join(', ')})` : '') + '.');
-        warn('  ABHILFE: Melde mir das, ich stelle die Ausgabe auf ein Element um,');
-        warn('  das nicht wegoptimiert wird. Alternativ die Kommentar-Entfernung');
-        warn('  im Plugin voruebergehend abschalten.');
+      } else if (!paramAngekommen) {
+        warn('  URSACHE: Der Parameter sc_perf geht unterwegs verloren.');
+        warn('  Die Anfrage landet ohne ihn am Ziel - eine Weiterleitung oder');
+        warn('  eine Server-Regel entfernt die Abfragezeichenfolge.');
+        warn('  ABHILFE: Melde mir das, ich stelle den Ausloeser auf etwas um,');
+        warn('  das eine Weiterleitung uebersteht.');
+      } else if (!footerLief) {
+        warn('  URSACHE: wp_footer scheint nicht zu laufen - die Admin-Leiste');
+        warn(`  fehlt im HTML und </body> ist ${vollstaendig ? 'vorhanden' : 'AUCH NICHT da'}.`);
+        warn('  Moeglich: die Admin-Leiste ist abgeschaltet (dann ist diese Probe');
+        warn('  aussagelos) oder die Ausgabe bricht vorher ab.');
+        warn('  Bitte melde mir diese Tabelle.');
       } else {
-        warn(`  ${kommentare} HTML-Kommentare kommen an, die Rechte stimmen (${rechte}).`);
-        warn('  Damit bleibt ein Seiten-Cache als wahrscheinlichste Ursache:');
-        warn('  Die Seite wird ausgeliefert, bevor PHP die Messung anhaengt.');
+        warn('  Alle Voraussetzungen sind erfuellt: Parameter kommt an, wp_footer');
+        warn('  laeuft, Rechte stimmen, Kommentare werden nicht entfernt.');
+        warn('  Damit bleibt ein Seiten-Cache als wahrscheinlichste Ursache.');
         warn('  ABHILFE: Cache leeren, dann erneut ausfuehren. Bleibt es dabei,');
         warn('  melde mir bitte diese Tabelle.');
       }
