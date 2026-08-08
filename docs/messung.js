@@ -25,7 +25,28 @@
   };
   // -----------------------------------------------------------------
 
-  const RE = /<!--\s*SC-PERF\s+queries=(\d+)\s+time=([\d.]+)s\s+peak=(.+?)\s*-->/;
+  // Das Muster muss BEIDE Schreibweisen der Zeit erkennen:
+  //   time=1.873s  -> ab Theme v1.5.70, bewusst mit Punkt formatiert
+  //   time=1,873s  -> v1.5.69, dort kam die Zahl aus timer_stop() und damit
+  //                   aus number_format_i18n(), das in einer deutschen
+  //                   Installation ein Komma setzt.
+  // Ebenso beim Speicher: "50331648" (Bytes, neu) oder "48 MB" (alt).
+  const RE = /<!--\s*SC-PERF\s+queries=(\d+)\s+time=([\d.,]+)s\s+peak=(.+?)\s*-->/;
+
+  // "1,873" -> 1.873 ; "1.873" -> 1.873 ; "1.234,567" -> 1234.567
+  // Enthaelt die Zahl ein Komma, ist das Komma das Dezimaltrennzeichen und
+  // Punkte sind Tausendertrennzeichen. Sonst ist der Punkt das Dezimalzeichen.
+  const zahl = (s) => {
+    s = String(s);
+    return s.includes(',')
+      ? parseFloat(s.replace(/\./g, '').replace(',', '.'))
+      : parseFloat(s);
+  };
+
+  // "50331648" -> "48 MB" ; "48 MB" bleibt "48 MB"
+  const speicher = (s) => /^\d+$/.test(s)
+    ? (parseInt(s, 10) / 1048576).toFixed(0) + ' MB'
+    : s;
   const log  = (...a) => console.log('%c[Messung]', 'color:#e24614;font-weight:bold', ...a);
   const warn = (...a) => console.log('%c[Messung]', 'color:#b00;font-weight:bold', ...a);
   const ok   = (...a) => console.log('%c[Messung]', 'color:#0a0;font-weight:bold', ...a);
@@ -298,8 +319,8 @@
       if (r.status !== 200) { warn(`${name}: HTTP ${r.status} bei ${pfad}`); return null; }
       if (!r.treffer) { warn(`${name}: kein SC-PERF bei ${pfad} (Seite laedt, Ausgabe fehlt)`); return null; }
       queries.push(parseInt(r.treffer[1], 10));
-      zeiten.push(parseFloat(r.treffer[2]));
-      peak = r.treffer[3];
+      zeiten.push(zahl(r.treffer[2]));
+      peak = speicher(r.treffer[3]);
       groessen.push(r.bytes);
     }
     const e = {

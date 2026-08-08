@@ -3896,14 +3896,29 @@ function simple_clean_perf_footer() {
         return;
     }
 
-    // timer_stop( 0, 3 ) gibt den Wert zurueck, statt ihn auszugeben.
-    // Alle drei Werte werden intern erzeugt und enthalten keine
-    // Nutzereingaben - der Parameterwert selbst wird nie ausgegeben.
+    // ACHTUNG - nicht auf timer_stop() und size_format() umstellen:
+    // Beide formatieren ueber number_format_i18n() und richten sich damit nach
+    // der Sprache der Installation. In einer deutschen WordPress-Installation
+    // kommt dabei ein KOMMA als Dezimaltrennzeichen heraus ("time=1,873s").
+    // Fuer Menschen ist das richtig, fuer maschinelles Auswerten unbrauchbar -
+    // das Auswerteskript hat die Zeile deshalb nicht gefunden, obwohl sie
+    // ausgegeben wurde.
+    //
+    // Deshalb hier bewusst selbst gerechnet und mit ausdruecklichen
+    // Trennzeichen formatiert. number_format() mit explizitem Punkt ist
+    // unabhaengig von Sprache und PHP-Version; der Speicher wird als reine
+    // Bytezahl ausgegeben und erst beim Auswerten lesbar gemacht.
+    //
+    // Alle Werte werden intern erzeugt und enthalten keine Nutzereingaben -
+    // der Wert des Parameters selbst wird nie ausgegeben.
+    global $timestart;
+    $dauer = isset( $timestart ) ? ( microtime( true ) - $timestart ) : 0;
+
     printf(
-        "\n<!-- SC-PERF queries=%d time=%ss peak=%s -->\n",
+        "\n<!-- SC-PERF queries=%d time=%ss peak=%d -->\n",
         (int) get_num_queries(),
-        timer_stop( 0, 3 ),
-        size_format( memory_get_peak_usage( true ) )
+        number_format( $dauer, 3, '.', '' ),
+        (int) memory_get_peak_usage( true )
     );
 }
 add_action( 'wp_footer', 'simple_clean_perf_footer', 9999 );
