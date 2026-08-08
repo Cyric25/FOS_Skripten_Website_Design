@@ -1441,14 +1441,50 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
     // Kandidaten aus Post-Meta laden
     $candidates = get_post_meta($post_id, '_glossar_term_candidates', true);
 
-    // Fallback: Keine Kandidaten gefunden
-    // Dies kann passieren wenn Post noch nicht gescannt wurde
-    // In diesem Fall: Verwende ALLE Begriffe als Fallback (langsamer aber funktioniert)
-    if (empty($candidates) || !is_array($candidates)) {
-        // Log für Debugging
+    // Wurde diese Seite schon einmal gescannt?
+    //
+    // ACHTUNG - hier steckt der Unterschied, auf den es ankommt: Ein LEERES
+    // Kandidaten-Array ist ein GÜLTIGES Scan-Ergebnis und bedeutet "auf dieser
+    // Seite kommt kein einziger Glossarbegriff vor". Eine Prüfung mit empty()
+    // allein kann das nicht von "noch nie gescannt" unterscheiden - beides
+    // sieht gleich aus. Genau daran hing ein teurer Fehler:
+    //
+    // Seiten mit wenig oder gar keinem Fließtext (z. B. eine Seite, deren
+    // Inhalt praktisch nur aus einem Block-Kommentar besteht) liefern beim
+    // Scan korrekt ein leeres Array. Mit der alten Bedingung fielen sie
+    // trotzdem in den Fallback: ALLE Glossarbegriffe wurden geladen, über
+    // simple_clean_get_glossar_term_variants() in Wortvarianten expandiert,
+    // zu einem einzigen großen Alternations-Regex zusammengesetzt und über
+    // das gesamte gerenderte HTML geschickt. Bei mehreren hundert Begriffen
+    // kostet das je Seitenaufruf ein Vielfaches der eigentlichen Ausgabe.
+    //
+    // Das Unterscheidungsmerkmal ist das Meta _glossar_scan_version. Es wird
+    // gesetzt von simple_clean_update_glossar_candidates() (Hook save_post)
+    // und von simple_clean_glossar_bulk_scan_batch_ajax() (Bulk-Scan auf der
+    // Glossar-Einstellungsseite). Ist es vorhanden, sind die Kandidaten
+    // maßgeblich - auch wenn die Liste leer ist.
+    //
+    // Diese Bedingung bitte NICHT zu einem empty() "vereinfachen".
+    // get_post_meta() liefert '' zurück, wenn das Meta nicht existiert.
+    // Geschrieben wird immer der Wert 1, ein leerer Wert bedeutet also
+    // zuverlässig "nie gescannt".
+    $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
+    $is_scanned   = !empty($scan_version);
+
+    if ($is_scanned && is_array($candidates)) {
+        // Gescannt: Die Kandidatenliste gilt.
+        if (empty($candidates)) {
+            // Gescannt und nichts gefunden -> hier gibt es nichts zu verlinken.
+            // Früher Ausstieg, ohne den Content überhaupt anzufassen.
+            return $content;
+        }
+    } else {
+        // Nie gescannt (oder Meta beschädigt): Fallback über alle Begriffe.
+        // Langsam, aber besser als gar keine Verlinkung. Ein Bulk-Scan über
+        // die Glossar-Einstellungsseite beseitigt diesen Zustand dauerhaft.
         if (defined('GLOSSAR_DEBUG') && GLOSSAR_DEBUG) {
             error_log(sprintf(
-                'Glossar: Post %d hat keine Kandidaten - verwende alle Begriffe als Fallback',
+                'Glossar: Post %d wurde nie gescannt (kein _glossar_scan_version) - verwende alle Begriffe als Fallback. Abhilfe: Bulk-Scan auf der Glossar-Einstellungsseite ausführen.',
                 $post_id
             ));
         }

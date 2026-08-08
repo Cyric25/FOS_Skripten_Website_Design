@@ -444,7 +444,11 @@ Sie bleibt dauerhaft im Theme und wird in AP-1.6 und AP-5.2 erneut verwendet.
 
 #### AP-1.3: Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln
 
-**Status:** ☐ offen
+**Status:** ◐ in Arbeit — Code fertig, Verzweigungslogik mit einem Stub-Harness
+gegen 6 Fälle geprüft (alle bestanden). Offen: Build und Live-Prüfung. Diese
+warten bewusst, bis die Ausgangsmessung aus AP-1.2 auf v1.5.69 vorliegt —
+sobald der Fix ausgeliefert ist, lässt sich der Vorher-Wert nicht mehr
+erheben.
 **Umfang:** M
 **Modell:** opus (die Änderung verändert das Verhalten aller Seiten mit leerer Kandidatenliste – die Bedingung muss exakt sitzen)
 **Abhängigkeiten:** AP-1.2
@@ -2595,7 +2599,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 |---|---|---|---|---|---|
 | AP-1.1 | Ausgangszustand sichern und Phasen-Branch anlegen | sonnet | ☑ | – | Commit `c9322e2` auf `main`; Branch `phase-1-glossar-fallback` aktiv. **Kein PHP 7.4 lokal verfügbar** – siehe Übergabenotiz |
 | AP-1.2 | Messbasis für die Inhaltsverzeichnisseite schaffen | sonnet | ◐ | AP-1.1 | Code fertig (`36ad832`, v1.5.69). Offen: ZIP einspielen + Messung durch den Nutzer |
-| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ☐ | AP-1.2 | |
+| AP-1.3 | Kandidaten-Fallback im Autolinker an `_glossar_scan_version` koppeln | opus | ◐ | AP-1.2 | Code fertig, Harness 6/6. Build wartet auf die Ausgangsmessung aus AP-1.2 |
 | AP-1.4 | Gleiche Korrektur für die Auslieferung von `glossarData` | opus | ☐ | AP-1.3 | |
 | AP-1.5 | Flächendeckenden Scan-Stand herstellen und nachweisen | sonnet | ☐ | AP-1.4 | |
 | AP-1.6 | Nachmessung und Phasenabschluss Phase 1 | sonnet | ☐ | AP-1.5 | |
