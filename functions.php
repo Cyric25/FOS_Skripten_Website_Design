@@ -232,8 +232,133 @@ function simple_clean_customize_register($wp_customize) {
         'section'  => 'simple_clean_colors',
         'settings' => 'color_background_light',
     )));
+
+    // ---------------------------------------------------------------
+    // Sektion: Inhaltsverzeichnis
+    // Gestaltung des Blocks fos/inhaltsverzeichnis. Aufbau und Umfang
+    // je Verzeichnis regeln die Block-Einstellungen im Editor; hier steht
+    // nur, wie es aussieht — global für alle Verzeichnisse.
+    // ---------------------------------------------------------------
+    $wp_customize->add_section('simple_clean_page_index', array(
+        'title'       => __('Inhaltsverzeichnis', 'fos-online-schulbuch'),
+        'description' => __('Aussehen des Blocks „Inhaltsverzeichnis". Startseite, Tiefe und Darstellung werden je Block im Editor eingestellt.', 'fos-online-schulbuch'),
+        'priority'    => 31,
+    ));
+
+    $wp_customize->add_setting('pidx_card_bg', array(
+        'default'           => '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'pidx_card_bg', array(
+        'label'       => __('Kartenhintergrund', 'fos-online-schulbuch'),
+        'description' => __('Flächenfarbe der Kapitelkarten', 'fos-online-schulbuch'),
+        'section'     => 'simple_clean_page_index',
+        'settings'    => 'pidx_card_bg',
+    )));
+
+    $wp_customize->add_setting('pidx_card_border', array(
+        'default'           => '#e0e0e0',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'pidx_card_border', array(
+        'label'       => __('Kartenrahmen', 'fos-online-schulbuch'),
+        'description' => __('Rahmen der Karten und des Suchfelds', 'fos-online-schulbuch'),
+        'section'     => 'simple_clean_page_index',
+        'settings'    => 'pidx_card_border',
+    )));
+
+    $wp_customize->add_setting('pidx_card_title', array(
+        'default'           => '#71230a',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'pidx_card_title', array(
+        'label'       => __('Farbe der Kapitelüberschriften', 'fos-online-schulbuch'),
+        'description' => __('Standard ist die Spezialtext-Farbe des Themes', 'fos-online-schulbuch'),
+        'section'     => 'simple_clean_page_index',
+        'settings'    => 'pidx_card_title',
+    )));
+
+    $wp_customize->add_setting('pidx_radius', array(
+        'default'           => 8,
+        'sanitize_callback' => 'simple_clean_sanitize_pidx_radius',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control('pidx_radius', array(
+        'type'        => 'number',
+        'label'       => __('Eckenradius', 'fos-online-schulbuch'),
+        'description' => __('In Pixel, 0 bis 24. Der Wert 0 ergibt eckige Karten.', 'fos-online-schulbuch'),
+        'section'     => 'simple_clean_page_index',
+        'settings'    => 'pidx_radius',
+        'input_attrs' => array('min' => 0, 'max' => 24, 'step' => 1),
+    ));
+
+    $wp_customize->add_setting('pidx_density', array(
+        'default'           => 'normal',
+        'sanitize_callback' => 'simple_clean_sanitize_pidx_density',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control('pidx_density', array(
+        'type'        => 'select',
+        'label'       => __('Dichte', 'fos-online-schulbuch'),
+        'description' => __('Abstand zwischen den Karten', 'fos-online-schulbuch'),
+        'section'     => 'simple_clean_page_index',
+        'settings'    => 'pidx_density',
+        'choices'     => array(
+            'kompakt' => __('Kompakt', 'fos-online-schulbuch'),
+            'normal'  => __('Normal', 'fos-online-schulbuch'),
+            'luftig'  => __('Luftig', 'fos-online-schulbuch'),
+        ),
+    ));
 }
 add_action('customize_register', 'simple_clean_customize_register');
+
+/**
+ * Bereinigt den Eckenradius auf 0 bis 24 Pixel.
+ *
+ * @param mixed $wert Eingabe aus dem Customizer.
+ * @return int
+ */
+function simple_clean_sanitize_pidx_radius($wert) {
+    $wert = absint($wert);
+    if ($wert > 24) {
+        return 24;
+    }
+    return $wert;
+}
+
+/**
+ * Bereinigt die Dichte auf einen der drei erlaubten Werte.
+ *
+ * Ein unbekannter Wert fällt auf 'normal' zurück — er darf nicht ungeprüft
+ * ins CSS gelangen.
+ *
+ * @param mixed $wert Eingabe aus dem Customizer.
+ * @return string
+ */
+function simple_clean_sanitize_pidx_density($wert) {
+    $erlaubt = array('kompakt', 'normal', 'luftig');
+    return in_array($wert, $erlaubt, true) ? $wert : 'normal';
+}
+
+/**
+ * Übersetzt die Dichte in einen Abstandswert.
+ *
+ * @param string $dichte Bereinigter Wert.
+ * @return string CSS-Länge.
+ */
+function simple_clean_pidx_gap($dichte) {
+    switch ($dichte) {
+        case 'kompakt':
+            return '0.5rem';
+        case 'luftig':
+            return '1.75rem';
+        default:
+            return '1rem';
+    }
+}
 
 /**
  * Generate Custom CSS from Customizer Settings
@@ -252,6 +377,23 @@ function simple_clean_customizer_css() {
     // Calculate RGB values for rgba() usage
     $ui_surface_rgb = simple_clean_hex_to_rgb($color_ui_surface);
 
+    // Inhaltsverzeichnis-Block. Die Werte laufen durch dieselben
+    // Bereinigungsfunktionen wie beim Speichern — ein per Hand manipulierter
+    // Theme-Mod darf nicht ungeprüft ins CSS gelangen.
+    $pidx_card_bg     = sanitize_hex_color(get_theme_mod('pidx_card_bg', '#ffffff'));
+    $pidx_card_border = sanitize_hex_color(get_theme_mod('pidx_card_border', '#e0e0e0'));
+    $pidx_card_title  = sanitize_hex_color(get_theme_mod('pidx_card_title', '#71230a'));
+    $pidx_radius      = simple_clean_sanitize_pidx_radius(get_theme_mod('pidx_radius', 8));
+    $pidx_gap         = simple_clean_pidx_gap(
+        simple_clean_sanitize_pidx_density(get_theme_mod('pidx_density', 'normal'))
+    );
+
+    // sanitize_hex_color() liefert null bei ungültiger Eingabe — dann greift
+    // der Standardwert, statt eine leere CSS-Deklaration zu erzeugen.
+    $pidx_card_bg     = $pidx_card_bg ? $pidx_card_bg : '#ffffff';
+    $pidx_card_border = $pidx_card_border ? $pidx_card_border : '#e0e0e0';
+    $pidx_card_title  = $pidx_card_title ? $pidx_card_title : '#71230a';
+
     // Generate custom CSS
     $css = "
     <style type='text/css'>
@@ -265,6 +407,16 @@ function simple_clean_customizer_css() {
             --color-text-primary: {$color_text_primary};
             --color-background: {$color_background};
             --color-background-light: {$color_background_light};
+
+            /* Inhaltsverzeichnis-Block. --pidx-accent bekommt bewusst KEINEN
+               eigenen Regler: Die Akzentfarbe soll der übrigen Oberfläche
+               folgen, sonst müsste man sie an zwei Stellen nachziehen. */
+            --pidx-card-bg: {$pidx_card_bg};
+            --pidx-card-border: {$pidx_card_border};
+            --pidx-card-title: {$pidx_card_title};
+            --pidx-accent: {$color_ui_surface};
+            --pidx-radius: {$pidx_radius}px;
+            --pidx-gap: {$pidx_gap};
         }
 
         /* Apply colors to elements */
@@ -340,7 +492,11 @@ add_filter('body_class', 'simple_clean_body_classes');
 function simple_clean_add_navigation_meta_box() {
     add_meta_box(
         'simple_clean_hide_navigation',
-        'Seitenleiste (Sidebar) Einstellungen',
+        // Titel angepasst (v1.5.74): Die Box regelt jetzt zwei Dinge.
+        // Die Meta-Box-ID bleibt bewusst 'simple_clean_hide_navigation' —
+        // daran hängen die gespeicherten Bildschirmeinstellungen der Benutzer
+        // (auf-/zugeklappt, Reihenfolge). Eine Änderung würde sie verwerfen.
+        'Navigation & Inhaltsverzeichnis',
         'simple_clean_navigation_meta_box_callback',
         'page',
         'side',
@@ -384,6 +540,40 @@ function simple_clean_navigation_meta_box_callback($post) {
             ℹ️ <strong>Status:</strong> Sidebar wird auf dieser Seite angezeigt
         </div>
     <?php endif; ?>
+
+    <?php
+    // Zweite Einstellung: Ausschluss aus dem Inhaltsverzeichnis-Block.
+    // Ausgewertet wird das Meta in includes/page-index.php
+    // (simple_clean_page_index_daten) — dort entfällt die Seite samt ihrem
+    // gesamten Unterbaum. Kein zweites Nonce: Das Feld oben deckt die ganze
+    // Box ab.
+    $hide_from_index = get_post_meta($post->ID, '_simple_clean_hide_from_index', true);
+    ?>
+
+    <div style="padding: 10px; background: #f0f7fb; border-left: 4px solid #0073aa; margin: 14px 0 10px;">
+        <label for="simple_clean_hide_from_index" style="display: block; margin-bottom: 8px;">
+            <input type="checkbox"
+                   id="simple_clean_hide_from_index"
+                   name="simple_clean_hide_from_index"
+                   value="1"
+                   <?php checked($hide_from_index, '1'); ?>
+                   style="margin-right: 5px;">
+            <strong>Nicht im Inhaltsverzeichnis anzeigen</strong>
+        </label>
+        <p class="description" style="margin: 5px 0 0; color: #666;">
+            Blendet diese Seite aus dem Block „Inhaltsverzeichnis" aus.<br>
+            <strong>Achtung:</strong> Auch <em>alle Unterseiten</em> verschwinden dann
+            aus dem Verzeichnis.<br>
+            Die Seite bleibt über ihre Adresse erreichbar und erscheint weiterhin
+            in der Seitenleiste.
+        </p>
+    </div>
+
+    <?php if ($hide_from_index === '1'): ?>
+        <div style="padding: 8px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+            🚫 <strong>Status:</strong> Diese Seite und ihre Unterseiten fehlen im Inhaltsverzeichnis
+        </div>
+    <?php endif; ?>
     <?php
 }
 
@@ -415,6 +605,14 @@ function simple_clean_save_navigation_meta($post_id) {
         update_post_meta($post_id, '_simple_clean_hide_navigation', '1');
     } else {
         delete_post_meta($post_id, '_simple_clean_hide_navigation');
+    }
+
+    // Zweite Einstellung derselben Meta-Box: Ausschluss aus dem
+    // Inhaltsverzeichnis. Ausgewertet in includes/page-index.php.
+    if (isset($_POST['simple_clean_hide_from_index']) && $_POST['simple_clean_hide_from_index'] === '1') {
+        update_post_meta($post_id, '_simple_clean_hide_from_index', '1');
+    } else {
+        delete_post_meta($post_id, '_simple_clean_hide_from_index');
     }
 }
 add_action('save_post', 'simple_clean_save_navigation_meta');
