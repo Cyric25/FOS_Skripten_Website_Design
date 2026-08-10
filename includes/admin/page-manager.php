@@ -31,6 +31,28 @@ class Simple_Clean_Page_Manager {
         add_action('wp_ajax_page_manager_create_page', [__CLASS__, 'ajax_create_page']);
         add_action('wp_ajax_page_manager_delete_page', [__CLASS__, 'ajax_delete_page']);
         add_action('wp_ajax_page_manager_toggle_status', [__CLASS__, 'ajax_toggle_status']);
+        add_action('wp_ajax_page_manager_bulk_action', [__CLASS__, 'ajax_bulk_action']);
+    }
+
+    /**
+     * Erlaubte Sammelaktionen.
+     *
+     * Bewusst eine Whitelist: Der Wert aus $_POST wird nur gegen diese Liste
+     * geprüft und nie in einen Methodennamen o. Ä. übersetzt.
+     *
+     * @return array Aktionsschlüssel => Beschriftung
+     */
+    private static function bulk_aktionen() {
+        return [
+            'status_publish' => 'Veröffentlichen',
+            'status_draft'   => 'Auf Entwurf setzen',
+            'set_parent'     => 'Elternseite zuweisen',
+            'hide_index'     => 'Aus Inhaltsverzeichnis ausnehmen',
+            'show_index'     => 'Wieder ins Inhaltsverzeichnis aufnehmen',
+            'hide_nav'       => 'Aus Seitenleiste ausnehmen',
+            'show_nav'       => 'Wieder in Seitenleiste aufnehmen',
+            'trash'          => 'In den Papierkorb',
+        ];
     }
 
     /**
@@ -147,6 +169,47 @@ class Simple_Clean_Page_Manager {
                 <span class="save-status" id="save-status"></span>
             </div>
 
+            <div class="page-bulk-bar">
+                <label class="page-bulk-all">
+                    <input type="checkbox" id="page-select-all" />
+                    Alle auswählen
+                </label>
+
+                <span id="page-bulk-count">0 ausgewählt</span>
+
+                <select id="page-bulk-action">
+                    <option value="">— Aktion wählen —</option>
+                    <optgroup label="Status">
+                        <option value="status_publish">Veröffentlichen</option>
+                        <option value="status_draft">Auf Entwurf setzen</option>
+                    </optgroup>
+                    <optgroup label="Hierarchie">
+                        <option value="set_parent">Elternseite zuweisen</option>
+                    </optgroup>
+                    <optgroup label="Sichtbarkeit">
+                        <option value="hide_index">Aus Inhaltsverzeichnis ausnehmen</option>
+                        <option value="show_index">Wieder ins Inhaltsverzeichnis aufnehmen</option>
+                        <option value="hide_nav">Aus Seitenleiste ausnehmen</option>
+                        <option value="show_nav">Wieder in Seitenleiste aufnehmen</option>
+                    </optgroup>
+                    <optgroup label="Löschen">
+                        <option value="trash">In den Papierkorb</option>
+                    </optgroup>
+                </select>
+
+                <select id="page-bulk-parent" hidden>
+                    <option value="0">(oberste Ebene)</option>
+                    <?php
+                    // Aus dem bereits geladenen Baum, ohne zusätzliche Abfrage.
+                    self::render_parent_options($children_map, 0, 0);
+                    ?>
+                </select>
+
+                <button type="button" class="button" id="page-bulk-apply" disabled>
+                    Ausführen
+                </button>
+            </div>
+
             <!-- Modal für neue Seite -->
             <div id="new-page-modal" class="page-manager-modal" style="display:none;">
                 <div class="page-manager-modal-content">
@@ -200,6 +263,10 @@ class Simple_Clean_Page_Manager {
             data-parent-id="<?php echo esc_attr($page->post_parent); ?>">
 
             <div class="page-item-row">
+                <input type="checkbox" class="page-select"
+                       value="<?php echo esc_attr($page->ID); ?>"
+                       aria-label="<?php echo esc_attr(sprintf('Seite „%s" auswählen', $page->post_title)); ?>" />
+
                 <span class="drag-handle" title="Ziehen zum Verschieben">
                     <span class="dashicons dashicons-menu"></span>
                 </span>
@@ -266,6 +333,29 @@ class Simple_Clean_Page_Manager {
             <?php endif; ?>
         </li>
         <?php
+    }
+
+    /**
+     * Gibt die Auswahloptionen für „Elternseite zuweisen" aus.
+     *
+     * Rekursiv über die bereits aufgebaute Kind-Karte – kein zusätzlicher
+     * Datenbankzugriff. Die Tiefe wird durch Einrückung sichtbar gemacht.
+     *
+     * @param array $children_map Karte: Eltern-ID => Kindseiten
+     * @param int   $parent_id    Aktuelle Ebene
+     * @param int   $tiefe        Verschachtelungstiefe (für die Einrückung)
+     */
+    private static function render_parent_options($children_map, $parent_id, $tiefe) {
+        if (empty($children_map[$parent_id]) || $tiefe > 6) {
+            return;
+        }
+        foreach ($children_map[$parent_id] as $page) {
+            $einzug = str_repeat('— ', $tiefe);
+            echo '<option value="' . esc_attr($page->ID) . '">'
+                . esc_html($einzug . $page->post_title)
+                . '</option>';
+            self::render_parent_options($children_map, $page->ID, $tiefe + 1);
+        }
     }
 
     /**
@@ -555,6 +645,183 @@ class Simple_Clean_Page_Manager {
             'message' => 'Status geändert zu: ' . $status_labels[$new_status],
             'new_status' => $new_status,
             'icon' => ($new_status === 'publish') ? 'dashicons-visibility' : 'dashicons-hidden'
+        ]);
+    }
+
+    /**
+     * AJAX handler: Sammelaktion für mehrere Seiten
+     *
+     * Folgt dem Muster von ajax_update_order(): Rechteprüfung je EINZELSEITE,
+     * Fehler werden gesammelt statt beim ersten Problem abzubrechen.
+     *
+     * ZWEI SCHREIBWEGE, BEWUSST UNTERSCHIEDLICH:
+     * - Status über wp_update_post(), weil dabei save_post feuert. Nur so
+     *   läuft simple_clean_update_glossar_candidates() mit und die Seite
+     *   bekommt ihr Meta _glossar_scan_version. Ohne dieses Meta fällt sie
+     *   beim Rendern auf ALLE Glossarbegriffe zurück — gemessen 1,998 s statt
+     *   0,058 s bei 1049 Begriffen.
+     * - Elternzuweisung über $wpdb->update() plus clean_post_cache(), wie in
+     *   ajax_update_order(). Der Inhalt ändert sich dabei nicht, ein
+     *   Glossar-Scan wäre unnötig.
+     */
+    public static function ajax_bulk_action() {
+        check_ajax_referer('page_manager_nonce', 'nonce');
+
+        if (!current_user_can('edit_pages')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung.']);
+        }
+
+        $aktion = isset($_POST['bulk_action']) ? sanitize_key($_POST['bulk_action']) : '';
+        $erlaubt = self::bulk_aktionen();
+        if (!isset($erlaubt[$aktion])) {
+            wp_send_json_error(['message' => 'Unbekannte Aktion.']);
+        }
+
+        $ids = isset($_POST['page_ids']) ? (array) $_POST['page_ids'] : [];
+        $ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
+        $ids = array_slice($ids, 0, 500);
+
+        if (empty($ids)) {
+            wp_send_json_error(['message' => 'Keine Seiten ausgewählt.']);
+        }
+
+        // Zielelternteil nur bei set_parent
+        $neuer_parent = 0;
+        if ($aktion === 'set_parent') {
+            $neuer_parent = isset($_POST['parent_id']) ? absint($_POST['parent_id']) : 0;
+            if ($neuer_parent > 0) {
+                $ziel = get_post($neuer_parent);
+                if (!$ziel || $ziel->post_type !== 'page') {
+                    wp_send_json_error(['message' => 'Zielseite nicht gefunden.']);
+                }
+            }
+        }
+
+        global $wpdb;
+        $geaendert = 0;
+        $uebersprungen = 0;
+        $errors = [];
+
+        foreach ($ids as $id) {
+            $page = get_post($id);
+            if (!$page || $page->post_type !== 'page') {
+                $errors[] = "Seite ID $id nicht gefunden";
+                continue;
+            }
+
+            if (!current_user_can('edit_page', $id)) {
+                $errors[] = "Keine Berechtigung für „{$page->post_title}\"";
+                continue;
+            }
+
+            switch ($aktion) {
+                case 'status_publish':
+                    if (!current_user_can('publish_pages')) {
+                        $errors[] = "Keine Berechtigung zum Veröffentlichen von „{$page->post_title}\"";
+                        break;
+                    }
+                    if ($page->post_status === 'publish') {
+                        $uebersprungen++;
+                        break;
+                    }
+                    $r = wp_update_post(['ID' => $id, 'post_status' => 'publish'], true);
+                    if (is_wp_error($r)) {
+                        $errors[] = "„{$page->post_title}\": " . $r->get_error_message();
+                    } else {
+                        $geaendert++;
+                    }
+                    break;
+
+                case 'status_draft':
+                    if ($page->post_status === 'draft') {
+                        $uebersprungen++;
+                        break;
+                    }
+                    $r = wp_update_post(['ID' => $id, 'post_status' => 'draft'], true);
+                    if (is_wp_error($r)) {
+                        $errors[] = "„{$page->post_title}\": " . $r->get_error_message();
+                    } else {
+                        $geaendert++;
+                    }
+                    break;
+
+                case 'trash':
+                    if (!current_user_can('delete_page', $id)) {
+                        $errors[] = "Keine Berechtigung zum Löschen von „{$page->post_title}\"";
+                        break;
+                    }
+                    if (wp_trash_post($id)) {
+                        $geaendert++;
+                    } else {
+                        $errors[] = "Fehler beim Löschen von „{$page->post_title}\"";
+                    }
+                    break;
+
+                case 'set_parent':
+                    if ($id === $neuer_parent) {
+                        $errors[] = "„{$page->post_title}\" kann nicht ihr eigenes Elternteil sein";
+                        break;
+                    }
+                    if ($neuer_parent > 0 && self::would_create_circular_reference($id, $neuer_parent)) {
+                        $errors[] = "„{$page->post_title}\" würde eine Schleife in der Hierarchie erzeugen";
+                        break;
+                    }
+                    if ((int) $page->post_parent === $neuer_parent) {
+                        $uebersprungen++;
+                        break;
+                    }
+                    $r = $wpdb->update(
+                        $wpdb->posts,
+                        ['post_parent' => $neuer_parent],
+                        ['ID' => $id],
+                        ['%d'],
+                        ['%d']
+                    );
+                    if ($r === false) {
+                        $errors[] = "Fehler beim Verschieben von „{$page->post_title}\"";
+                    } else {
+                        clean_post_cache($id);
+                        $geaendert++;
+                    }
+                    break;
+
+                case 'hide_index':
+                    update_post_meta($id, '_simple_clean_hide_from_index', '1');
+                    $geaendert++;
+                    break;
+
+                case 'show_index':
+                    delete_post_meta($id, '_simple_clean_hide_from_index');
+                    $geaendert++;
+                    break;
+
+                case 'hide_nav':
+                    update_post_meta($id, '_simple_clean_hide_navigation', '1');
+                    $geaendert++;
+                    break;
+
+                case 'show_nav':
+                    delete_post_meta($id, '_simple_clean_hide_navigation');
+                    $geaendert++;
+                    break;
+            }
+        }
+
+        // Nur Aktionen, die den Baum sichtbar verändern, brauchen ein Neuladen.
+        $reload = in_array($aktion, ['status_publish', 'status_draft', 'trash', 'set_parent'], true);
+
+        $meldung = sprintf('%d Seite(n) geändert.', $geaendert);
+        if ($uebersprungen > 0) {
+            $meldung .= sprintf(' %d ohne Änderung.', $uebersprungen);
+        }
+
+        wp_send_json_success([
+            'aktion'        => $aktion,
+            'geaendert'     => $geaendert,
+            'uebersprungen' => $uebersprungen,
+            'errors'        => $errors,
+            'message'       => $meldung,
+            'reload'        => $reload,
         ]);
     }
 }

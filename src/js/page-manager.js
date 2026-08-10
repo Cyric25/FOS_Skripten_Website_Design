@@ -27,6 +27,7 @@
             this.bindEvents();
             this.initSortables();
             this.restoreExpandedState();
+            this.aktualisiereAuswahl();
         },
 
         /**
@@ -132,6 +133,48 @@
                 self.saveExpandedState();
             });
 
+            // --- Sammelaktionen ---------------------------------------
+            // Ereignisse an document binden, damit sie auch nach einem
+            // Neuladen des Baums greifen.
+
+            // Auswahl einer einzelnen Zeile
+            $(document).on('change', '.page-select', function() {
+                self.aktualisiereAuswahl();
+            });
+
+            // Bereichsauswahl mit gedrückter Umschalttaste
+            $(document).on('click', '.page-select', function(e) {
+                const $alle = $('.page-select:visible');
+                const index = $alle.index(this);
+
+                if (e.shiftKey && self.letzteAuswahl !== null && self.letzteAuswahl !== index) {
+                    const von = Math.min(self.letzteAuswahl, index);
+                    const bis = Math.max(self.letzteAuswahl, index);
+                    const zustand = this.checked;
+                    $alle.slice(von, bis + 1).prop('checked', zustand);
+                    self.aktualisiereAuswahl();
+                }
+                self.letzteAuswahl = index;
+            });
+
+            // Alle auswählen
+            $('#page-select-all').on('change', function() {
+                $('.page-select:visible').prop('checked', this.checked);
+                self.letzteAuswahl = null;
+                self.aktualisiereAuswahl();
+            });
+
+            // Aktionswahl – die Elternauswahl nur bei set_parent zeigen
+            $('#page-bulk-action').on('change', function() {
+                $('#page-bulk-parent').prop('hidden', this.value !== 'set_parent');
+                self.aktualisiereAuswahl();
+            });
+
+            // Ausführen
+            $('#page-bulk-apply').on('click', function() {
+                self.fuehreBulkAus();
+            });
+
             // Collapse all
             $('#collapse-all').on('click', function() {
                 $('.page-tree-children').slideUp(200, function() {
@@ -143,6 +186,107 @@
                     .removeClass('dashicons-arrow-down-alt2')
                     .addClass('dashicons-arrow-right-alt2');
                 self.saveExpandedState();
+            });
+        },
+
+        /**
+         * Index der zuletzt angeklickten Auswahl-Checkbox (für Shift-Bereiche)
+         */
+        letzteAuswahl: null,
+
+        /**
+         * Auswahlzähler, Kopf-Checkbox und Ausführen-Knopf nachziehen
+         */
+        aktualisiereAuswahl: function() {
+            const $alle = $('.page-select:visible');
+            const $gewaehlt = $alle.filter(':checked');
+            const anzahl = $gewaehlt.length;
+
+            $('#page-bulk-count').text(anzahl + ' ausgewählt');
+
+            const aktion = $('#page-bulk-action').val();
+            $('#page-bulk-apply').prop('disabled', anzahl === 0 || !aktion);
+
+            const $alleBox = $('#page-select-all');
+            if ($alleBox.length) {
+                $alleBox.prop('checked', anzahl > 0 && anzahl === $alle.length);
+                $alleBox.prop('indeterminate', anzahl > 0 && anzahl < $alle.length);
+            }
+        },
+
+        /**
+         * Sammelaktion ausführen
+         */
+        fuehreBulkAus: function() {
+            const self = this;
+            const ids = $('.page-select:checked').map(function() {
+                return parseInt(this.value, 10);
+            }).get();
+            const aktion = $('#page-bulk-action').val();
+
+            if (ids.length === 0 || !aktion) {
+                return;
+            }
+
+            // Rückfragen bei allem, was nach außen sichtbar oder schwer
+            // rückgängig zu machen ist.
+            if (aktion === 'trash') {
+                if (!confirm('Sollen ' + ids.length + ' Seite(n) wirklich in den Papierkorb verschoben werden?')) {
+                    return;
+                }
+            } else if (aktion === 'status_publish') {
+                if (!confirm(ids.length + ' Seite(n) veröffentlichen?')) {
+                    return;
+                }
+            }
+
+            const daten = {
+                action: 'page_manager_bulk_action',
+                nonce: pageManagerData.nonce,
+                bulk_action: aktion,
+                page_ids: ids
+            };
+            if (aktion === 'set_parent') {
+                daten.parent_id = parseInt($('#page-bulk-parent').val(), 10) || 0;
+            }
+
+            $('#page-bulk-apply').prop('disabled', true);
+            self.showStatus('saving', 'Aktion wird ausgeführt...');
+
+            $.ajax({
+                url: pageManagerData.ajaxUrl,
+                type: 'POST',
+                data: daten,
+                success: function(response) {
+                    if (!response.success) {
+                        self.showStatus('error', response.data.message);
+                        self.aktualisiereAuswahl();
+                        return;
+                    }
+
+                    let meldung = response.data.message;
+                    if (response.data.errors && response.data.errors.length > 0) {
+                        console.warn('Sammelaktion – übersprungene Seiten:', response.data.errors);
+                        meldung += ' (' + response.data.errors.length
+                            + ' übersprungen — Details in der Konsole)';
+                    }
+                    self.showStatus('saved', meldung);
+
+                    if (response.data.reload) {
+                        // Aufklapp-Zustand sichern, damit er das Neuladen
+                        // übersteht (dasselbe Muster wie in createPage()).
+                        self.saveExpandedState();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 600);
+                    } else {
+                        self.aktualisiereAuswahl();
+                    }
+                },
+                error: function() {
+                    self.showStatus('error', 'Fehler bei der Sammelaktion.');
+                    self.aktualisiereAuswahl();
+                }
             });
         },
 
