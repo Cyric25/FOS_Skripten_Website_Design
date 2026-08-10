@@ -1122,6 +1122,38 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
 ### Admin-Werkzeuge (includes/admin/)
 - `page-manager.php`: Seiten-Übersicht mit Drag-Sortierung, Anlegen/Löschen/
   Status-Toggle per AJAX (`page_manager_*`), Rechteprüfung pro Einzelseite.
+
+  **Sammelaktionen (seit v1.5.76).** Auswahlkästchen je Zeile plus Leiste
+  `.page-bulk-bar`; ein zusätzlicher Endpunkt `page_manager_bulk_action`
+  (Nonce `page_manager_nonce`, wie die vier bestehenden). Acht Aktionen als
+  **Whitelist** in `bulk_aktionen()`: `status_publish`, `status_draft`,
+  `set_parent`, `hide_index`, `show_index`, `hide_nav`, `show_nav`, `trash`.
+  Der Wert aus `$_POST` wird nur gegen diese Liste geprüft und nie in einen
+  Methodennamen übersetzt.
+
+  Rechte werden **je Einzelseite** geprüft (`edit_page`), beim Veröffentlichen
+  zusätzlich `publish_pages`, beim Papierkorb `delete_page`. Fehler werden
+  gesammelt statt beim ersten Problem abzubrechen — dasselbe Muster wie in
+  `ajax_update_order()`. `set_parent` nutzt die vorhandene
+  `would_create_circular_reference()`.
+
+  **Zwei Schreibwege, bewusst unterschiedlich — nicht vereinheitlichen:**
+
+  | Aktion | Weg | Grund |
+  |---|---|---|
+  | Status | `wp_update_post()` | feuert `save_post`, dadurch läuft `simple_clean_update_glossar_candidates()` mit und die Seite bekommt `_glossar_scan_version`. Ohne dieses Meta fällt sie beim Rendern auf **alle** Glossarbegriffe zurück (gemessen 1,998 s statt 0,058 s bei 1049 Begriffen) |
+  | Elternseite | `$wpdb->update()` + `clean_post_cache()` | wie `ajax_update_order()`; der Inhalt ändert sich nicht, ein Glossar-Scan wäre unnötig |
+  | Meta-Aktionen | `update_post_meta()` / `delete_post_meta()` mit dem String `'1'` | identisch zur Meta-Box in `functions.php` (Zeilen 604–615); eine abweichende Schreibweise würde von `includes/page-index.php` und `sidebar.php` nicht erkannt |
+
+  Die Antwort enthält `reload`: wahr bei Aktionen, die den Baum sichtbar
+  verändern (Status, Papierkorb, Elternseite), falsch bei den Meta-Aktionen —
+  dort genügt eine Statusmeldung. Vor dem Neuladen sichert das JavaScript den
+  Aufklapp-Zustand, wie `createPage()` es tut.
+
+  **Zur Drag-Sortierung:** Das Sortable ist mit `handle: '.drag-handle'`
+  initialisiert. Ein Klick auf das Auswahlkästchen kann deshalb kein Ziehen
+  auslösen — eine `cancel`-Option ist **nicht** nötig und wurde bewusst nicht
+  ergänzt. Wer `handle` entfernt, muss sie nachrüsten.
 - `clipboard-uploader.php`: Bilder aus der Zwischenablage in die Mediathek
   (Capability `upload_files`).
 
