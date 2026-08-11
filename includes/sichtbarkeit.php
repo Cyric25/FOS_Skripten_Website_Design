@@ -378,3 +378,211 @@ function simple_clean_lehrerhinweis_ausgeben($seiten_id) {
 function simple_clean_lehrerhinweis_titel($titel) {
     return __('Nur für Lehrpersonen', 'simple-clean-theme') . ' – ' . get_bloginfo('name');
 }
+
+// ===================================================================
+// AUSBLENDEN IN FLACHEN LISTEN: MENÜ, SUCHE, REST, SITEMAP
+// ===================================================================
+
+/**
+ * Die auszuschließenden Seiten-IDs als einfache Liste.
+ *
+ * Anders als bei Seitenleiste und Inhaltsverzeichnis gibt es hier keine
+ * Baumstruktur, die den Unterbaum von selbst mitnimmt — eine Unterseite steht
+ * in einer flachen Liste für sich. Deshalb die Variante MIT Unterbaum.
+ *
+ * Für Lehrpersonen immer leer; die Filter unten steigen dann sofort aus.
+ *
+ * @return int[]
+ */
+function simple_clean_gesperrte_ids_liste() {
+    if (simple_clean_ist_lehrperson()) {
+        return array();
+    }
+
+    return array_keys(simple_clean_gesperrte_seiten_mit_unterbaum());
+}
+
+/**
+ * Gesperrte Seiten aus dem Hauptmenü nehmen.
+ *
+ * Zwei Durchgänge: erst die Einträge, die direkt auf eine gesperrte Seite
+ * zeigen, dann alle Einträge, deren Elterneintrag dadurch verschwunden ist —
+ * so lange, bis sich nichts mehr ändert. Ein Untereintrag ohne Elterneintrag
+ * würde sonst als eigener Menüpunkt oben auftauchen.
+ *
+ * @param array $items
+ * @return array
+ */
+function simple_clean_menue_filtern($items) {
+    $ids = simple_clean_gesperrte_ids_liste();
+    if (empty($ids) || empty($items)) {
+        return $items;
+    }
+
+    $gesperrt = array_fill_keys($ids, true);
+    $behalten = array();
+
+    foreach ($items as $item) {
+        if (isset($item->object) && 'page' === $item->object
+            && isset($gesperrt[(int) $item->object_id])) {
+            continue;
+        }
+        $behalten[(int) $item->ID] = $item;
+    }
+
+    // Verwaiste Untereinträge entfernen, bis nichts mehr wegfällt.
+    do {
+        $vorher = count($behalten);
+        foreach ($behalten as $id => $item) {
+            $eltern = isset($item->menu_item_parent) ? (int) $item->menu_item_parent : 0;
+            if ($eltern > 0 && !isset($behalten[$eltern])) {
+                unset($behalten[$id]);
+            }
+        }
+    } while (count($behalten) < $vorher);
+
+    return array_values($behalten);
+}
+add_filter('wp_get_nav_menu_items', 'simple_clean_menue_filtern', 10, 1);
+
+/**
+ * Gesperrte Seiten aus jedem wp_list_pages() nehmen.
+ *
+ * Betrifft vor allem den Menü-Rückfall `simple_clean_fallback_menu()` in der
+ * functions.php, der greift, solange kein Menü zugewiesen ist.
+ *
+ * @param array $ausgeschlossen
+ * @return array
+ */
+function simple_clean_list_pages_ausschluss($ausgeschlossen) {
+    $ids = simple_clean_gesperrte_ids_liste();
+    if (empty($ids)) {
+        return $ausgeschlossen;
+    }
+
+    return array_merge((array) $ausgeschlossen, $ids);
+}
+add_filter('wp_list_pages_excludes', 'simple_clean_list_pages_ausschluss');
+
+/**
+ * Gesperrte Seiten aus Abfragen nehmen — Suche, Archive, REST-Listen.
+ *
+ * BEWUSST NICHT auf `is_main_query()` beschränkt: Die REST-Schnittstelle und
+ * der Suchendpunkt bauen eigene Abfragen, die nie die Hauptabfrage sind. Wer
+ * hier auf die Hauptabfrage einschränkt, lässt genau diese Wege offen.
+ *
+ * BEWUSST NICHT bei `is_singular()`: Der Aufruf einer einzelnen Seite muss die
+ * Seite finden, damit `simple_clean_lehrerseite_pruefen()` (Priorität 20 auf
+ * `template_redirect`) die Hinweisseite mit HTTP 403 ausgeben kann. Würde die
+ * Abfrage die Seite verschlucken, gäbe es stattdessen ein gewöhnliches 404 —
+ * ohne Erklärung und ohne Anmelde-Link.
+ *
+ * @param WP_Query $query
+ * @return void
+ */
+function simple_clean_query_ausschluss($query) {
+    if (is_admin() || !($query instanceof WP_Query) || $query->is_singular()) {
+        return;
+    }
+
+    // Abfragen anderer Inhaltstypen nicht anfassen (Beiträge, Glossarbegriffe,
+    // Menüeinträge, Anhänge). Ein leerer oder 'any'-Typ kann Seiten enthalten
+    // und wird deshalb behandelt.
+    $typ = $query->get('post_type');
+    if (!empty($typ) && 'any' !== $typ && !in_array('page', (array) $typ, true)) {
+        return;
+    }
+
+    $ids = simple_clean_gesperrte_ids_liste();
+    if (empty($ids)) {
+        return;
+    }
+
+    $vorhanden = (array) $query->get('post__not_in');
+    $query->set('post__not_in', array_merge($vorhanden, $ids));
+}
+add_action('pre_get_posts', 'simple_clean_query_ausschluss');
+
+/**
+ * Gesperrte Seiten aus REST-Sammlungen nehmen (`/wp/v2/pages`).
+ *
+ * @param array $args
+ * @return array
+ */
+function simple_clean_rest_ausschluss($args) {
+    $ids = simple_clean_gesperrte_ids_liste();
+    if (empty($ids)) {
+        return $args;
+    }
+
+    $vorhanden = isset($args['post__not_in']) ? (array) $args['post__not_in'] : array();
+    $args['post__not_in'] = array_merge($vorhanden, $ids);
+
+    return $args;
+}
+add_filter('rest_page_query', 'simple_clean_rest_ausschluss');
+
+/**
+ * Einzelne Seiten über die REST-Schnittstelle sperren
+ * (`/wp/v2/pages/<id>`).
+ *
+ * NÖTIG, WEIL `rest_page_query` NUR SAMMLUNGEN FILTERT. Der Abruf einer
+ * einzelnen Seite geht daran vorbei und lieferte sonst Titel und
+ * vollständigen Inhalt an jeden — die Sperre wäre mit einer einzigen URL
+ * auszuhebeln.
+ *
+ * @param mixed           $ergebnis
+ * @param WP_REST_Server  $server
+ * @param WP_REST_Request $request
+ * @return mixed
+ */
+function simple_clean_rest_einzelseite($ergebnis, $server, $request) {
+    if (null !== $ergebnis) {
+        return $ergebnis;
+    }
+
+    if ('GET' !== $request->get_method()) {
+        return $ergebnis;
+    }
+
+    if (!preg_match('#^/wp/v2/pages/(\d+)#', (string) $request->get_route(), $treffer)) {
+        return $ergebnis;
+    }
+
+    $seiten_id = (int) $treffer[1];
+
+    if (simple_clean_seite_sichtbar($seiten_id)) {
+        return $ergebnis;
+    }
+
+    return new WP_Error(
+        'rest_forbidden',
+        __('Diese Seite ist nur für angemeldete Lehrpersonen sichtbar.', 'simple-clean-theme'),
+        array('status' => 403)
+    );
+}
+add_filter('rest_pre_dispatch', 'simple_clean_rest_einzelseite', 10, 3);
+
+/**
+ * Gesperrte Seiten aus der XML-Sitemap nehmen.
+ *
+ * @param array  $args
+ * @param string $post_type
+ * @return array
+ */
+function simple_clean_sitemap_ausschluss($args, $post_type) {
+    if ('page' !== $post_type) {
+        return $args;
+    }
+
+    $ids = simple_clean_gesperrte_ids_liste();
+    if (empty($ids)) {
+        return $args;
+    }
+
+    $vorhanden = isset($args['post__not_in']) ? (array) $args['post__not_in'] : array();
+    $args['post__not_in'] = array_merge($vorhanden, $ids);
+
+    return $args;
+}
+add_filter('wp_sitemaps_posts_query_args', 'simple_clean_sitemap_ausschluss', 10, 2);

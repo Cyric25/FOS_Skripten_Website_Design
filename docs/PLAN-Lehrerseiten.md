@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.4 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.5 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -897,7 +897,7 @@ denselben Fehler und muss auf das mu-Plugin-Verfahren umgestellt werden.
 
 ### AP-1.5: Ausblenden in Menü, Suche, REST und Sitemap
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** sonnet (vier gleichartige Filter, Vorgehen vorgezeichnet)
 **Abhängigkeiten:** AP-1.1, AP-1.3 (ändert dieselbe Datei — nicht parallel)
@@ -978,6 +978,84 @@ gesperrten Seiten **einschließlich aller Nachfahren** liefert.
   unveränderter Reihenfolge.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. Sechs Filter in `includes/sichtbarkeit.php`, alle über
+die eine Hilfsfunktion `simple_clean_gesperrte_ids_liste()`.
+
+**Zwei Abweichungen vom AP-Text — beide, weil der Text ein Loch gelassen
+hätte:**
+
+1. **`pre_get_posts` gilt für ALLE Abfragen, nicht nur die Hauptabfrage.**
+   Der Plan schrieb `$query->is_main_query()` vor. Die REST-Schnittstelle und
+   der Suchendpunkt bauen aber eigene Abfragen, die nie die Hauptabfrage sind —
+   mit der Einschränkung wären genau diese Wege offen geblieben. Stattdessen:
+   kein `is_main_query()`, dafür Ausstieg bei `is_singular()` und bei Abfragen
+   fremder Inhaltstypen.
+
+   **`is_singular()` auszunehmen ist zwingend.** Sonst fände die Abfrage die
+   gesperrte Seite nicht mehr, `get_queried_object_id()` wäre 0, und statt der
+   Hinweisseite mit 403 käme ein gewöhnliches 404 — ohne Erklärung und ohne
+   Anmelde-Link. Nachgemessen: Die gesperrte Seite liefert weiterhin 403 mit
+   Hinweisseite.
+
+2. **Einzelne Seiten über REST waren nicht abgedeckt.** `rest_page_query`
+   filtert nur Sammlungen; `/wp-json/wp/v2/pages/31` ging daran vorbei und
+   hätte Titel und vollständigen Inhalt an jeden geliefert — die Sperre wäre
+   mit einer einzigen URL auszuhebeln gewesen. Ergänzt: ein Filter auf
+   `rest_pre_dispatch`, der Routen `^/wp/v2/pages/<id>` prüft und bei
+   gesperrter Seite `WP_Error` mit Status 403 zurückgibt.
+
+**Gemessene Ergebnisse (abgemeldet / angemeldet):**
+
+| Prüfung | abgemeldet | angemeldet |
+|---|---|---|
+| Hauptmenü (gerendert) | Kapitel, Normale Unterseite, Verzeichnis | zusätzlich „Loesungen Test" **und** dessen Untereintrag |
+| REST `/wp/v2/pages` | 29, 30, 33 | 29, 30, 31, 32, 33 |
+| REST `/wp/v2/pages/31` | **403** `rest_forbidden` | 200 |
+| REST `/wp/v2/pages/32` | **403** | 200 |
+| REST `/wp/v2/pages/30` | 200 | 200 |
+| REST-Suche „Zwirbelquark" / „Distelbohne" | `[]` | – |
+| REST-Suche „Rankenpilz" | 1 Treffer (ID 30) | – |
+| HTML-Suche „Zwirbelquark" / „Distelbohne" | keine Ergebnis-Links | – |
+| HTML-Suche „Rankenpilz" | Link auf „Normale Unterseite" | – |
+| Gesperrte Seite direkt | **403 mit Hinweisseite** (nicht 404) | 200 |
+
+Die **Waisen-Logik im Menü** ist geprüft: Der Prüfaufbau enthält bewusst einen
+Menüeintrag, dessen Elterneintrag die gesperrte Seite ist. Er verschwindet
+für Besucher mit — sonst stünde er ohne Elterneintrag als eigener Menüpunkt
+oben.
+
+**Zwei Testfallen, in die ich gelaufen bin — für spätere APs wichtig:**
+
+- **REST-Prüfungen „angemeldet" brauchen einen Nonce.** Ein Cookie allein
+  genügt der REST-Schnittstelle nicht; ohne `X-WP-Nonce` gilt die Anfrage als
+  anonym. Mein erster Durchgang sah deshalb so aus, als sperre der Filter auch
+  Lehrpersonen aus. Mit `wp_create_nonce('wp_rest')` im Header: alle fünf
+  Seiten in der Sammlung, Einzelseiten 200. **Der Block-Editor ist also nicht
+  betroffen** — genau das musste belegt werden.
+- **Ein Testskript, das `wp_set_current_user($admin)` aufruft, hat keine
+  Besuchersicht mehr.** Mein erster Menü-Test zeigte deshalb keinerlei
+  Filterwirkung. Mit `wp_set_current_user(0)` greift der Filter wie erwartet.
+
+**Nicht abschließend prüfbar: die Sitemap.** Diese Installation liefert unter
+jeder Sitemap-Adresse 404, weil sie PATHINFO-Permalinks (`/index.php/…`) ohne
+mod_rewrite nutzt. **Das liegt nicht an dieser Änderung:** Mit abgehängten
+Filtern gibt `WP_Sitemaps_Posts::get_url_list('page', 1)` ebenfalls 0 URLs
+zurück. Geprüft wurde deshalb der Filter selbst:
+
+| Aufruf | Ergebnis |
+|---|---|
+| `wp_sitemaps_posts_query_args`, `post_type=page`, Besuchersicht | `post__not_in = 31,32` |
+| dasselbe mit `post_type=post` | unverändert (`999`) |
+| bestehendes `post__not_in=[999]` | wird ergänzt zu `999,31,32`, nicht ersetzt |
+
+**Für AP-3.1:** Prüfzeile 8 (Sitemap) lässt sich in dieser Umgebung nicht über
+die URL prüfen. Entweder über den Anbieter wie oben, oder auf der
+Produktivinstallation. Als Befund vermerken, nicht als bestanden abhaken.
+
+**Prüfaufbau erweitert:** Es gibt jetzt ein Menü „Testmenue Lehrerseiten",
+zugewiesen an die Position `primary`, mit fünf Einträgen (darunter der
+gesperrte und ein Kind davon). Es bleibt für die folgenden APs stehen.
 
 ---
 
@@ -2063,7 +2141,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.2 | Häkchen „Nur für Lehrpersonen" in der Meta-Box | sonnet | ☑ | AP-1.1 | Theme | 20 Prüfungen grün; Box heißt jetzt „Navigation, Verzeichnis & Zugriff" |
 | AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☑ | AP-1.1 | Theme | 403 + Hinweisseite; Passwortschutz gewinnt weiterhin; Prüfaufbau (IDs 29–32) angelegt |
 | AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☑ | AP-1.1 | Theme | +1 Abfrage gemessen; Messanleitung in AP-3.1 korrigiert |
-| AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☐ | AP-1.1, AP-1.3 | Theme | |
+| AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☑ | AP-1.1, AP-1.3 | Theme | REST-Einzelseite zusätzlich geschlossen; Sitemap in dieser Umgebung nicht über URL prüfbar |
 | AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☐ | AP-1.1, AP-1.2 | Theme | parallel zu 1.3/1.4/1.5 |
 | AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | Theme | |
 | AP-1.doc | Dokumentation Phase 1 | sonnet | ☐ | AP-1.rev | Theme | |
@@ -2088,7 +2166,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | AP-1.2 | Skript im Webroot: Meta-Box rendern, mit echtem Nonce speichern, `wp_postmeta` direkt auslesen, Löschen prüfen, Regression der zwei bestehenden Häkchen, ungültiges Nonce; `php -l`; PHP-7.4-Parse | **bestanden** — 20/20 grün. Eine Prüfung war anfangs rot (Messfehler: `wp_nonce_field` schreibt den Namen als `id=` **und** `name=`; es ist genau ein Feld). `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | 2026-08-11 | AP-1.3 | `curl` gegen die Testinstallation: gesperrte Seite und Unterseite abgemeldet und angemeldet, Statuszeile, Cache-Header, `noindex`, Titel- und Kunstwort-Leck, Anmelde- und Rücksprung-Link, normale Seiten, Website-Passwortschutz ein/aus; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 erneut | **bestanden** — 403 mit `no-store`, Seitentitel und Lösungswörter 0-mal im Dokument, Vererbung greift, angemeldet HTTP 200 vollständig, bei aktivem Website-Passwort erscheint die Passwortabfrage (nicht die Hinweisseite). `debug.log` ohne Theme-Einträge, Webroot ohne Reste | Claude (Opus) |
 | 2026-08-11 | AP-1.4 | Seitenleiste und Block „Inhaltsverzeichnis" je abgemeldet und angemeldet; Gegenprobe mit entferntem Häkchen; Abfragezahl über `?sc_perf=1` mit erzwungener Besuchersicht; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 | **bestanden** — gesperrte Seite und ihr Unterbaum fehlen abgemeldet in beiden Bäumen (0 Treffer), angemeldet vollständig da. Ohne Häkchen alles wieder sichtbar. **+1 Abfrage** (37/38 → 38/39). `debug.log` ohne Theme-Einträge | Claude (Opus) |
-| | AP-1.5 | | | |
+| 2026-08-11 | AP-1.5 | Hauptmenü gerendert und über `wp_get_nav_menu_items()`, HTML-Suche, REST-Sammlung, REST-Einzelseite, REST-Suche, `wp_list_pages`, Sitemap-Filter isoliert; je abgemeldet und angemeldet (REST mit `X-WP-Nonce`); Gegenprobe 403 statt 404; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 | **bestanden bis auf eine nicht prüfbare Zeile** — Menü inkl. Waisen-Untereintrag gefiltert, Suche ohne Treffer, REST-Sammlung ohne 31/32, REST-Einzelseite 403, angemeldet überall vollständig, gesperrte Seite weiterhin 403 mit Hinweisseite. **Sitemap:** in dieser Installation generell 404 (PATHINFO-Permalinks ohne mod_rewrite), auch ohne die Filter — Filter isoliert geprüft und korrekt | Claude (Opus) |
 | | AP-1.6 | | | |
 | | **Phase 1** Integration + Regression | | | |
 | | AP-1.rev | | | |
