@@ -1374,6 +1374,39 @@ wenn nichts gesperrt ist. Für Angemeldete keine.
 `add_filter('simple_clean_ist_lehrperson', '__return_false');` erzwingt die
 Besuchersicht, während `?sc_perf=1` weiter ausgibt.
 
+## Klassenansicht (kommt aus dem CDB-Plugin)
+
+**Sie greift tief ins Theme, steht aber nicht in dessen Code.** Wer nur diese
+Datei liest, hält Kopfleiste und Seitenleiste für unangetastet — sie sind es
+im Klassenmodus nicht.
+
+Das Plugin „Container Block Designer" bringt ein Klassensystem mit: Schüler
+melden sich über den Shortcode `[cbd_classroom]` mit einem Klassenpasswort an
+und rufen danach normale Seiten mit `?classroom=<id>&token=<token>` auf. In
+diesem Modus tut `assets/js/classroom-page-filter.js` im Browser Folgendes:
+
+- blendet `.site-header` aus und setzt **eine eigene Kopfleiste** davor
+  (`#cbd-classroom-nav-header`),
+- **ersetzt den Inhalt von `#sidebar`** durch die Klassen-Navigation — dabei
+  werden die Theme-Klassen `page-tree`, `page-item`, `page-link` usw.
+  wiederverwendet, damit die Gestaltung passt,
+- hängt an jeden internen Link die Klassenparameter an,
+- versteckt Container-Blöcke, die für die Klasse nicht als „behandelt"
+  markiert sind.
+
+**Folgen für Arbeiten am Theme:** Wer diese CSS-Klassen oder die Struktur von
+`#sidebar` umbenennt, bricht die Klassenansicht — der Fehler zeigt sich nur im
+Klassenmodus und fällt beim normalen Testen nicht auf. Wer am Aufbau der
+Seitenleiste arbeitet, sollte einmal mit Klassenparametern gegenprüfen.
+
+Auf Seiten, die **nur für Lehrpersonen** sichtbar sind (Abschnitt oben),
+filtert das Plugin zusätzlich **serverseitig** — dort steht nur noch im HTML,
+was freigegeben ist. Verbunden sind beide Seiten über den Filter
+`simple_clean_lehrerseite_freigeben`.
+
+Details: `Plugins/CDB-Designer/CLAUDE.md`, Abschnitt „Klassen-Durchlass für
+gesperrte Seiten".
+
 ## Diagnose: Wo geht die Zeit hin?
 
 Auf einem Shared Hosting ohne SSH und ohne WP-CLI steht kein Profiler zur
