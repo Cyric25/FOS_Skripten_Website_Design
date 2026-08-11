@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (Phase 2 abgeschlossen)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-3.1 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -2062,7 +2062,7 @@ lässt.
 
 ### AP-3.1: Durchgang durch alle Sperrstellen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** opus (Beurteilung, ob die Sperre wirklich dicht ist)
 **Abhängigkeiten:** AP-2.doc
@@ -2163,6 +2163,123 @@ Testprotokoll aufgenommen.
   dem AP.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. **20 Zeilen bestanden, 2 rot — und die zwei roten
+haben ein echtes Leck aufgedeckt (behoben in AP-3.1.fix1). Eine Zeile bleibt
+offen.**
+
+| # | Pruefung | Ergebnis |
+|---|---|---|
+| 1 | Seitenleiste | „Loesungen Test" und „Loesungen Detail" fehlen |
+| 2 | Inhaltsverzeichnis | beide fehlen |
+| 3 | Hauptmenue | Eintrag fehlt (samt Waisen-Untereintrag) |
+| 4 | Suche „Fabelbirne" | kein Ergebnis-Link |
+| 5 | Suche „Zwirbelquark" | kein Ergebnis-Link |
+| 6 | `/wp/v2/pages` | 31 und 32 fehlen |
+| 7 | `/wp/v2/search?search=Fabelbirne` | kein Treffer |
+| **8** | **Sitemap** | **OFFEN — in dieser Umgebung generell 404** |
+| 9 | Direktaufruf „Loesungen Test" | 403 |
+| 10 | Direktaufruf „Loesungen Detail" | 403 |
+| 11 | Quelltext der Hinweisseite | Titel kommt 0-mal vor |
+| **12** | **`?page_id=31`** | **war 301 mit Slug im Location-Kopf → AP-3.1.fix1** |
+| **13** | **`?preview=true`** | **dasselbe → AP-3.1.fix1** |
+| 14 | Feed | keine gesperrten Inhalte |
+| 15 | Klassenanmeldung | Seite oeffnet sich (200) |
+| 16 | Quelltext dort | „Zwirbelquark" 1x, „Fabelbirne"/„Nebelkeks" 0x |
+| 17 | „Loesungen Detail" in der Klassenansicht | 403 (keine Markierungen) |
+| 18 | gueltiges Token, fremdes `?classroom=` | 403 |
+| 19 | Token nach Loeschen des Transients | 403; nach Wiederherstellen wieder 200 |
+| 20 | nicht gesperrte Seite in der Klassenansicht | alle Container im Quelltext |
+| 21 | angemeldet | alle Seiten 200 und vollstaendig |
+
+**`debug.log` ohne eine einzige Fehlerzeile** aus Theme oder Plugin.
+
+**Caching:** In der Testinstallation ist **kein** Caching-Plugin aktiv,
+`WP_CACHE` ist aus, `advanced-cache.php` fehlt. Der Punkt ist damit hier nicht
+pruefbar und bleibt ein **Betriebshinweis fuer die Produktivinstallation**:
+Die Unterscheidung haengt am Anmeldestatus; ein Seiten-Cache muss fuer
+angemeldete Benutzer umgangen werden. Die Hinweisseite sendet
+`nocache_headers()`, ihre Antwort wird also nicht gespeichert.
+
+**Zeile 8 bleibt offen.** Diese Installation nutzt PATHINFO-Permalinks
+(`/index.php/...`) ohne mod_rewrite und liefert unter jeder Sitemap-Adresse
+404 — auch mit abgehaengten Filtern und auch bei
+`WP_Sitemaps_Posts::get_url_list()` direkt. Der Filter selbst ist isoliert
+geprueft (AP-1.5) und ergaenzt `post__not_in` korrekt. **Auf der
+Produktivinstallation nach dem Ausrollen nachholen:**
+`/wp-sitemap-posts-page-1.xml` abgemeldet aufrufen und pruefen, dass die
+gesperrten Seiten fehlen.
+
+**Nicht geprueft:** das Ziehen von Seiten per Maus im Seitenmanager (ohne
+Browser nicht sinnvoll; der Code daran wurde nicht angefasst).
+
+---
+
+### AP-3.1.fix1: Kanonische Weiterleitung und head verraten den Slug
+
+**Status:** ☑ erledigt (2026-08-11)
+**Umfang:** S
+**Modell:** opus
+**Abhaengigkeiten:** AP-3.1 (Befund kritisch)
+
+**Ziel & Kontext:**
+
+Befund aus AP-3.1, Zeilen 12 und 13. Der Aufruf `?page_id=31` einer gesperrten
+Seite endete mit **HTTP 301**, nicht mit der Hinweisseite:
+`redirect_canonical()` haengt ebenfalls an `template_redirect`, aber auf
+Prioritaet 10 — also **vor** der Sperre auf Prioritaet 20. Der
+`Location`-Kopf nannte dabei den Slug: `.../kapitel-test/loesungen-test/`.
+
+Damit liessen sich durch blosses Durchprobieren von Seiten-IDs die Namen aller
+Loesungsseiten einsammeln. Eine nicht vergebene ID verhaelt sich zudem anders
+(`Location: /?page_id=99999`) — die Weiterleitung war also auch ein Orakel
+dafuer, welche IDs ueberhaupt existieren.
+
+Nach dem Abstellen der Weiterleitung zeigte sich dasselbe Leck ein zweites
+Mal, nun **im Rumpf der Hinweisseite**: `rel="canonical"`, die zwei
+oEmbed-Verweise und der Parameter `redirect_to` des Anmelde-Links enthielten
+alle den Permalink.
+
+**Betroffene Dateien:**
+- `Theme/includes/sichtbarkeit.php` (aendern)
+
+**Vorgehen:**
+1. Filter `redirect_canonical`: `false` zurueckgeben, wenn die angefragte
+   Seite nicht sichtbar ist. Unbedenklich, weil die Seite ohnehin nicht
+   ausgeliefert, sondern mit der Hinweisseite und 403 beantwortet wird.
+2. In `simple_clean_lehrerhinweis_ausgeben()` vor `get_header()`
+   `rel_canonical`, `wp_shortlink_wp_head` und
+   `wp_oembed_add_discovery_links` von `wp_head` abhaengen.
+3. Als Ruecksprungziel des Anmelde-Links die **tatsaechlich aufgerufene**
+   Adresse verwenden statt des Permalinks.
+
+**Akzeptanzkriterien:**
+- [x] `?page_id=<id>` einer gesperrten Seite antwortet mit **403**, nicht 301.
+- [x] Der Slug kommt im gesamten Dokument **0-mal** vor.
+- [x] Der Anmelde-Link fuehrt zurueck auf die aufgerufene Adresse.
+- [x] Nicht gesperrte Seiten werden weiterhin kanonisch umgeleitet (301).
+- [x] Klassenansicht und alle uebrigen Seiten unveraendert.
+
+**Tests:**
+- `?page_id=31` abgemeldet aufrufen, Statuszeile und `Location`-Kopf pruefen,
+  im Rumpf nach dem Slug suchen.
+- `?page_id=30` (nicht gesperrt) muss weiterhin 301 liefern.
+
+**Übergabenotiz:**
+
+Erledigt am 2026-08-11. Gemessen nachher: `?page_id=31` → **403**, Slug
+`loesungen-test` **0-mal** im HTML, Anmelde-Link
+`redirect_to=...%2F%3Fpage_id%3D31` (ohne Slug). Ueber die schoene Adresse
+aufgerufen kommt der Titel ebenfalls 0-mal vor. `?page_id=30` liefert
+unveraendert 301 auf die schoene Adresse. Klassenansicht weiterhin 200 mit dem
+freigegebenen Block; Startseite, Kapitelseite, Verzeichnisseite und normale
+Unterseite unveraendert 200. Pruefharnisch gruen, PHP 7.4 sauber.
+
+**Die Lehre, die ueber diesen Fall hinausgeht:** Es genuegt nicht, den Inhalt
+zu sperren. Alles, was WordPress **ueber** eine Seite ausgibt —
+Weiterleitungen, `rel=canonical`, oEmbed-Verweise, Shortlinks,
+Ruecksprungadressen — kann ihren Namen verraten. Wer die Hinweisseite
+erweitert, muss das mitdenken.
 
 ---
 
@@ -2379,7 +2496,8 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-2.4 | Klassenfilter im Browser anpassen | sonnet | ☑ | AP-2.3 | Plugin | `reduziert` = "1" bzw. "" gemessen |
 | AP-2.rev | Review Phase 2 | opus | ☑ | AP-2.1 … AP-2.4 | Plugin | **nicht unabhängig**; keine Befunde |
 | AP-2.doc | Dokumentation Phase 2 | sonnet | ☑ | AP-2.rev | Plugin + Theme | inkl. Doku-Lücke „Klassenansicht" im Theme geschlossen |
-| AP-3.1 | Durchgang durch alle Sperrstellen | opus | ☐ | AP-2.doc | beide | |
+| AP-3.1 | Durchgang durch alle Sperrstellen | opus | ☑ | AP-2.doc | beide | 20 bestanden, 1 offen (Sitemap), 2 → AP-3.1.fix1 |
+| AP-3.1.fix1 | Kanonische Weiterleitung verriet den Slug | opus | ☑ | AP-3.1 | Theme | 301 mit Slug im Location-Kopf; auch canonical/oEmbed/redirect_to |
 | AP-3.2 | Verteilungspakete bauen und Ausrollen vorbereiten | sonnet | ☐ | AP-3.1 | beide | |
 | AP-3.rev | Unabhängiges Review Phase 3 | opus | ☐ | AP-3.1, AP-3.2 | beide | |
 | AP-3.doc | Abschlussdokumentation und Rückblick | sonnet | ☐ | AP-3.rev | beide | |
@@ -2407,7 +2525,8 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | **Phase 2** Integration + Regression | 15 Prüfungen: Klassenansicht der gesperrten Seite (Status, freigegebener Block, zwei gesperrte Blöcke, freier Absatz), Sperre ohne Parameter, falsche Klasse, Seite ohne Markierungen; Regression normale Seite mit und ohne Klassenmodus, angemeldete Ansicht, Startseite, Verzeichnisseite; beide Prüfharnische | **bestanden (15/15)**, einschließlich des Theme-Harnischs aus Phase 1 | Claude (Opus) |
 | 2026-08-11 | AP-2.rev | Geltungsbereich der Reduktion Zeile für Zeile; Freigabebedingungen; Einzigkeit der Suffix-Regel (über den Harnisch); Rückfall `data-stable-id`; Prepared Statement; Antwortstruktur der AJAX-Methode; Scope-Check; Debug-Gating | **keine Befunde.** Review war **nicht unabhängig** — Einschränkung wie in Phase 1 ausgewiesen | Claude (Opus) |
 | 2026-08-11 | AP-2.doc | Stichproben der genannten Methodennamen im Code; Datei-Map gegen den Dateibestand | **bestanden** — neuer Abschnitt in `Plugins/CDB-Designer/CLAUDE.md`, Datei-Map ergänzt, Doku-Lücke „Klassenansicht" in `Theme/CLAUDE.md` geschlossen | Claude (Opus) |
-| | AP-3.1 | | | |
+| 2026-08-11 | AP-3.1 | 21 Prüfzeilen gegen die laufende Installation, abgemeldet und angemeldet; `debug.log`; Caching-Zustand | **20 bestanden, 1 offen, 2 rot.** Die zwei roten deckten ein Slug-Leck über die kanonische Weiterleitung auf → AP-3.1.fix1. Offen bleibt die Sitemap (Umgebung liefert generell 404). Kein Caching-Plugin aktiv. `debug.log` ohne Fehlerzeile | Claude (Opus) |
+| 2026-08-11 | AP-3.1.fix1 | `?page_id=31` Status und Location-Kopf, Slug im Rumpf, Anmelde-Link, Gegenprobe mit nicht gesperrter Seite, Regression aller Seiten; Harnisch; PHP-7.4-Parse | **bestanden** — 403 statt 301, Slug 0-mal im Dokument, `?page_id=30` weiterhin 301 | Claude (Opus) |
 | | AP-3.2 | | | |
 | | **Phase 3** Integration + Regression | | | |
 | | AP-3.rev | | | |

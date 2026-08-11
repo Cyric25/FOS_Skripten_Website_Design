@@ -309,6 +309,45 @@ function simple_clean_lehrerseite_pruefen() {
 add_action('template_redirect', 'simple_clean_lehrerseite_pruefen', 20);
 
 /**
+ * Die kanonische Weiterleitung für gesperrte Seiten unterbinden (AP-3.1.fix1).
+ *
+ * DER FEHLER, DEN DAS BEHEBT: `redirect_canonical()` hängt ebenfalls an
+ * `template_redirect`, aber auf Priorität 10 — also VOR der Sperre oben. Ein
+ * Aufruf von `?page_id=31` wurde deshalb mit HTTP 301 auf die schöne Adresse
+ * umgeleitet, und der `Location`-Kopf nannte den Slug der gesperrten Seite
+ * („…/loesungen-test/"). Wer Seiten-IDs durchprobiert, konnte so die Namen
+ * aller Lösungsseiten einsammeln, ohne je ihren Inhalt zu sehen. Eine nicht
+ * vergebene ID verhält sich zudem anders — die Weiterleitung verriet also
+ * auch, welche IDs überhaupt existieren.
+ *
+ * Die Weiterleitung an dieser Stelle abzusagen ist unbedenklich: Die Seite
+ * wird ohnehin nicht ausgeliefert, sondern von
+ * `simple_clean_lehrerseite_pruefen()` mit der Hinweisseite und HTTP 403
+ * beantwortet.
+ *
+ * @param string $redirect_url
+ * @param string $requested_url
+ * @return string|false
+ */
+function simple_clean_lehrerseite_kanonisch($redirect_url, $requested_url = '') {
+    if (is_admin() || !is_singular('page')) {
+        return $redirect_url;
+    }
+
+    $seiten_id = (int) get_queried_object_id();
+    if ($seiten_id <= 0) {
+        return $redirect_url;
+    }
+
+    if (simple_clean_seite_sichtbar($seiten_id)) {
+        return $redirect_url;
+    }
+
+    return false;
+}
+add_filter('redirect_canonical', 'simple_clean_lehrerseite_kanonisch', 10, 2);
+
+/**
  * Die Hinweisseite „Nur für Lehrpersonen".
  *
  * DER TITEL DER GESPERRTEN SEITE WIRD NIRGENDS AUSGEGEBEN — weder sichtbar
@@ -332,6 +371,15 @@ function simple_clean_lehrerhinweis_ausgeben($seiten_id) {
     add_filter('wp_robots', 'wp_robots_no_robots');
     add_filter('pre_get_document_title', 'simple_clean_lehrerhinweis_titel', 99);
 
+    // Alles aus dem <head> nehmen, was die Adresse der gesperrten Seite nennt
+    // (AP-3.1.fix1). Canonical, Shortlink und die beiden oEmbed-Verweise
+    // enthalten den Permalink und damit den Slug — und der Slug verrät in
+    // aller Regel den Titel. Wer die Seite über `?page_id=31` aufruft, kennt
+    // ihn vorher nicht; ohne diese Zeilen bekäme er ihn hier geliefert.
+    remove_action('wp_head', 'rel_canonical');
+    remove_action('wp_head', 'wp_shortlink_wp_head', 10);
+    remove_action('wp_head', 'wp_oembed_add_discovery_links');
+
     // Ziel für „zurück": die nächste sichtbare Elternseite, sonst die
     // Startseite. Eine gesperrte Elternseite darf hier nicht auftauchen.
     $zurueck_url  = home_url('/');
@@ -343,7 +391,17 @@ function simple_clean_lehrerhinweis_ausgeben($seiten_id) {
         $zurueck_text = get_the_title($eltern_id);
     }
 
-    $anmelde_url = wp_login_url(get_permalink($seiten_id));
+    // Rücksprungziel ist die TATSÄCHLICH aufgerufene Adresse, nicht der
+    // Permalink (AP-3.1.fix1). Wer über `?page_id=31` kommt, kennt den Slug
+    // noch nicht — `wp_login_url(get_permalink())` hätte ihn im Parameter
+    // `redirect_to` mitgeliefert. Über die schöne Adresse aufgerufen steht
+    // dort dasselbe wie in der Adresszeile, also nichts Neues.
+    $angefragt = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
+    $anmelde_ziel = $angefragt !== ''
+        ? esc_url_raw(home_url($angefragt))
+        : home_url('/');
+
+    $anmelde_url = wp_login_url($anmelde_ziel);
 
     get_header();
     ?>
