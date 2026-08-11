@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (Phase 1 abgeschlossen)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-2.2 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -1512,7 +1512,7 @@ Zusammenspiel beschreibt, das erst in Phase 2 entsteht.
 
 ### AP-2.1: Geteilte Helfer für behandelte Container herauslösen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** sonnet (mechanische Extraktion, Zielsignaturen vorgegeben)
 **Abhängigkeiten:** keine (kann parallel zu Phase 1 begonnen werden, gehört aber zur Auslieferung von Phase 2)
@@ -1614,7 +1614,7 @@ als statische Helfer heraus und stellt die bestehende Methode darauf um —
 
 ### AP-2.2: Klassensitzung serverseitig prüfen und den Filter bedienen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** opus (Zugriffsentscheidung auf Basis eines Tokens; sicherheitsrelevant)
 **Abhängigkeiten:** AP-1.3 (der Filter `simple_clean_lehrerseite_freigeben` existiert), AP-2.1
@@ -2373,8 +2373,8 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.rev | Review Phase 1 | opus | ☑ | AP-1.1 … AP-1.6 | Theme | **nicht unabhängig** (auf Nutzerentscheidung selbst geprüft); 1 kritischer Befund → AP-1.fix1 |
 | AP-1.fix1 | Glossar-Verwendungsnachweise verraten gesperrte Titel | opus | ☑ | AP-1.rev | Theme | rohe $wpdb-Abfrage ging an pre_get_posts vorbei |
 | AP-1.doc | Dokumentation Phase 1 | sonnet | ☑ | AP-1.rev | Theme | CLAUDE.md-Abschnitt + Datei-Map auf Stand 1.5.78 |
-| AP-2.1 | Geteilte Helfer für behandelte Container herauslösen | sonnet | ☐ | – | Plugin | |
-| AP-2.2 | Klassensitzung prüfen und den Filter bedienen | opus | ☐ | AP-1.3, AP-2.1 | Plugin | |
+| AP-2.1 | Geteilte Helfer für behandelte Container herauslösen | sonnet | ☑ | – | Plugin | `zerlege_container_id()` ist die einzige Deutung von `:pN` |
+| AP-2.2 | Klassensitzung prüfen und den Filter bedienen | opus | ☑ | AP-1.3, AP-2.1 | Plugin | Durchlass live belegt: 200 mit Sitzung, 403 ohne |
 | AP-2.3 | Serverseitige Reduktion des Seiteninhalts | opus | ☐ | AP-2.2 | Plugin | |
 | AP-2.4 | Klassenfilter im Browser anpassen | sonnet | ☐ | AP-2.3 | Plugin | |
 | AP-2.rev | Unabhängiges Review Phase 2 | opus | ☐ | AP-2.1 … AP-2.4 | Plugin | |
@@ -2400,8 +2400,8 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | AP-1.rev | Sechs APs gegen ihre Akzeptanzkriterien; `grep` über alle `*.php` nach elf Seiten-Auflistungs- und Verlinkungsmustern, jede Fundstelle beurteilt; Einzigkeit von `simple_clean_ist_lehrperson()`; Filter-Standardwert; Hakenreihenfolge; Scope-Check; Sicherheitsdurchsicht | **1 kritischer Befund** (Glossar-Verwendungsnachweise, siehe AP-1.fix1), sonst keine offenen Befunde. Review war nicht unabhängig — Einschränkung in der Übergabenotiz ausgewiesen | Claude (Opus) |
 | 2026-08-11 | AP-1.fix1 | `simple_clean_get_term_usage()` abgemeldet und angemeldet; gerenderte Glossarseite; `php -l`; PHP-7.4-Parse | **bestanden** — vorher lieferte die Liste anonym `#31 Loesungen Test`, jetzt nur noch `#30`. Angemeldet unverändert beide. Titel auf der Glossarseite 0-mal | Claude (Opus) |
 | 2026-08-11 | AP-1.doc | Stichprobe: alle acht in `CLAUDE.md` genannten Funktionsnamen per `grep` im Code wiedergefunden; Datei-Map gegen den Dateibestand abgeglichen; Abschluss-Regression aller Seiten | **bestanden** — Funktionen existieren, Verweise stimmen, alle Seiten laden (gesperrte weiterhin 403), Harnisch grün | Claude (Opus) |
-| | AP-2.1 | | | |
-| | AP-2.2 | | | |
+| 2026-08-11 | AP-2.1 | 15 Prüfungen im Harnisch (Zerlegung, behandelte Container, Abgrenzung gegen fremde Klassen/Seiten, ungültige Kennungen ohne Abfrage, Einzigkeit der Regel); `php -l`; `tools/check-php74.php`; Regression der AJAX-Antwortstruktur gegen die laufende Installation | **bestanden** — 15/15 grün, 560 Dateien PHP-7.4-sauber. AJAX-Antwort unverändert (`class_name`, `treated_containers`, `drawings` mit Tafelseiten 0 und 1) | Claude (Opus) |
+| 2026-08-11 | AP-2.2 | 11 weitere Prüfungen (Sitzung ohne Parameter, abgelaufenes Token, Klasse passt nicht zum Token, gültige Sitzung, Klassensystem aus; Filter mit/ohne behandelte Container, bereits freigegebener Wert); `php -l`; Live-Test gegen die Testinstallation | **bestanden** — 26/26 grün. Live: ohne Parameter 403, mit gültiger Sitzung **200**, falsche Klasse 403, unbekanntes Token 403, Unterseite ohne Markierungen 403 | Claude (Opus) |
 | | AP-2.3 | | | |
 | | AP-2.4 | | | |
 | | **Phase 2** Integration + Regression | | | |
