@@ -3854,6 +3854,14 @@ if (is_admin()) {
 require_once get_template_directory() . '/includes/page-index.php';
 
 // ===================================================================
+// SEITEN NUR FÜR LEHRPERSONEN
+// ===================================================================
+
+// Ebenfalls außerhalb des is_admin()-Blocks: Die Sperre wirkt im Frontend,
+// die Meta-Box weiter oben in dieser Datei schreibt nur das Meta.
+require_once get_template_directory() . '/includes/sichtbarkeit.php';
+
+// ===================================================================
 // SVG-UPLOAD SUPPORT
 // ===================================================================
 

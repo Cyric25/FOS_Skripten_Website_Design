@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.1 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -157,7 +157,15 @@ HTML-Quelltext.
 - **Testumgebung:** Lokaler All-inkl-Nachbau unter `C:\allinkl-testserver`
   (Apache + PHP 8.3 + MariaDB, Start per `start-server.cmd`).
   - WordPress: `C:\allinkl-testserver\www\htdocs\w0000001\fos`
-  - URL: http://localhost:8080/fos/
+  - **URL: http://fos.localhost:8080/** — nicht über den Pfad
+    `localhost:8080/fos/`.
+    `siteurl` steht auf dem Hostnamen `fos.localhost`; über den Pfad
+    aufgerufen antwortet WordPress mit 404. (In AP-1.1 zunächst falsch
+    angenommen und dort korrigiert.)
+  - **Die Installation enthält keine Seiten.** Der Prüfaufbau muss angelegt
+    werden — AP-1.3 legt ihn an (Kapitelseite mit Unterseiten, eine davon
+    gesperrt) und beschreibt ihn, die folgenden APs bauen darauf auf.
+  - Anmeldung: Benutzer `admin` (einziger Benutzer, Rolle Administrator).
   - Theme liegt dort als `wp-content/themes/fos-online-schulbuch`,
     die Plugins als `wp-content/plugins/container-block-designer` und
     `wp-content/plugins/modular-blocks-plugin`.
@@ -239,7 +247,7 @@ Jede Phase endet mit `AP-<N>.rev` (unabhängiges Review) und `AP-<N>.doc`
 
 ### AP-1.1: Zentrale Sichtbarkeitslogik mit Prüfharnisch (TDD)
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** opus (sicherheitsrelevante Zugriffsentscheidung; definiert die Regel, auf der alles Weitere aufbaut)
 **Abhängigkeiten:** keine
@@ -376,7 +384,7 @@ dem String `'1'`, Abwesenheit bedeutet „nicht gesetzt".
 - Smoke-Test: `php Theme/tools/test-sichtbarkeit.php` läuft ohne Fatal Error durch und gibt eine Bilanzzeile aus.
 - Prüfschritt WordPress: Theme-Dateien in die Testinstallation
   `C:\allinkl-testserver\www\htdocs\w0000001\fos\wp-content\themes\fos-online-schulbuch\`
-  kopieren, `start-server.cmd` starten, http://localhost:8080/fos/ aufrufen.
+  kopieren, `start-server.cmd` starten, http://fos.localhost:8080/ aufrufen.
   Die Seite muss unverändert erscheinen (dieses AP ändert noch kein Verhalten),
   und `wp-content/debug.log` darf keine neuen Notices/Warnings enthalten.
 - Regressionsrelevanz: `functions.php` bekommt nur eine `require_once`-Zeile.
@@ -384,6 +392,62 @@ dem String `'1'`, Abwesenheit bedeutet „nicht gesetzt".
   dem Block „Inhaltsverzeichnis" weiterhin normal laden.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. **17 statt der geplanten 15 Prüfungen** — zwei kamen
+hinzu (16: ein Filter, der `$frei` nur durchreicht, darf nicht freigeben;
+17: ein Kind einer gesperrten Seite ist ebenfalls unsichtbar). Beide sichern
+die Naht ab, an der Phase 2 andockt. Roter Lauf mit 20 Fehlern ist in Commit
+`d42989b` festgehalten, die Tests wurden danach nicht mehr angefasst.
+
+**Abweichung vom Plan — keine `function_exists`-Guards.** Der Plan verlangte
+sie. Ich habe die Funktionen unbedingt deklariert, weil bedingt deklarierte
+Funktionen von PHP **nicht gehoistet** werden — genau daran ist dieses Theme
+schon einmal gescheitert (`sidebar.php`, v1.5.57→58, siehe `CLAUDE.md`). Die
+Datei wird per `require_once` genau einmal geladen; Guards brächten keinen
+Nutzen, nur das Hoisting-Risiko. Die Absicherung liegt stattdessen bei den
+Aufrufern: `sidebar.php` und `page-index.php` (AP-1.4) prüfen ihrerseits mit
+`function_exists()`, falls die Datei einmal fehlt. Begründung steht als
+Kommentarblock im Dateikopf.
+
+**Zusätzlich eingebaut:** `simple_clean_sichtbarkeit_generation()` und
+`simple_clean_sichtbarkeit_cache_leeren()`. Die beiden Listenfunktionen halten
+ihr Ergebnis in `static`-Variablen; ohne einen Weg, den Zwischenspeicher zu
+verwerfen, wären sie nicht testbar (jeder Testfall braucht einen frischen
+Zustand). Nützlich ist das auch für WP-CLI und Importe, die innerhalb eines
+Aufrufs Metas ändern.
+
+**Für Folge-APs wichtig:**
+- Die Rückgabe von `simple_clean_gesperrte_seiten()` ist `array(ID => true)`,
+  gebaut mit `array_fill_keys()` — **nicht** `array_flip()` wie im Plan
+  angedeutet. Die Union `$a + $b` in AP-1.4 funktioniert damit wie
+  beschrieben.
+- `simple_clean_gesperrte_seiten_mit_unterbaum()` gibt ebenfalls
+  `array(ID => true)` zurück. Für `post__not_in` in AP-1.5 also
+  `array_keys()` verwenden.
+- Ohne gesperrte Seite kostet das Ganze **genau eine** Abfrage; der Baumaufbau
+  entfällt dann vollständig.
+
+**Zwei Befunde zur Testumgebung, beide im Plan (Abschnitt 3) nachgetragen:**
+1. Die richtige Adresse ist **http://fos.localhost:8080/**, nicht
+   `http://localhost:8080/fos/`. Über den Pfad antwortet WordPress mit 404,
+   weil `siteurl` auf dem Hostnamen steht. Das hat mich kurz glauben lassen,
+   die Änderung hätte die Startseite zerschossen — hatte sie nicht. Alle sechs
+   URL-Vorkommen im Plan sind korrigiert.
+2. **Die Installation enthält keine einzige Seite.** Der Prüfaufbau muss
+   angelegt werden; AP-1.3 übernimmt das.
+
+Smoke-Test bestanden: `http://fos.localhost:8080/` liefert HTTP 200 mit dem
+Titel „FOS Online Schulbuch (Test)", alle fünf Funktionen sind unter
+WordPress vorhanden, `simple_clean_gesperrte_seiten()` liefert gegen die echte
+Datenbank ein leeres Array. `wp-content/debug.log` enthält ausschließlich die
+vorbestehenden Meldungen der beiden Plugins, keine Zeile aus dem Theme.
+
+PHP 7.4 geprüft: Das Werkzeug `tools/check-php74.php` liegt im CDB-Plugin und
+setzt ein `vendor/` neben dem Prüfziel voraus, das dem Theme fehlt. Geprüft
+wurde deshalb mit einem Wegwerf-Skript, das den `nikic/php-parser` des Plugins
+lädt und die drei Theme-Dateien gegen 7.4 parst — alle drei sauber.
+**Empfehlung für AP-3.doc:** überlegen, ob das Theme einen eigenen,
+dauerhaften 7.4-Prüfer bekommen soll; derzeit gibt es keinen.
 
 ---
 
@@ -461,7 +525,7 @@ Einführung des zweiten Feldes.
 - [ ] `php -l Theme/functions.php` fehlerfrei, keine PHP-8.0-Syntax.
 
 **Tests:**
-- Smoke-Test: In der Testinstallation http://localhost:8080/fos/wp-admin/ eine
+- Smoke-Test: In der Testinstallation http://fos.localhost:8080/wp-admin/ eine
   Seite öffnen. Die Box „Navigation, Verzeichnis & Zugriff" erscheint rechts mit
   drei Häkchen; keine PHP-Warnung im Editor, `debug.log` ohne neue Einträge.
 - Prüfschritt Speichern: Häkchen setzen, aktualisieren, Seite neu laden →
@@ -759,9 +823,9 @@ gesperrten Seiten **einschließlich aller Nachfahren** liefert.
 - Prüfschritt Suche: Auf der gesperrten Seite ein eindeutiges Kunstwort
   einfügen (z. B. „Zwirbelquark"), Seite speichern. Abgemeldet
   `…/?s=Zwirbelquark` → kein Treffer. Angemeldet → Treffer.
-- Prüfschritt REST: Abgemeldet `http://localhost:8080/fos/wp-json/wp/v2/pages?per_page=100`
+- Prüfschritt REST: Abgemeldet `http://fos.localhost:8080/wp-json/wp/v2/pages?per_page=100`
   aufrufen und nach der Seiten-ID suchen → nicht enthalten.
-- Prüfschritt Sitemap: Abgemeldet `http://localhost:8080/fos/wp-sitemap-posts-page-1.xml`
+- Prüfschritt Sitemap: Abgemeldet `http://fos.localhost:8080/wp-sitemap-posts-page-1.xml`
   aufrufen → die URL der gesperrten Seite fehlt.
 - Regressionsprüfung: Suche nach einem Wort auf einer normalen Seite liefert
   weiterhin Treffer; das Hauptmenü zeigt alle nicht gesperrten Einträge in
@@ -842,7 +906,7 @@ man gesperrte Seiten auf einen Blick erkennt.
 - [ ] `Theme/reference_file_map.md`: Zeile zu `includes/admin/page-manager.php` um die zwei neuen Aktionen ergänzt.
 
 **Tests:**
-- Smoke-Test: http://localhost:8080/fos/wp-admin/admin.php?page=page-manager
+- Smoke-Test: http://fos.localhost:8080/wp-admin/admin.php?page=page-manager
   aufrufen → Baum erscheint, Browser-Konsole ohne Fehler.
 - Prüfschritt Sammelaktion: Drei Seiten anhaken, „Nur für Lehrpersonen
   sichtbar" ausführen → Statusmeldung „3 Seiten geändert", 🔒 erscheint nach
@@ -1837,7 +1901,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 
 | AP | Titel | Modell | Status | Abhängig von | Repository | Notiz |
 |---|---|---|---|---|---|---|
-| AP-1.1 | Zentrale Sichtbarkeitslogik mit Prüfharnisch (TDD) | opus | ☐ | – | Theme | |
+| AP-1.1 | Zentrale Sichtbarkeitslogik mit Prüfharnisch (TDD) | opus | ☑ | – | Theme | 17 Prüfungen grün; keine `function_exists`-Guards (Hoisting), Begründung in der Übergabenotiz |
 | AP-1.2 | Häkchen „Nur für Lehrpersonen" in der Meta-Box | sonnet | ☐ | AP-1.1 | Theme | |
 | AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☐ | AP-1.1 | Theme | |
 | AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☐ | AP-1.1 | Theme | parallel zu 1.2/1.3/1.5 |
@@ -1862,7 +1926,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 
 | Datum | AP / Phase | Getestet | Ergebnis | Getestet von |
 |---|---|---|---|---|
-| | AP-1.1 | | | |
+| 2026-08-11 | AP-1.1 | `php tools/test-sichtbarkeit.php` (17 Prüfungen); `php -l` auf drei Dateien; PHP-7.4-Parse aller drei Dateien; Smoke-Test http://fos.localhost:8080/ ; `debug.log` | **bestanden** — 17/17 grün, Exit 0. Roter Vorlauf: 20 Fehler (Commit `d42989b`). PHP 7.4 sauber. Startseite HTTP 200. `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | | AP-1.2 | | | |
 | | AP-1.3 | | | |
 | | AP-1.4 | | | |

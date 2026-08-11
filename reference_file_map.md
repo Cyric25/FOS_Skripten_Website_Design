@@ -9,7 +9,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 
 | Datei | Zweck | Wichtige Funktionen/Inhalte | Hängt ab von |
 |---|---|---|---|
-| `functions.php` | Sammelstelle aller Theme-Subsysteme, ~3900 Zeilen | Setup, Asset-Einbindung, Customizer (Farben + Inhaltsverzeichnis), Meta-Box „Navigation & Inhaltsverzeichnis", Glossar-System, Passwortschutz, AI-Blocker, SVG-Pipeline, Lightbox, Diagnoseausgabe `simple_clean_perf_footer()`. Gliederung siehe `CLAUDE.md` | `includes/*`, `dist/*` |
+| `functions.php` | Sammelstelle aller Theme-Subsysteme, ~3900 Zeilen | Setup, Asset-Einbindung, Customizer (Farben + Inhaltsverzeichnis), Meta-Box „Navigation & Inhaltsverzeichnis", Glossar-System, Passwortschutz, AI-Blocker, SVG-Pipeline, Lightbox, Diagnoseausgabe `simple_clean_perf_footer()`. Gliederung siehe `CLAUDE.md`. Bindet `includes/sichtbarkeit.php` ein (außerhalb des `is_admin()`-Blocks — die Sperre wirkt im Frontend) | `includes/*`, `dist/*` |
 | `header.php` | Kopfbereich, Hauptmenü | Inline-Script für den Mobil-Menü-Umschalter (inkl. ARIA, ESC, Klick daneben) | – |
 | `footer.php` | Fußbereich | Copyright, Anmelde-Link, `wp_footer()` | – |
 | `index.php` | Beitragsliste | Auszüge, Datum/Autor, Blätternavigation | `header.php`, `footer.php` |
@@ -26,6 +26,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 |---|---|---|---|
 | `includes/page-index.php` | Block „Inhaltsverzeichnis" (`fos/inhaltsverzeichnis`) | `simple_clean_page_index_sanitize_attrs()`, `simple_clean_page_index_daten()` (zwei schlanke Abfragen, Breitensuche, statisch zwischengehalten), `simple_clean_page_index_url()`, `simple_clean_page_index_liste()`, `simple_clean_render_page_index()`, Registrierung per `render_callback`, Asset-Einbindung für Editor und Frontend | `blocks/inhaltsverzeichnis/block.json`, `dist/js/page-index*.js`, `dist/css/page-index-style.css`, Meta `_simple_clean_hide_from_index` |
 | `includes/admin/page-manager.php` | Seitenübersicht im Admin mit Drag-Sortierung und **Sammelaktionen** | Anlegen/Löschen/Status-Umschalten per AJAX; `ajax_bulk_action()` mit acht Aktionen als Whitelist (`bulk_aktionen()`), Rechteprüfung je Einzelseite, `render_parent_options()` für die Elternauswahl. **Status läuft über `wp_update_post()` (wegen `save_post` und dem Glossar-Scan), `post_parent` und `menu_order` dagegen direkt per `$wpdb->update`, also an `save_post` vorbei** | `dist/js/page-manager.js` |
+| `includes/sichtbarkeit.php` | Seiten **nur für Lehrpersonen** — die zentrale Sichtbarkeitslogik | `simple_clean_ist_lehrperson()` (**einzige** Definition von „Lehrperson"), `simple_clean_gesperrte_seiten()`, `simple_clean_gesperrte_seiten_mit_unterbaum()` (Unterbaum, nur für flache Listen nötig), `simple_clean_seite_nur_lehrpersonen()`, `simple_clean_seite_sichtbar()`, `simple_clean_sichtbarkeit_cache_leeren()`. Bietet die Filter `simple_clean_ist_lehrperson` und `simple_clean_lehrerseite_freigeben` — **Standardwert des zweiten ist `false` und muss es bleiben** (das CDB-Plugin hängt sich dort ein) | Meta `_simple_clean_nur_lehrpersonen` |
 | `includes/admin/clipboard-uploader.php` | Bilder aus der Zwischenablage in die Mediathek | `Simple_Clean_Clipboard_Uploader::init()`, Capability `upload_files` | – |
 | `includes/admin/image-lightbox-editor.js` | Lightbox-Schalter in der Bild-Blockleiste | wird direkt eingebunden, nicht über Vite gebaut | – |
 
@@ -68,6 +69,9 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 | `docs/PLAN-Seitenindex.md` | Projektplan zum Inhaltsverzeichnis-Block mit Statustabelle, Testprotokoll und Messwerten |
 | `docs/ERWEITERUNGSANALYSE-Seitenindex.md` | Ursachenanalyse, die zum Plan geführt hat (teils durch Messung überholt — siehe Abschnitt 11 des Plans) |
 | `docs/messung.js` | Konsolenskript zum Messen von Ladezeit, Queries und Glossaranteil. Fällt nicht ins Verteilungs-ZIP |
+| `docs/PLAN-Lehrerseiten.md` | Projektplan „Seiten nur für Lehrpersonen" mit Statustabelle, Testprotokoll und Rückblick |
+| `docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` | Analyse, die zu diesem Plan führte |
+| `tools/test-sichtbarkeit.php` | Prüfharnisch der Sichtbarkeitslogik, 17 Prüfungen **ohne WordPress** (Stubs für `is_user_logged_in`, `get_post_meta`, `get_post_ancestors`, Filter und `$wpdb`; der `$wpdb`-Doppel zählt Abfragen mit). Aufruf: `php tools/test-sichtbarkeit.php`. **`tools/` steht bewusst nicht in der ZIP-Whitelist** von `create-theme-zip.js` |
 
 ## Sammelzeilen
 
