@@ -263,3 +263,118 @@ function simple_clean_seite_sichtbar($post_id) {
 
     return (bool) apply_filters('simple_clean_lehrerseite_freigeben', false, $post_id);
 }
+
+// ===================================================================
+// DURCHSETZUNG BEIM SEITENAUFRUF
+// ===================================================================
+
+/**
+ * Gesperrte Seiten beim direkten Aufruf abfangen.
+ *
+ * REIHENFOLGE AUF template_redirect — die zählt:
+ *
+ *   Priorität  1  simple_clean_block_ai_user_agents()     403 für AI-Crawler
+ *   Priorität 10  simple_clean_password_protection_check() Passwort der Website
+ *   Priorität 20  diese Funktion                           Lehrersperre
+ *
+ * Die Lehrersperre kommt zuletzt. Sonst käme ein Besucher, der das
+ * Website-Passwort nicht kennt, über die Hinweisseite an der Passwortabfrage
+ * vorbei — und wüsste damit, dass es die Seite gibt.
+ *
+ * @return void
+ */
+function simple_clean_lehrerseite_pruefen() {
+    // Nur die öffentliche Anzeige einzelner Seiten betrifft das hier.
+    if (is_admin()
+        || (defined('DOING_AJAX') && DOING_AJAX)
+        || (defined('DOING_CRON') && DOING_CRON)
+        || (defined('REST_REQUEST') && REST_REQUEST)
+        || is_feed()
+        || !is_singular('page')) {
+        return;
+    }
+
+    $seiten_id = (int) get_queried_object_id();
+    if ($seiten_id <= 0) {
+        return;
+    }
+
+    if (simple_clean_seite_sichtbar($seiten_id)) {
+        return;
+    }
+
+    simple_clean_lehrerhinweis_ausgeben($seiten_id);
+    exit;
+}
+add_action('template_redirect', 'simple_clean_lehrerseite_pruefen', 20);
+
+/**
+ * Die Hinweisseite „Nur für Lehrpersonen".
+ *
+ * DER TITEL DER GESPERRTEN SEITE WIRD NIRGENDS AUSGEGEBEN — weder sichtbar
+ * noch im <title>. Er verriete, wie die Lösung heißt, und damit genau das,
+ * was die Sperre verbergen soll.
+ *
+ * HTTP 403 statt 200: Für Suchmaschinen, Prüfwerkzeuge und Caches ist das die
+ * ehrliche Antwort. `nocache_headers()` verhindert, dass ein Cache diese
+ * Antwort später einer angemeldeten Lehrperson vorsetzt (oder umgekehrt).
+ *
+ * @param int $seiten_id
+ * @return void
+ */
+function simple_clean_lehrerhinweis_ausgeben($seiten_id) {
+    $seiten_id = (int) $seiten_id;
+
+    status_header(403);
+    nocache_headers();
+
+    // Muss VOR get_header() gesetzt werden — dort läuft wp_head().
+    add_filter('wp_robots', 'wp_robots_no_robots');
+    add_filter('pre_get_document_title', 'simple_clean_lehrerhinweis_titel', 99);
+
+    // Ziel für „zurück": die nächste sichtbare Elternseite, sonst die
+    // Startseite. Eine gesperrte Elternseite darf hier nicht auftauchen.
+    $zurueck_url  = home_url('/');
+    $zurueck_text = __('Zur Startseite', 'simple-clean-theme');
+
+    $eltern_id = (int) wp_get_post_parent_id($seiten_id);
+    if ($eltern_id > 0 && simple_clean_seite_sichtbar($eltern_id)) {
+        $zurueck_url  = get_permalink($eltern_id);
+        $zurueck_text = get_the_title($eltern_id);
+    }
+
+    $anmelde_url = wp_login_url(get_permalink($seiten_id));
+
+    get_header();
+    ?>
+    <main class="site-main">
+        <div class="container">
+            <div class="sc-lehrerhinweis">
+                <h1><?php esc_html_e('Nur für Lehrpersonen', 'simple-clean-theme'); ?></h1>
+                <p>
+                    <?php esc_html_e('Diese Seite ist nur für angemeldete Lehrpersonen sichtbar.', 'simple-clean-theme'); ?>
+                </p>
+                <p>
+                    <a class="sc-lehrerhinweis__anmelden" href="<?php echo esc_url($anmelde_url); ?>">
+                        <?php esc_html_e('Anmelden', 'simple-clean-theme'); ?>
+                    </a>
+                </p>
+                <p class="sc-lehrerhinweis__zurueck">
+                    <a href="<?php echo esc_url($zurueck_url); ?>"><?php echo esc_html($zurueck_text); ?></a>
+                </p>
+            </div>
+        </div>
+    </main>
+    <?php
+    get_footer();
+}
+
+/**
+ * Dokumenttitel der Hinweisseite. Ersetzt den Seitentitel vollständig.
+ *
+ * @param string $titel
+ * @return string
+ */
+function simple_clean_lehrerhinweis_titel($titel) {
+    return __('Nur für Lehrpersonen', 'simple-clean-theme') . ' – ' . get_bloginfo('name');
+}

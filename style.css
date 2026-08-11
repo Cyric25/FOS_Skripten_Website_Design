@@ -1065,3 +1065,54 @@ video {
         font-size: 0.9rem;
     }
 }
+
+/* ===================================================================
+   HINWEISSEITE „NUR FÜR LEHRPERSONEN"
+   Ausgegeben von includes/sichtbarkeit.php, wenn eine gesperrte Seite
+   direkt aufgerufen wird (HTTP 403).
+
+   Keine freistehenden Farbwerte — alles über die Theme-Variablen, damit
+   die Customizer-Einstellungen durchschlagen. Der „plastische Look" bleibt
+   bewusst außen vor; er gehört dem Navigations-Streifen.
+   =================================================================== */
+
+.sc-lehrerhinweis {
+    max-width: 42rem;
+    margin: var(--space-xl, 3rem) auto;
+    padding: var(--space-lg, 2rem);
+    text-align: center;
+    background-color: var(--color-ui-surface-light, #f5ede9);
+    border: 1px solid var(--color-sidebar-border, #e0e0e0);
+    border-radius: 8px;
+}
+
+.sc-lehrerhinweis h1 {
+    margin-top: 0;
+    color: var(--color-special-text, #71230a);
+}
+
+.sc-lehrerhinweis p {
+    margin: var(--space-sm, 1rem) 0;
+}
+
+.sc-lehrerhinweis__anmelden {
+    display: inline-block;
+    padding: 0.6em 1.6em;
+    background-color: var(--color-ui-surface, #e24614);
+    color: var(--color-background, #ffffff);
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.sc-lehrerhinweis__anmelden:hover,
+.sc-lehrerhinweis__anmelden:focus {
+    background-color: var(--color-ui-surface-dark, #c93d12);
+    color: var(--color-background, #ffffff);
+    text-decoration: none;
+}
+
+.sc-lehrerhinweis__zurueck {
+    font-size: var(--font-size-small, 0.875rem);
+}

@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.2 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.3 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -574,7 +574,7 @@ Für AP-1.6 relevant: Das Meta wird als String `'1'` geschrieben und per
 
 ### AP-1.3: Durchsetzung beim Seitenaufruf und die Hinweisseite
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** opus (Zugriffsdurchsetzung; Reihenfolge der `template_redirect`-Haken ist heikel)
 **Abhängigkeiten:** AP-1.1
@@ -675,6 +675,69 @@ daran vorbeikommen.
   `debug.log` ohne neue Einträge.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. `simple_clean_lehrerseite_pruefen()` auf
+`template_redirect` Priorität 20, Ausgabe in
+`simple_clean_lehrerhinweis_ausgeben()`, Titelersatz über
+`simple_clean_lehrerhinweis_titel()` am Filter `pre_get_document_title`.
+CSS unter `.sc-lehrerhinweis` am Ende von `style.css`, ausschließlich mit
+Theme-Variablen.
+
+**Der Prüfaufbau ist angelegt** und bleibt für die folgenden APs stehen
+(Seiten-IDs in der Testinstallation):
+
+| Seite | ID | Eltern | gesperrt | Kunstwort im Text |
+|---|---|---|---|---|
+| Kapitel Test | 29 | – | nein | Ankerkraut |
+| Normale Unterseite | 30 | 29 | nein | Rankenpilz |
+| Loesungen Test | 31 | 29 | **ja** | Zwirbelquark, Fabelbirne, Nebelkeks |
+| Loesungen Detail | 32 | 31 | nein (erbt) | Distelbohne |
+
+Das Seed-Skript ist idempotent; ein erneuter Aufruf legt keine Dubletten an.
+`simple_clean_gesperrte_seiten()` liefert gegen diese Daten `31`,
+`simple_clean_gesperrte_seiten_mit_unterbaum()` liefert `31,32` — die
+Vererbung stimmt also auch gegen die echte Datenbank.
+
+**Gemessene Ergebnisse:**
+- Gesperrte Seite abgemeldet: `HTTP/1.1 403 Forbidden`,
+  `Cache-Control: no-cache, must-revalidate, max-age=0, no-store, private`,
+  `noindex` im Dokument.
+- `<title>` lautet „Nur für Lehrpersonen – FOS Online Schulbuch (Test)".
+  Der Seitentitel „Loesungen Test" kommt **0-mal** im ganzen Dokument vor,
+  die drei Lösungswörter ebenfalls 0-mal.
+- Unterseite „Loesungen Detail" abgemeldet: ebenfalls 403, „Distelbohne"
+  0-mal → die Vererbung greift auch im HTTP-Weg.
+- Angemeldet: beide Seiten HTTP 200 mit vollständigem Inhalt, keine
+  Hinweisseite.
+- Anmelde-Link:
+  `wp-login.php?redirect_to=…/kapitel-test/loesungen-test/` — führt also
+  zurück auf die aufgerufene Seite.
+- Rücksprung-Link zeigt auf die sichtbare Elternseite „Kapitel Test".
+- Normale Seiten und Startseite unverändert HTTP 200 mit ihren Kunstwörtern.
+- `debug.log` ohne eine einzige Theme-Zeile.
+
+**Passwortschutz-Prüfung bestanden — der wichtigste Einzelfall.** Bei aktivem
+Website-Passwort liefert die gesperrte Seite abgemeldet die **Passwortabfrage**
+(HTTP 200), nicht die Hinweisseite, und kein Lösungswort steht im HTML. Die
+Priorität 20 nach dem Passwortschutz (10) wirkt wie beabsichtigt. Der
+Passwortschutz wurde danach wieder abgeschaltet.
+
+**Umgesetzt, aber im Plan nicht ausdrücklich verlangt:** Die Prüfung steigt
+zusätzlich bei `is_feed()` früh aus. `template_redirect` läuft auch für Feeds;
+ohne diesen Ausstieg hinge das Verhalten allein daran, dass
+`is_singular('page')` dort falsch ist — eine Annahme, die ich nicht tragen
+wollte.
+
+**Für AP-1.4 und AP-1.5 wichtig:** Die Hinweisseite ist die letzte
+Verteidigungslinie und steht. Die beiden folgenden APs schließen die Links,
+sind also Verschleierung und Komfort, nicht der Schutz selbst. Wenn dort etwas
+durchrutscht, führt es nicht zum Inhalt.
+
+**Getestet wurde per `curl` gegen die laufende Installation**, für den
+angemeldeten Fall mit einem kurzlebigen Hilfsskript im Webroot, das per
+`wp_set_auth_cookie()` ein Anmelde-Cookie setzt (Einmal-Token, Prüfung auf
+127.0.0.1, unmittelbar danach gelöscht). Der Webroot ist nachweislich wieder
+frei von Hilfsskripten.
 
 ---
 
@@ -1934,7 +1997,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 |---|---|---|---|---|---|---|
 | AP-1.1 | Zentrale Sichtbarkeitslogik mit Prüfharnisch (TDD) | opus | ☑ | – | Theme | 17 Prüfungen grün; keine `function_exists`-Guards (Hoisting), Begründung in der Übergabenotiz |
 | AP-1.2 | Häkchen „Nur für Lehrpersonen" in der Meta-Box | sonnet | ☑ | AP-1.1 | Theme | 20 Prüfungen grün; Box heißt jetzt „Navigation, Verzeichnis & Zugriff" |
-| AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☐ | AP-1.1 | Theme | |
+| AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☑ | AP-1.1 | Theme | 403 + Hinweisseite; Passwortschutz gewinnt weiterhin; Prüfaufbau (IDs 29–32) angelegt |
 | AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☐ | AP-1.1 | Theme | parallel zu 1.2/1.3/1.5 |
 | AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☐ | AP-1.1, AP-1.3 | Theme | |
 | AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☐ | AP-1.1, AP-1.2 | Theme | parallel zu 1.3/1.4/1.5 |
@@ -1959,7 +2022,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 |---|---|---|---|---|
 | 2026-08-11 | AP-1.1 | `php tools/test-sichtbarkeit.php` (17 Prüfungen); `php -l` auf drei Dateien; PHP-7.4-Parse aller drei Dateien; Smoke-Test http://fos.localhost:8080/ ; `debug.log` | **bestanden** — 17/17 grün, Exit 0. Roter Vorlauf: 20 Fehler (Commit `d42989b`). PHP 7.4 sauber. Startseite HTTP 200. `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | 2026-08-11 | AP-1.2 | Skript im Webroot: Meta-Box rendern, mit echtem Nonce speichern, `wp_postmeta` direkt auslesen, Löschen prüfen, Regression der zwei bestehenden Häkchen, ungültiges Nonce; `php -l`; PHP-7.4-Parse | **bestanden** — 20/20 grün. Eine Prüfung war anfangs rot (Messfehler: `wp_nonce_field` schreibt den Namen als `id=` **und** `name=`; es ist genau ein Feld). `debug.log` ohne Theme-Einträge | Claude (Opus) |
-| | AP-1.3 | | | |
+| 2026-08-11 | AP-1.3 | `curl` gegen die Testinstallation: gesperrte Seite und Unterseite abgemeldet und angemeldet, Statuszeile, Cache-Header, `noindex`, Titel- und Kunstwort-Leck, Anmelde- und Rücksprung-Link, normale Seiten, Website-Passwortschutz ein/aus; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 erneut | **bestanden** — 403 mit `no-store`, Seitentitel und Lösungswörter 0-mal im Dokument, Vererbung greift, angemeldet HTTP 200 vollständig, bei aktivem Website-Passwort erscheint die Passwortabfrage (nicht die Hinweisseite). `debug.log` ohne Theme-Einträge, Webroot ohne Reste | Claude (Opus) |
 | | AP-1.4 | | | |
 | | AP-1.5 | | | |
 | | AP-1.6 | | | |
