@@ -51,6 +51,8 @@ class Simple_Clean_Page_Manager {
             'show_index'     => 'Wieder ins Inhaltsverzeichnis aufnehmen',
             'hide_nav'       => 'Aus Seitenleiste ausnehmen',
             'show_nav'       => 'Wieder in Seitenleiste aufnehmen',
+            'lock_teacher'   => 'Nur für Lehrpersonen sichtbar',
+            'unlock_teacher' => 'Wieder öffentlich sichtbar',
             'trash'          => 'In den Papierkorb',
         ];
     }
@@ -192,6 +194,10 @@ class Simple_Clean_Page_Manager {
                         <option value="hide_nav">Aus Seitenleiste ausnehmen</option>
                         <option value="show_nav">Wieder in Seitenleiste aufnehmen</option>
                     </optgroup>
+                    <optgroup label="Zugriff">
+                        <option value="lock_teacher">Nur für Lehrpersonen sichtbar</option>
+                        <option value="unlock_teacher">Wieder öffentlich sichtbar</option>
+                    </optgroup>
                     <optgroup label="Löschen">
                         <option value="trash">In den Papierkorb</option>
                     </optgroup>
@@ -282,6 +288,22 @@ class Simple_Clean_Page_Manager {
                 <span class="page-title">
                     <?php echo esc_html($page->post_title); ?>
                 </span>
+
+                <?php
+                // Kennzeichnung „nur für Lehrpersonen". simple_clean_gesperrte_seiten()
+                // hält sein Ergebnis statisch — über den ganzen Baum hinweg
+                // entsteht also EINE Abfrage, nicht eine je Zeile.
+                if (function_exists('simple_clean_gesperrte_seiten')) {
+                    $gesperrte_seiten = simple_clean_gesperrte_seiten();
+                    if (isset($gesperrte_seiten[(int) $page->ID])) {
+                        printf(
+                            '<span class="page-lehrer-marker" title="%s" aria-label="%s">🔒</span>',
+                            esc_attr__('Nur für Lehrpersonen sichtbar (gilt auch für alle Unterseiten)', 'simple-clean-theme'),
+                            esc_attr__('Nur für Lehrpersonen sichtbar', 'simple-clean-theme')
+                        );
+                    }
+                }
+                ?>
 
                 <?php self::render_status_badge($page->post_status); ?>
 
@@ -802,6 +824,21 @@ class Simple_Clean_Page_Manager {
 
                 case 'show_nav':
                     delete_post_meta($id, '_simple_clean_hide_navigation');
+                    $geaendert++;
+                    break;
+
+                // Sperre für nicht angemeldete Besucher. Schreibweise wie bei
+                // den vier Aktionen darüber: String '1' bzw. Meta löschen —
+                // includes/sichtbarkeit.php erkennt nichts anderes.
+                // Die Sperre gilt samt Unterbaum; die Unterseiten brauchen
+                // also kein eigenes Meta.
+                case 'lock_teacher':
+                    update_post_meta($id, '_simple_clean_nur_lehrpersonen', '1');
+                    $geaendert++;
+                    break;
+
+                case 'unlock_teacher':
+                    delete_post_meta($id, '_simple_clean_nur_lehrpersonen');
                     $geaendert++;
                     break;
             }

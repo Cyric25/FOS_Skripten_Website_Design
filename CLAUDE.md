@@ -1157,6 +1157,13 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
 - `clipboard-uploader.php`: Bilder aus der Zwischenablage in die Mediathek
   (Capability `upload_files`).
 
+**Der Menü-Slug `page-manager` ist eine öffentliche Schnittstelle.** Das
+Plugin CDB-Designer hängt dort per `add_submenu_page()` den Eintrag „Seiten
+importieren" ein (siehe `Plugins/CDB-Designer/CLAUDE.md`, Abschnitt
+„Seitenimport"). Wird der Slug hier geändert oder der Seitenmanager entfernt,
+verschwindet der Eintrag aus diesem Menü und landet im Rückfall unter
+„Container Designer". Beim Umbenennen also das Plugin mitziehen.
+
 ### Sonstiges
 - Customizer-Farben: `simple_clean_customize_register()` /
   `simple_clean_customizer_css()` — CSS-Variablen in :root (Details siehe

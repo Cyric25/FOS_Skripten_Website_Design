@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.5 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.6 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -1061,7 +1061,7 @@ gesperrte und ein Kind davon). Es bleibt für die folgenden APs stehen.
 
 ### AP-1.6: Seitenmanager – Sammelaktionen und Kennzeichnung
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** sonnet (acht bestehende Sammelaktionen als wörtliche Vorlage)
 **Abhängigkeiten:** AP-1.1, AP-1.2
@@ -1148,6 +1148,53 @@ man gesperrte Seiten auf einen Blick erkennt.
   Sortierung wird gespeichert.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. Zwei Einträge in `bulk_aktionen()`, zwei `case`-Zweige
+in `ajax_bulk_action()` (wörtlich nach dem Muster von `hide_index`/`show_index`),
+eine neue Auswahlgruppe „Zugriff" in der Leiste, das Schloss in der Baumzeile
+und eine CSS-Regel `.page-lehrer-marker`.
+
+**24 Prüfungen bestanden**, unter anderem:
+- Whitelist enthält jetzt zehn Aktionen, die acht bestehenden unverändert.
+- `lock_teacher` auf drei Seiten → alle drei haben `_simple_clean_nur_lehrpersonen = '1'`
+  in `wp_postmeta`, Antwort meldet „3 Seite(n) geändert", `reload` ist `false`.
+- `unlock_teacher` → alle drei Meta-Zeilen **gelöscht**, nicht auf `0` gesetzt.
+- Eine erfundene Aktion (`rm_minus_rf`) wird abgewiesen — die Whitelist trägt.
+- Regression: die vier bestehenden Meta-Aktionen wirken unverändert;
+  `status_draft`/`status_publish` setzen den Status **und** liefern
+  `reload = true`.
+
+**Abfragezahl:** Die gesamte Baumansicht des Seitenmanagers kostet **2
+Abfragen** (die vorhandene `get_pages()` plus die eine Meta-Abfrage). Der
+Marker kostet also genau eine Abfrage, unabhängig von der Zahl der Seiten —
+`simple_clean_gesperrte_seiten()` hält sein Ergebnis statisch, deshalb genügt
+der Aufruf direkt in `render_page_item()` ohne Durchreichen eines Parameters.
+
+**Beim Bauen ein Fehler in meiner eigenen Planung aufgefallen — behoben.**
+`npm run build` meldete `+ fos-online-schulbuch/tools/test-sichtbarkeit.php`:
+Der Prüfharnisch landete im Verteilungs-ZIP. In AP-1.1 und in der Datei-Map
+stand, `tools/` sei „bewusst nicht in der ZIP-Whitelist" — das war falsch. Die
+Einschlussregel in `create-theme-zip.js` lautet `filePath.match(/\.php$/)` und
+trifft **jede** PHP-Datei in **jedem** Unterverzeichnis, nicht nur die im
+Wurzelverzeichnis. `tools/` steht jetzt in `EXCLUDE_PATTERNS` (mit
+Schrägstrich, damit ein künftiges `includes/tools-helper.php` nicht
+mitausgeschlossen wird), samt Kommentar. Nach dem Neubau ist das ZIP frei von
+`tools/` und `docs/`; `includes/sichtbarkeit.php` ist enthalten.
+
+**Zwei Testfallen, notiert für spätere APs:**
+- `Simple_Clean_Page_Manager` wird in `functions.php` nur unter `is_admin()`
+  geladen. Ein Prüfskript muss die Datei selbst einbinden oder im
+  Admin-/AJAX-Kontext laufen.
+- `wp_send_json_*()` ruft **außerhalb** eines AJAX-Kontexts direkt `die` auf;
+  der Filter `wp_die_handler` greift dort nicht. Das Skript muss vor
+  `wp-load.php` `define('DOING_AJAX', true)` setzen und dann
+  `wp_die_ajax_handler` filtern.
+
+**Theme-Version steht jetzt auf 1.5.78** (`backup-and-build.js` erhöht sie bei
+jedem Bau selbstständig; es gab zwei Bauläufe).
+
+Nicht geprüft, weil ohne Browser nicht sinnvoll: das Ziehen von Seiten per
+Maus. Der Code daran wurde nicht angefasst.
 
 ---
 
@@ -2142,7 +2189,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☑ | AP-1.1 | Theme | 403 + Hinweisseite; Passwortschutz gewinnt weiterhin; Prüfaufbau (IDs 29–32) angelegt |
 | AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☑ | AP-1.1 | Theme | +1 Abfrage gemessen; Messanleitung in AP-3.1 korrigiert |
 | AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☑ | AP-1.1, AP-1.3 | Theme | REST-Einzelseite zusätzlich geschlossen; Sitemap in dieser Umgebung nicht über URL prüfbar |
-| AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☐ | AP-1.1, AP-1.2 | Theme | parallel zu 1.3/1.4/1.5 |
+| AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☑ | AP-1.1, AP-1.2 | Theme | 10 Aktionen; Baumansicht 2 Abfragen; `tools/` aus dem ZIP ausgeschlossen |
 | AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | Theme | |
 | AP-1.doc | Dokumentation Phase 1 | sonnet | ☐ | AP-1.rev | Theme | |
 | AP-2.1 | Geteilte Helfer für behandelte Container herauslösen | sonnet | ☐ | – | Plugin | |
@@ -2167,7 +2214,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | AP-1.3 | `curl` gegen die Testinstallation: gesperrte Seite und Unterseite abgemeldet und angemeldet, Statuszeile, Cache-Header, `noindex`, Titel- und Kunstwort-Leck, Anmelde- und Rücksprung-Link, normale Seiten, Website-Passwortschutz ein/aus; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 erneut | **bestanden** — 403 mit `no-store`, Seitentitel und Lösungswörter 0-mal im Dokument, Vererbung greift, angemeldet HTTP 200 vollständig, bei aktivem Website-Passwort erscheint die Passwortabfrage (nicht die Hinweisseite). `debug.log` ohne Theme-Einträge, Webroot ohne Reste | Claude (Opus) |
 | 2026-08-11 | AP-1.4 | Seitenleiste und Block „Inhaltsverzeichnis" je abgemeldet und angemeldet; Gegenprobe mit entferntem Häkchen; Abfragezahl über `?sc_perf=1` mit erzwungener Besuchersicht; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 | **bestanden** — gesperrte Seite und ihr Unterbaum fehlen abgemeldet in beiden Bäumen (0 Treffer), angemeldet vollständig da. Ohne Häkchen alles wieder sichtbar. **+1 Abfrage** (37/38 → 38/39). `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | 2026-08-11 | AP-1.5 | Hauptmenü gerendert und über `wp_get_nav_menu_items()`, HTML-Suche, REST-Sammlung, REST-Einzelseite, REST-Suche, `wp_list_pages`, Sitemap-Filter isoliert; je abgemeldet und angemeldet (REST mit `X-WP-Nonce`); Gegenprobe 403 statt 404; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 | **bestanden bis auf eine nicht prüfbare Zeile** — Menü inkl. Waisen-Untereintrag gefiltert, Suche ohne Treffer, REST-Sammlung ohne 31/32, REST-Einzelseite 403, angemeldet überall vollständig, gesperrte Seite weiterhin 403 mit Hinweisseite. **Sitemap:** in dieser Installation generell 404 (PATHINFO-Permalinks ohne mod_rewrite), auch ohne die Filter — Filter isoliert geprüft und korrekt | Claude (Opus) |
-| | AP-1.6 | | | |
+| 2026-08-11 | AP-1.6 | Whitelist, `lock_teacher`/`unlock_teacher` gegen `wp_postmeta`, `reload`-Wert, Schloss-Marker und Auswahlliste in der gerenderten Baumansicht, Abfragezahl, erfundene Aktion, Regression der acht bestehenden Aktionen; `php -l`; PHP-7.4-Parse; `npm run build` und ZIP-Inhalt | **bestanden** — 24/24 grün. Baumansicht kostet 2 Abfragen. Beim Bau aufgefallen: `tools/` landete im ZIP (falsche Annahme im Plan), `EXCLUDE_PATTERNS` ergänzt und nachgebaut | Claude (Opus) |
 | | **Phase 1** Integration + Regression | | | |
 | | AP-1.rev | | | |
 | | AP-1.doc | | | |
