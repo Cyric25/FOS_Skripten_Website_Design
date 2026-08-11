@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-2.2 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (Phase 2 abgeschlossen)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -1735,7 +1735,7 @@ an (`classroom-page-filter.js`, `interceptLinks()`).
 
 ### AP-2.3: Serverseitige Reduktion des Seiteninhalts
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** opus (Eingriff in den Renderpfad; Fehler wirken sich auf alle Seiten aus)
 **Abhängigkeiten:** AP-2.2
@@ -1858,7 +1858,7 @@ Inhalte im laufenden Betrieb verschwinden lassen.
 
 ### AP-2.4: Klassenfilter im Browser an die Reduktion anpassen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** S
 **Modell:** sonnet (kleine, klar umrissene Änderung an einer Datei)
 **Abhängigkeiten:** AP-2.3
@@ -1933,9 +1933,9 @@ Navigationsleiste und die Zeichnungs-Abschnitte müssen weiterhin entstehen.
 
 ---
 
-### AP-2.rev: Unabhängiges Review Phase 2
+### AP-2.rev: Review Phase 2
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11) — **nicht unabhängig, siehe Übergabenotiz**
 **Umfang:** M
 **Modell:** opus
 **Abhängigkeiten:** AP-2.1, AP-2.2, AP-2.3, AP-2.4 (inkl. Phasen-Integrationstest)
@@ -1994,7 +1994,7 @@ lässt.
 
 ### AP-2.doc: Dokumentation Phase 2
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-2.rev
@@ -2375,10 +2375,10 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.doc | Dokumentation Phase 1 | sonnet | ☑ | AP-1.rev | Theme | CLAUDE.md-Abschnitt + Datei-Map auf Stand 1.5.78 |
 | AP-2.1 | Geteilte Helfer für behandelte Container herauslösen | sonnet | ☑ | – | Plugin | `zerlege_container_id()` ist die einzige Deutung von `:pN` |
 | AP-2.2 | Klassensitzung prüfen und den Filter bedienen | opus | ☑ | AP-1.3, AP-2.1 | Plugin | Durchlass live belegt: 200 mit Sitzung, 403 ohne |
-| AP-2.3 | Serverseitige Reduktion des Seiteninhalts | opus | ☐ | AP-2.2 | Plugin | |
-| AP-2.4 | Klassenfilter im Browser anpassen | sonnet | ☐ | AP-2.3 | Plugin | |
-| AP-2.rev | Unabhängiges Review Phase 2 | opus | ☐ | AP-2.1 … AP-2.4 | Plugin | |
-| AP-2.doc | Dokumentation Phase 2 | sonnet | ☐ | AP-2.rev | Plugin + Theme | |
+| AP-2.3 | Serverseitige Reduktion des Seiteninhalts | opus | ☑ | AP-2.2 | Plugin | nur ein `data-stable-id` bleibt im Quelltext; normale Seiten unberührt |
+| AP-2.4 | Klassenfilter im Browser anpassen | sonnet | ☑ | AP-2.3 | Plugin | `reduziert` = "1" bzw. "" gemessen |
+| AP-2.rev | Review Phase 2 | opus | ☑ | AP-2.1 … AP-2.4 | Plugin | **nicht unabhängig**; keine Befunde |
+| AP-2.doc | Dokumentation Phase 2 | sonnet | ☑ | AP-2.rev | Plugin + Theme | inkl. Doku-Lücke „Klassenansicht" im Theme geschlossen |
 | AP-3.1 | Durchgang durch alle Sperrstellen | opus | ☐ | AP-2.doc | beide | |
 | AP-3.2 | Verteilungspakete bauen und Ausrollen vorbereiten | sonnet | ☐ | AP-3.1 | beide | |
 | AP-3.rev | Unabhängiges Review Phase 3 | opus | ☐ | AP-3.1, AP-3.2 | beide | |
@@ -2402,11 +2402,11 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | AP-1.doc | Stichprobe: alle acht in `CLAUDE.md` genannten Funktionsnamen per `grep` im Code wiedergefunden; Datei-Map gegen den Dateibestand abgeglichen; Abschluss-Regression aller Seiten | **bestanden** — Funktionen existieren, Verweise stimmen, alle Seiten laden (gesperrte weiterhin 403), Harnisch grün | Claude (Opus) |
 | 2026-08-11 | AP-2.1 | 15 Prüfungen im Harnisch (Zerlegung, behandelte Container, Abgrenzung gegen fremde Klassen/Seiten, ungültige Kennungen ohne Abfrage, Einzigkeit der Regel); `php -l`; `tools/check-php74.php`; Regression der AJAX-Antwortstruktur gegen die laufende Installation | **bestanden** — 15/15 grün, 560 Dateien PHP-7.4-sauber. AJAX-Antwort unverändert (`class_name`, `treated_containers`, `drawings` mit Tafelseiten 0 und 1) | Claude (Opus) |
 | 2026-08-11 | AP-2.2 | 11 weitere Prüfungen (Sitzung ohne Parameter, abgelaufenes Token, Klasse passt nicht zum Token, gültige Sitzung, Klassensystem aus; Filter mit/ohne behandelte Container, bereits freigegebener Wert); `php -l`; Live-Test gegen die Testinstallation | **bestanden** — 26/26 grün. Live: ohne Parameter 403, mit gültiger Sitzung **200**, falsche Klasse 403, unbekanntes Token 403, Unterseite ohne Markierungen 403 | Claude (Opus) |
-| | AP-2.3 | | | |
-| | AP-2.4 | | | |
-| | **Phase 2** Integration + Regression | | | |
-| | AP-2.rev | | | |
-| | AP-2.doc | | | |
+| 2026-08-11 | AP-2.3 | 11 weitere Prüfungen zu `block_erlaubt()` (freigegeben/gesperrt, `stableId` nur im HTML, freistehende Blöcke, Container ohne Kennung, leere Freigabeliste, Eintrag ohne `blockName`, verschachtelte Blöcke, fremder Blocktyp); Live-Test des Quelltexts auf gesperrter und nicht gesperrter Seite, abgemeldet und angemeldet; `php -l`; `check-php74.php` | **bestanden** — 37/37 grün, 561 Dateien PHP-7.4-sauber. **Gesperrte Seite in der Klassenansicht: nur `Zwirbelquark`, ein einziges `data-stable-id`; `Fabelbirne`, `Nebelkeks` und der freie Absatz `Moosbeere` kommen 0-mal vor.** Nicht gesperrte Seite und angemeldete Ansicht unverändert vollständig | Claude (Opus) |
+| 2026-08-11 | AP-2.4 | `cbdClassroomPageData` auf beiden Seitenarten ausgelesen; `node --check` für das JavaScript; Einbindung des Filterskripts | **bestanden** — `reduziert` ist `"1"` auf der gesperrten und `""` auf der normalen Seite; die JS-Prüfung mit `!!` behandelt beides richtig. Filterskript auf beiden Seiten eingebunden | Claude (Opus) |
+| 2026-08-11 | **Phase 2** Integration + Regression | 15 Prüfungen: Klassenansicht der gesperrten Seite (Status, freigegebener Block, zwei gesperrte Blöcke, freier Absatz), Sperre ohne Parameter, falsche Klasse, Seite ohne Markierungen; Regression normale Seite mit und ohne Klassenmodus, angemeldete Ansicht, Startseite, Verzeichnisseite; beide Prüfharnische | **bestanden (15/15)**, einschließlich des Theme-Harnischs aus Phase 1 | Claude (Opus) |
+| 2026-08-11 | AP-2.rev | Geltungsbereich der Reduktion Zeile für Zeile; Freigabebedingungen; Einzigkeit der Suffix-Regel (über den Harnisch); Rückfall `data-stable-id`; Prepared Statement; Antwortstruktur der AJAX-Methode; Scope-Check; Debug-Gating | **keine Befunde.** Review war **nicht unabhängig** — Einschränkung wie in Phase 1 ausgewiesen | Claude (Opus) |
+| 2026-08-11 | AP-2.doc | Stichproben der genannten Methodennamen im Code; Datei-Map gegen den Dateibestand | **bestanden** — neuer Abschnitt in `Plugins/CDB-Designer/CLAUDE.md`, Datei-Map ergänzt, Doku-Lücke „Klassenansicht" in `Theme/CLAUDE.md` geschlossen | Claude (Opus) |
 | | AP-3.1 | | | |
 | | AP-3.2 | | | |
 | | **Phase 3** Integration + Regression | | | |
