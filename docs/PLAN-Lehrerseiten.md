@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.6 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.rev und AP-1.fix1 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -1198,9 +1198,76 @@ Maus. Der Code daran wurde nicht angefasst.
 
 ---
 
+### AP-1.fix1: Glossar-Verwendungsnachweise verraten gesperrte Seitentitel
+
+**Status:** ☑ erledigt (2026-08-11)
+**Umfang:** S
+**Modell:** opus
+**Abhängigkeiten:** AP-1.rev (Befund kritisch)
+
+**Ziel & Kontext:**
+
+Befund aus AP-1.rev. Die Seite eines Glossarbegriffs (`single-glossar.php`)
+zeigt den Abschnitt „Dieser Begriff wird verwendet in:" — eine Liste der
+Seiten, auf denen der Begriff vorkommt, mit **Titel** und Link. Die Daten
+liefert `simple_clean_get_term_usage()` in `functions.php` (Zeile ~2228) über
+eine **rohe `$wpdb`-Abfrage**. Sie geht damit an `pre_get_posts` vorbei; die
+Filter aus AP-1.5 greifen nicht.
+
+Folge: Steht ein Glossarbegriff auf einer gesperrten Lösungsseite, nennt die
+öffentliche Glossarseite deren Titel. Der Link führt zwar auf die Hinweisseite
+mit 403 — aber der Titel ist genau das, was AP-1.3 sorgfältig verbirgt.
+
+Nachgewiesen in der Testinstallation: Ein anonymer Aufruf lieferte
+`#31 Loesungen Test` in der Liste.
+
+**Betroffene Dateien:**
+- `Theme/functions.php` (ändern)
+
+**Vorgehen:**
+1. In `simple_clean_get_term_usage()` vor der Prüfschleife die Liste der
+   gesperrten Seiten holen (nur für nicht Angemeldete, mit
+   `function_exists`-Absicherung), Variante **mit Unterbaum**.
+2. In der Schleife Treffer überspringen, deren ID darin steht.
+3. Kommentar, der festhält **warum** die Filterung hier stehen muss (rohe
+   Abfrage, `pre_get_posts` greift nicht).
+
+**Akzeptanzkriterien:**
+- [x] Abgemeldet enthält `simple_clean_get_term_usage()` keine gesperrte Seite.
+- [x] Angemeldet enthält sie weiterhin alle Fundstellen.
+- [x] Die gerenderte Glossarseite nennt den Titel der gesperrten Seite nicht mehr.
+- [x] Nicht gesperrte Fundstellen erscheinen unverändert.
+- [x] `php -l` fehlerfrei, keine PHP-8.0-Syntax.
+
+**Tests:**
+- Glossarbegriff anlegen, ihn über das Meta `_glossar_terms_used` sowohl der
+  gesperrten als auch einer normalen Seite zuordnen, dann
+  `simple_clean_get_term_usage()` einmal abgemeldet und einmal angemeldet
+  aufrufen.
+- Die Glossarseite abgemeldet abrufen und nach dem Titel der gesperrten Seite
+  suchen.
+
+**Übergabenotiz:**
+
+Erledigt am 2026-08-11, direkt nach dem Befund.
+
+Gemessen vorher (abgemeldet): `#31 Loesungen Test`, `#30 Normale Unterseite`.
+Gemessen nachher (abgemeldet): nur `#30 Normale Unterseite`.
+Angemeldet: weiterhin beide. Die gerenderte Glossarseite enthält den Titel
+„Loesungen Test" abgemeldet **0-mal**, „Normale Unterseite" unverändert.
+
+**Die Lehre daraus, für AP-2.rev und AP-3.1:** Die Filter in
+`includes/sichtbarkeit.php` greifen nur, wo WordPress-APIs benutzt werden. Wo
+das Theme mit rohem SQL arbeitet, muss jede Fundstelle einzeln nachgezogen
+werden. Geprüft wurden alle sechs solchen Stellen; die übrigen fünf sind
+Admin-Funktionen des Glossar-Bulk-Scans hinter Rechteprüfungen und zählen bzw.
+verarbeiten nur, ohne Titel auszugeben.
+
+---
+
 ### AP-1.rev: Unabhängiges Review Phase 1
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11) — **mit Einschränkung, siehe Übergabenotiz**
 **Umfang:** M
 **Modell:** opus
 **Abhängigkeiten:** AP-1.1, AP-1.2, AP-1.3, AP-1.4, AP-1.5, AP-1.6 (inkl. Phasen-Integrationstest)
@@ -1258,6 +1325,91 @@ wichtiger als bei einem gewöhnlichen Feature.
 - entfällt (Review-AP; das Ergebnis ist der Bericht).
 
 **Übergabenotiz:**
+
+**EINSCHRÄNKUNG, DIE BEIM LESEN DIESES BERICHTS ZU BEACHTEN IST:** Das Review
+war **nicht unabhängig**. Es wurde auf ausdrückliche Entscheidung des Nutzers
+von demselben Agenten durchgeführt, der alle sechs Arbeitspakete der Phase
+implementiert hat. Der Plan sieht dafür einen frischen Agenten vor, gerade
+weil Selbstkontrolle die eigenen blinden Flecken nicht findet. **Ein späteres
+unabhängiges Review dieser Phase bleibt sinnvoll**, insbesondere für die
+Punkte, die auf Urteil statt auf Messung beruhen.
+
+Am wenigsten von dieser Einschränkung betroffen ist Schritt 2 (die
+mechanische Suche nach allen Stellen, an denen Seiten sichtbar werden) — und
+genau dort kam auch der einzige kritische Befund her.
+
+**Befund 1 — kritisch, behoben in AP-1.fix1.**
+`simple_clean_get_term_usage()` in `functions.php` (Zeile ~2228) stellt eine
+rohe `$wpdb`-Abfrage über `post_type IN ('post','page')` und geht damit an
+`pre_get_posts` vorbei. Ihr Ergebnis erscheint auf der öffentlichen Seite
+jedes Glossarbegriffs als „Dieser Begriff wird verwendet in:" — **mit dem
+Titel** der Fundstelle. Eine gesperrte Lösungsseite stand damit für anonyme
+Besucher namentlich im Netz, obwohl die Hinweisseite ihren Titel verbirgt.
+Empirisch nachgewiesen, behoben und gegengeprüft.
+
+**Vollständigkeitsprüfung (Schritt 2).** `grep` über alle `*.php` des Themes
+nach `get_pages`, `wp_list_pages`, `wp_nav_menu`, `WP_Query`, `get_posts`,
+`get_permalink`, `wp_sitemaps`, `register_rest_route`, `get_children`,
+`wp_dropdown_pages` sowie nach rohen Abfragen mit `post_type … page`:
+
+| Fundstelle | Beurteilung |
+|---|---|
+| `functions.php:32` `wp_list_pages()` (Menü-Rückfall) | abgedeckt über `wp_list_pages_excludes` |
+| `sidebar.php:132` `get_pages()` | abgedeckt (AP-1.4) |
+| `header.php:24` `wp_nav_menu()` | abgedeckt über `wp_get_nav_menu_items` |
+| `includes/page-index.php:149` rohe Abfrage | abgedeckt (AP-1.4), Ausschlussliste |
+| `includes/admin/page-manager.php:132` `get_pages()` | Adminbereich, Capability `edit_pages` — Lehrpersonen; bewusst ungefiltert, zeigt stattdessen das Schloss |
+| **`functions.php:2242`** rohe Abfrage (Glossar-Verwendung) | **Befund 1, behoben** |
+| `functions.php:3525`, `3823`, `3850` rohe Abfragen | Admin-Funktionen des Glossar-Bulk-Scans hinter Rechteprüfung; zählen bzw. verarbeiten, geben keine Titel aus — unbedenklich |
+| `functions.php:2269` `get_posts()` (`rebuild_usage_tracking`) | Wartungsfunktion, gibt nichts aus — unbedenklich |
+| `functions.php:2448` `register_rest_route` (Glossar, POST) | verlangt `edit_posts`, legt Begriffe an — kein Seitenzugriff |
+| `archive-glossar.php`, `single-glossar.php` Aufzählungen | betreffen Glossarbegriffe (eigener Inhaltstyp), nicht Seiten. Die Verwendungsliste in `single-glossar.php:48` ist Befund 1 |
+| `functions.php:476`, `2544` `get_permalink()` | Auszug bzw. REST-Antwort zu Glossarbegriffen — keine Seitenliste |
+
+**Schritt 3 — ist `simple_clean_ist_lehrperson()` die einzige Definition?**
+Ja. `grep` nach `is_user_logged_in` und `current_user_can` in
+`includes/sichtbarkeit.php`, `sidebar.php` und `includes/page-index.php`
+findet `is_user_logged_in()` ausschließlich in
+`simple_clean_ist_lehrperson()`. Alle übrigen Stellen fragen die Funktion.
+
+**Schritt 4 — Standardwert des Filters.** `simple_clean_seite_sichtbar()` ruft
+`apply_filters('simple_clean_lehrerseite_freigeben', false, $post_id)`. Kein
+`add_filter` darauf im gesamten Theme; der Standardwert bleibt `false`. Der
+Prüfharnisch deckt das mit Prüfung 16 ab (ein Filter, der nur durchreicht,
+gibt nicht frei).
+
+**Schritt 5 — Hakenreihenfolge.** AI-Blocker Priorität 1, Passwortschutz
+Priorität 10 (Standard), Lehrersperre Priorität 20. In der Testinstallation
+gegengeprüft: Bei aktivem Website-Passwort erscheint die Passwortabfrage, nicht
+die Hinweisseite.
+
+**Schritt 6 — Phasen-Endzustand.** Erreicht; siehe Integrationstest im
+Testprotokoll (26/26).
+
+**Schritt 7 — Scope-Check gegen Abschnitt 2.** Keine neue Rolle, keine neue
+Capability, kein neues Block-Attribut, keine Änderung am Klassensystem, keine
+Fremdbibliothek. Die Erweiterung berührt ausschließlich Seiten
+(`post_type = 'page'`). Eine Änderung außerhalb der AP-Scopes gab es:
+`create-theme-zip.js` (`tools/` ausschließen) — in AP-1.6 begründet und
+dokumentiert, sie behebt einen Fehler der Planung selbst.
+
+**Schritt 8 — Qualität und Sicherheit.**
+- Ausgaben der Hinweisseite laufen durch `esc_html()`/`esc_url()`; der
+  Seitentitel wird gar nicht erst ausgegeben.
+- Keine Nutzereingabe fließt in eine Abfrage: Die beiden rohen Abfragen in
+  `includes/sichtbarkeit.php` enthalten ausschließlich feste Zeichenketten und
+  `$wpdb`-Eigenschaften.
+- Kein `error_log` und kein `console.log` ergänzt.
+- Neues CSS ohne freistehende Farbwerte, nur Theme-Variablen mit Rückfall.
+- PHP 7.4 für alle geänderten Dateien geprüft.
+- **Ein Punkt, den ein unabhängiges Review nachschauen sollte:**
+  `simple_clean_query_ausschluss()` greift in **alle** Abfragen ein, die Seiten
+  betreffen könnten. Das ist begründet (REST und Suche bauen eigene Abfragen),
+  aber es ist der weitreichendste Eingriff der Phase. Die Ausnahmen
+  (`is_admin()`, `is_singular()`, fremde Inhaltstypen, leere Liste) sind
+  gemessen; ob sie vollständig sind, ist Urteilssache.
+
+**Kein Befund mittlerer oder geringer Schwere offen.**
 
 ---
 
@@ -2190,7 +2342,8 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☑ | AP-1.1 | Theme | +1 Abfrage gemessen; Messanleitung in AP-3.1 korrigiert |
 | AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☑ | AP-1.1, AP-1.3 | Theme | REST-Einzelseite zusätzlich geschlossen; Sitemap in dieser Umgebung nicht über URL prüfbar |
 | AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☑ | AP-1.1, AP-1.2 | Theme | 10 Aktionen; Baumansicht 2 Abfragen; `tools/` aus dem ZIP ausgeschlossen |
-| AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | Theme | |
+| AP-1.rev | Review Phase 1 | opus | ☑ | AP-1.1 … AP-1.6 | Theme | **nicht unabhängig** (auf Nutzerentscheidung selbst geprüft); 1 kritischer Befund → AP-1.fix1 |
+| AP-1.fix1 | Glossar-Verwendungsnachweise verraten gesperrte Titel | opus | ☑ | AP-1.rev | Theme | rohe $wpdb-Abfrage ging an pre_get_posts vorbei |
 | AP-1.doc | Dokumentation Phase 1 | sonnet | ☐ | AP-1.rev | Theme | |
 | AP-2.1 | Geteilte Helfer für behandelte Container herauslösen | sonnet | ☐ | – | Plugin | |
 | AP-2.2 | Klassensitzung prüfen und den Filter bedienen | opus | ☐ | AP-1.3, AP-2.1 | Plugin | |
@@ -2216,7 +2369,8 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | AP-1.5 | Hauptmenü gerendert und über `wp_get_nav_menu_items()`, HTML-Suche, REST-Sammlung, REST-Einzelseite, REST-Suche, `wp_list_pages`, Sitemap-Filter isoliert; je abgemeldet und angemeldet (REST mit `X-WP-Nonce`); Gegenprobe 403 statt 404; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 | **bestanden bis auf eine nicht prüfbare Zeile** — Menü inkl. Waisen-Untereintrag gefiltert, Suche ohne Treffer, REST-Sammlung ohne 31/32, REST-Einzelseite 403, angemeldet überall vollständig, gesperrte Seite weiterhin 403 mit Hinweisseite. **Sitemap:** in dieser Installation generell 404 (PATHINFO-Permalinks ohne mod_rewrite), auch ohne die Filter — Filter isoliert geprüft und korrekt | Claude (Opus) |
 | 2026-08-11 | AP-1.6 | Whitelist, `lock_teacher`/`unlock_teacher` gegen `wp_postmeta`, `reload`-Wert, Schloss-Marker und Auswahlliste in der gerenderten Baumansicht, Abfragezahl, erfundene Aktion, Regression der acht bestehenden Aktionen; `php -l`; PHP-7.4-Parse; `npm run build` und ZIP-Inhalt | **bestanden** — 24/24 grün. Baumansicht kostet 2 Abfragen. Beim Bau aufgefallen: `tools/` landete im ZIP (falsche Annahme im Plan), `EXCLUDE_PATTERNS` ergänzt und nachgebaut | Claude (Opus) |
 | 2026-08-11 | **Phase 1** Integration + Regression | 26 Einzelprüfungen in einem Durchlauf: gesperrte Seite und Unterseite (Status, Titel- und Kunstwort-Leck), Seitenleiste, Inhaltsverzeichnis, Menü, Suche, REST-Sammlung und -Einzelseiten — je abgemeldet; Regression von Startseite, Kapitelseite, normaler Unterseite, Verzeichnisseite, Suche, Anmeldeseite; angemeldete Vollsicht inkl. Seitenmanager mit Marker; Prüfharnisch; `debug.log` | **bestanden (26/26).** Vier Zeilen waren zunächst rot, alle vier durch Fehler im Prüfskript: Seitentitel erscheinen sowohl im Menü **als auch** in der Seitenleiste (2 Treffer sind richtig), ein Suchergebnis wird zweimal verlinkt (Titel + Weiterlesen), und ein `grep`-Bereich reichte über den Kopfbereich hinaus. Nachgemessen: Menü hat abgemeldet genau 3 Punkte, der Waisen-Untereintrag ist entfernt; Suche liefert genau 1 eindeutige Ergebnis-URL; `debug.log` hat 551 Zeilen Plugin-Protokoll und **0 Fehlerzeilen** | Claude (Opus) |
-| | AP-1.rev | | | |
+| 2026-08-11 | AP-1.rev | Sechs APs gegen ihre Akzeptanzkriterien; `grep` über alle `*.php` nach elf Seiten-Auflistungs- und Verlinkungsmustern, jede Fundstelle beurteilt; Einzigkeit von `simple_clean_ist_lehrperson()`; Filter-Standardwert; Hakenreihenfolge; Scope-Check; Sicherheitsdurchsicht | **1 kritischer Befund** (Glossar-Verwendungsnachweise, siehe AP-1.fix1), sonst keine offenen Befunde. Review war nicht unabhängig — Einschränkung in der Übergabenotiz ausgewiesen | Claude (Opus) |
+| 2026-08-11 | AP-1.fix1 | `simple_clean_get_term_usage()` abgemeldet und angemeldet; gerenderte Glossarseite; `php -l`; PHP-7.4-Parse | **bestanden** — vorher lieferte die Liste anonym `#31 Loesungen Test`, jetzt nur noch `#30`. Angemeldet unverändert beide. Titel auf der Glossarseite 0-mal | Claude (Opus) |
 | | AP-1.doc | | | |
 | | AP-2.1 | | | |
 | | AP-2.2 | | | |

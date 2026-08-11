@@ -2243,9 +2243,26 @@ function simple_clean_get_term_usage($term_id) {
         ORDER BY p.post_date DESC
     ", $like));
 
+    // Seiten, die nur für Lehrpersonen sichtbar sind, dürfen hier nicht
+    // auftauchen (AP-1.fix1).
+    //
+    // WARUM DAS HIER STEHEN MUSS: Die Abfrage oben geht bewusst direkt an
+    // $wpdb und damit an `pre_get_posts` vorbei — die Filter in
+    // includes/sichtbarkeit.php greifen also nicht. Die Liste erscheint auf
+    // der öffentlichen Seite eines Glossarbegriffs und nennt den TITEL der
+    // Fundstelle. Genau den verbirgt die Hinweisseite sorgfältig; über diesen
+    // Weg stünde er wieder öffentlich da.
+    $gesperrt = array();
+    if (function_exists('simple_clean_ist_lehrperson') && !simple_clean_ist_lehrperson()) {
+        $gesperrt = simple_clean_gesperrte_seiten_mit_unterbaum();
+    }
+
     // Exact verification against the unserialized array (LIKE is only a prefilter)
     $matching_posts = array();
     foreach ($results as $post) {
+        if (isset($gesperrt[(int) $post->ID])) {
+            continue;
+        }
         $used_terms = get_post_meta($post->ID, '_glossar_terms_used', true);
         if (is_array($used_terms) && in_array($term_id, $used_terms)) {
             $matching_posts[] = $post;
