@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.3 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.4 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -743,7 +743,7 @@ frei von Hilfsskripten.
 
 ### AP-1.4: Ausblenden in Seitenleiste und Inhaltsverzeichnis
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** sonnet (Vorgehen an beiden Stellen exakt beschrieben, bestehendes Muster)
 **Abhängigkeiten:** AP-1.1
@@ -840,6 +840,58 @@ darf parallel dazu laufen.
   Häkchen „Seitenleiste ausblenden" wirkt weiterhin.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. Beide Eingriffe sind kurz: In `sidebar.php` wird
+`$all_pages` vor dem Aufbau von `$children_map` gefiltert, in
+`simple_clean_page_index_daten()` kommt die Liste per Schlüssel-Union zur
+vorhandenen Ausschlussliste hinzu. Die Vererbung auf den Unterbaum ergibt sich
+in beiden Fällen von selbst, weil die Bäume von der Wurzel abwärts laufen —
+`simple_clean_gesperrte_seiten_mit_unterbaum()` wird hier **nicht** gebraucht.
+
+Zusätzlich zum Plan: Liegt schon die **Wurzelseite** im gesperrten Bereich,
+gibt `sidebar.php` gar keinen Baum aus. Über AP-1.3 ist dieser Fall nicht
+erreichbar, aber die Absicherung kostet nichts.
+
+Für die Testseite mit dem Block wurde „Verzeichnis Test" (ID 33) angelegt,
+Inhalt `<!-- wp:fos/inhaltsverzeichnis {"maxDepth":3,"showSearch":false} /-->`.
+
+**Ergebnisse (Treffer im HTML):**
+
+| Ansicht | Normale Unterseite | Loesungen Test | Loesungen Detail |
+|---|---|---|---|
+| Seitenleiste, abgemeldet | 1 | **0** | **0** |
+| Seitenleiste, angemeldet | 1 | 1 | 1 |
+| Inhaltsverzeichnis, abgemeldet | 1 | **0** | **0** |
+| Inhaltsverzeichnis, angemeldet | 1 | 1 | 1 |
+
+**Gegenprobe:** Nimmt man das Häkchen weg, erscheinen abgemeldet wieder alle
+Seiten in beiden Bäumen und die Seite liefert HTTP 200. Die Erweiterung ist
+also vollständig rückstellbar und ändert nichts, solange sie nicht benutzt
+wird.
+
+**Zur Messung der Abfragezahl — die Anleitung im AP war unbrauchbar, so wie
+ich sie geschrieben hatte.** Sie verlangte die Messung „als Administrator";
+für einen Administrator wird der neue Code-Pfad aber gerade übersprungen, die
+Messung hätte also zwangsläufig „keine Änderung" ergeben und nichts bewiesen.
+Gemessen wurde deshalb mit einem temporären mu-Plugin, das
+`add_filter('simple_clean_ist_lehrperson', '__return_false')` setzt: Damit
+läuft die Besuchersicht, während die Diagnoseausgabe (sie braucht
+`manage_options`) weiter erscheint. Genau dafür gibt es den Filter.
+
+| Lage | Kapitelseite | Verzeichnisseite |
+|---|---|---|
+| Administrator (Pfad übersprungen) | 37 | 38 |
+| Besuchersicht, Seite gesperrt | 38 | 39 |
+| Besuchersicht, nichts gesperrt | 38 | 39 |
+
+**Genau +1 Abfrage**, und zwar für nicht angemeldete Besucher — das ist die
+eine Meta-Abfrage aus `simple_clean_gesperrte_seiten()`. Sie fällt auch dann
+an, wenn keine Seite gesperrt ist; ohne sie wüsste man ja nicht, dass nichts
+gesperrt ist. Keine zusätzliche Abfrage pro Baumknoten. Für Angemeldete ändert
+sich nichts.
+
+**Für AP-3.1 vormerken:** Die Messanleitung dort („als Administrator") hat
+denselben Fehler und muss auf das mu-Plugin-Verfahren umgestellt werden.
 
 ---
 
@@ -1768,10 +1820,22 @@ Testprotokoll aufgenommen.
 
 4. `wp-content/debug.log` prüfen: keine neuen Notices, Warnings oder
    Deprecations aus Theme oder Plugin.
-5. Abfragezahl vergleichen: Als Administrator eine Seite mit `?sc_perf=1`
-   aufrufen und den Wert `queries=` festhalten. Zum Vergleich denselben Aufruf
-   auf einer Installation ohne gesperrte Seiten (alle Häkchen entfernen).
-   Differenz notieren; mehr als zwei zusätzliche Abfragen ist ein Befund.
+5. Abfragezahl vergleichen. **Nicht einfach „als Administrator" messen** —
+   für einen Administrator wird der ganze neue Code-Pfad übersprungen, die
+   Messung zeigt dann zwangsläufig keine Änderung und beweist nichts (dieser
+   Fehler stand bis AP-1.4 in diesem Plan). Richtig geht es so:
+   - Ein temporäres mu-Plugin
+     `wp-content/mu-plugins/zz-nolehrer.php` mit der einen Zeile
+     `add_filter('simple_clean_ist_lehrperson', '__return_false');` anlegen.
+     Damit gilt die Besuchersicht, während die Diagnoseausgabe weiter
+     erscheint (sie verlangt `manage_options`).
+   - Als Administrator eine Kapitelseite und eine Seite mit dem Block
+     „Inhaltsverzeichnis" mit `?sc_perf=1` aufrufen und `queries=` ablesen —
+     einmal mit, einmal ohne mu-Plugin.
+   - Das mu-Plugin danach **löschen**.
+   Referenzwerte aus AP-1.4 (Phase 1, ohne die Filter aus AP-1.5): 37/38 als
+   Administrator, 38/39 in der Besuchersicht, also +1. Mehr als zwei
+   zusätzliche Abfragen ist ein Befund.
 6. **Caching prüfen:** Unter „Plugins" nachsehen, ob ein Caching-Plugin aktiv
    ist. Falls ja: prüfen und festhalten, ob es für angemeldete Benutzer den
    Cache umgeht — andernfalls ist es ein Befund und muss in die Dokumentation
@@ -1998,7 +2062,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.1 | Zentrale Sichtbarkeitslogik mit Prüfharnisch (TDD) | opus | ☑ | – | Theme | 17 Prüfungen grün; keine `function_exists`-Guards (Hoisting), Begründung in der Übergabenotiz |
 | AP-1.2 | Häkchen „Nur für Lehrpersonen" in der Meta-Box | sonnet | ☑ | AP-1.1 | Theme | 20 Prüfungen grün; Box heißt jetzt „Navigation, Verzeichnis & Zugriff" |
 | AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☑ | AP-1.1 | Theme | 403 + Hinweisseite; Passwortschutz gewinnt weiterhin; Prüfaufbau (IDs 29–32) angelegt |
-| AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☐ | AP-1.1 | Theme | parallel zu 1.2/1.3/1.5 |
+| AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☑ | AP-1.1 | Theme | +1 Abfrage gemessen; Messanleitung in AP-3.1 korrigiert |
 | AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☐ | AP-1.1, AP-1.3 | Theme | |
 | AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☐ | AP-1.1, AP-1.2 | Theme | parallel zu 1.3/1.4/1.5 |
 | AP-1.rev | Unabhängiges Review Phase 1 | opus | ☐ | AP-1.1 … AP-1.6 | Theme | |
@@ -2023,7 +2087,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | AP-1.1 | `php tools/test-sichtbarkeit.php` (17 Prüfungen); `php -l` auf drei Dateien; PHP-7.4-Parse aller drei Dateien; Smoke-Test http://fos.localhost:8080/ ; `debug.log` | **bestanden** — 17/17 grün, Exit 0. Roter Vorlauf: 20 Fehler (Commit `d42989b`). PHP 7.4 sauber. Startseite HTTP 200. `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | 2026-08-11 | AP-1.2 | Skript im Webroot: Meta-Box rendern, mit echtem Nonce speichern, `wp_postmeta` direkt auslesen, Löschen prüfen, Regression der zwei bestehenden Häkchen, ungültiges Nonce; `php -l`; PHP-7.4-Parse | **bestanden** — 20/20 grün. Eine Prüfung war anfangs rot (Messfehler: `wp_nonce_field` schreibt den Namen als `id=` **und** `name=`; es ist genau ein Feld). `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | 2026-08-11 | AP-1.3 | `curl` gegen die Testinstallation: gesperrte Seite und Unterseite abgemeldet und angemeldet, Statuszeile, Cache-Header, `noindex`, Titel- und Kunstwort-Leck, Anmelde- und Rücksprung-Link, normale Seiten, Website-Passwortschutz ein/aus; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 erneut | **bestanden** — 403 mit `no-store`, Seitentitel und Lösungswörter 0-mal im Dokument, Vererbung greift, angemeldet HTTP 200 vollständig, bei aktivem Website-Passwort erscheint die Passwortabfrage (nicht die Hinweisseite). `debug.log` ohne Theme-Einträge, Webroot ohne Reste | Claude (Opus) |
-| | AP-1.4 | | | |
+| 2026-08-11 | AP-1.4 | Seitenleiste und Block „Inhaltsverzeichnis" je abgemeldet und angemeldet; Gegenprobe mit entferntem Häkchen; Abfragezahl über `?sc_perf=1` mit erzwungener Besuchersicht; `php -l`; PHP-7.4-Parse; Harnisch aus AP-1.1 | **bestanden** — gesperrte Seite und ihr Unterbaum fehlen abgemeldet in beiden Bäumen (0 Treffer), angemeldet vollständig da. Ohne Häkchen alles wieder sichtbar. **+1 Abfrage** (37/38 → 38/39). `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | | AP-1.5 | | | |
 | | AP-1.6 | | | |
 | | **Phase 1** Integration + Regression | | | |

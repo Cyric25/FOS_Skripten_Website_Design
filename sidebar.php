@@ -134,6 +134,31 @@ function display_page_tree_item($page, $current_page_id, $children_map, $current
             'sort_column' => 'menu_order, post_title',
         ));
 
+        // Seiten, die nur für Lehrpersonen sichtbar sind, aus dem Baum nehmen.
+        // Ihre Kinder bleiben zwar in $all_pages stehen, werden aber nie
+        // erreicht: Der Baum wird von der Wurzel abwärts aufgebaut, ein
+        // fehlender Knoten nimmt seinen Unterbaum also von selbst mit.
+        //
+        // Die function_exists-Prüfung ist Absicht — sidebar.php ist ein
+        // Template. Fehlt includes/sichtbarkeit.php einmal, soll die
+        // Seitenleiste weiterlaufen statt mit einem Fatal auszusteigen.
+        if (function_exists('simple_clean_ist_lehrperson') && !simple_clean_ist_lehrperson()) {
+            $gesperrt = simple_clean_gesperrte_seiten();
+
+            if (!empty($gesperrt)) {
+                // Liegt schon die Wurzel im gesperrten Bereich, gibt es hier
+                // nichts auszugeben. Erreichbar ist das normalerweise nicht
+                // (AP-1.3 fängt den Aufruf vorher ab), kostet aber nichts.
+                if (isset($gesperrt[(int) $root_page_id])) {
+                    $all_pages = array();
+                } else {
+                    $all_pages = array_filter($all_pages, function ($tree_page) use ($gesperrt) {
+                        return !isset($gesperrt[(int) $tree_page->ID]);
+                    });
+                }
+            }
+        }
+
         $children_map = array();
         foreach ($all_pages as $tree_page) {
             $children_map[$tree_page->post_parent][] = $tree_page;
