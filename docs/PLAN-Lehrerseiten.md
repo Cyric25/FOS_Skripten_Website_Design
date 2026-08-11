@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (Phase 2 abgeschlossen)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (Vorhaben abgeschlossen)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -2062,7 +2062,7 @@ lässt.
 
 ### AP-3.1: Durchgang durch alle Sperrstellen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** opus (Beurteilung, ob die Sperre wirklich dicht ist)
 **Abhängigkeiten:** AP-2.doc
@@ -2164,11 +2164,128 @@ Testprotokoll aufgenommen.
 
 **Übergabenotiz:**
 
+Erledigt am 2026-08-11. **20 Zeilen bestanden, 2 rot — und die zwei roten
+haben ein echtes Leck aufgedeckt (behoben in AP-3.1.fix1). Eine Zeile bleibt
+offen.**
+
+| # | Pruefung | Ergebnis |
+|---|---|---|
+| 1 | Seitenleiste | „Loesungen Test" und „Loesungen Detail" fehlen |
+| 2 | Inhaltsverzeichnis | beide fehlen |
+| 3 | Hauptmenue | Eintrag fehlt (samt Waisen-Untereintrag) |
+| 4 | Suche „Fabelbirne" | kein Ergebnis-Link |
+| 5 | Suche „Zwirbelquark" | kein Ergebnis-Link |
+| 6 | `/wp/v2/pages` | 31 und 32 fehlen |
+| 7 | `/wp/v2/search?search=Fabelbirne` | kein Treffer |
+| **8** | **Sitemap** | **OFFEN — in dieser Umgebung generell 404** |
+| 9 | Direktaufruf „Loesungen Test" | 403 |
+| 10 | Direktaufruf „Loesungen Detail" | 403 |
+| 11 | Quelltext der Hinweisseite | Titel kommt 0-mal vor |
+| **12** | **`?page_id=31`** | **war 301 mit Slug im Location-Kopf → AP-3.1.fix1** |
+| **13** | **`?preview=true`** | **dasselbe → AP-3.1.fix1** |
+| 14 | Feed | keine gesperrten Inhalte |
+| 15 | Klassenanmeldung | Seite oeffnet sich (200) |
+| 16 | Quelltext dort | „Zwirbelquark" 1x, „Fabelbirne"/„Nebelkeks" 0x |
+| 17 | „Loesungen Detail" in der Klassenansicht | 403 (keine Markierungen) |
+| 18 | gueltiges Token, fremdes `?classroom=` | 403 |
+| 19 | Token nach Loeschen des Transients | 403; nach Wiederherstellen wieder 200 |
+| 20 | nicht gesperrte Seite in der Klassenansicht | alle Container im Quelltext |
+| 21 | angemeldet | alle Seiten 200 und vollstaendig |
+
+**`debug.log` ohne eine einzige Fehlerzeile** aus Theme oder Plugin.
+
+**Caching:** In der Testinstallation ist **kein** Caching-Plugin aktiv,
+`WP_CACHE` ist aus, `advanced-cache.php` fehlt. Der Punkt ist damit hier nicht
+pruefbar und bleibt ein **Betriebshinweis fuer die Produktivinstallation**:
+Die Unterscheidung haengt am Anmeldestatus; ein Seiten-Cache muss fuer
+angemeldete Benutzer umgangen werden. Die Hinweisseite sendet
+`nocache_headers()`, ihre Antwort wird also nicht gespeichert.
+
+**Zeile 8 bleibt offen.** Diese Installation nutzt PATHINFO-Permalinks
+(`/index.php/...`) ohne mod_rewrite und liefert unter jeder Sitemap-Adresse
+404 — auch mit abgehaengten Filtern und auch bei
+`WP_Sitemaps_Posts::get_url_list()` direkt. Der Filter selbst ist isoliert
+geprueft (AP-1.5) und ergaenzt `post__not_in` korrekt. **Auf der
+Produktivinstallation nach dem Ausrollen nachholen:**
+`/wp-sitemap-posts-page-1.xml` abgemeldet aufrufen und pruefen, dass die
+gesperrten Seiten fehlen.
+
+**Nicht geprueft:** das Ziehen von Seiten per Maus im Seitenmanager (ohne
+Browser nicht sinnvoll; der Code daran wurde nicht angefasst).
+
+---
+
+### AP-3.1.fix1: Kanonische Weiterleitung und head verraten den Slug
+
+**Status:** ☑ erledigt (2026-08-11)
+**Umfang:** S
+**Modell:** opus
+**Abhaengigkeiten:** AP-3.1 (Befund kritisch)
+
+**Ziel & Kontext:**
+
+Befund aus AP-3.1, Zeilen 12 und 13. Der Aufruf `?page_id=31` einer gesperrten
+Seite endete mit **HTTP 301**, nicht mit der Hinweisseite:
+`redirect_canonical()` haengt ebenfalls an `template_redirect`, aber auf
+Prioritaet 10 — also **vor** der Sperre auf Prioritaet 20. Der
+`Location`-Kopf nannte dabei den Slug: `.../kapitel-test/loesungen-test/`.
+
+Damit liessen sich durch blosses Durchprobieren von Seiten-IDs die Namen aller
+Loesungsseiten einsammeln. Eine nicht vergebene ID verhaelt sich zudem anders
+(`Location: /?page_id=99999`) — die Weiterleitung war also auch ein Orakel
+dafuer, welche IDs ueberhaupt existieren.
+
+Nach dem Abstellen der Weiterleitung zeigte sich dasselbe Leck ein zweites
+Mal, nun **im Rumpf der Hinweisseite**: `rel="canonical"`, die zwei
+oEmbed-Verweise und der Parameter `redirect_to` des Anmelde-Links enthielten
+alle den Permalink.
+
+**Betroffene Dateien:**
+- `Theme/includes/sichtbarkeit.php` (aendern)
+
+**Vorgehen:**
+1. Filter `redirect_canonical`: `false` zurueckgeben, wenn die angefragte
+   Seite nicht sichtbar ist. Unbedenklich, weil die Seite ohnehin nicht
+   ausgeliefert, sondern mit der Hinweisseite und 403 beantwortet wird.
+2. In `simple_clean_lehrerhinweis_ausgeben()` vor `get_header()`
+   `rel_canonical`, `wp_shortlink_wp_head` und
+   `wp_oembed_add_discovery_links` von `wp_head` abhaengen.
+3. Als Ruecksprungziel des Anmelde-Links die **tatsaechlich aufgerufene**
+   Adresse verwenden statt des Permalinks.
+
+**Akzeptanzkriterien:**
+- [x] `?page_id=<id>` einer gesperrten Seite antwortet mit **403**, nicht 301.
+- [x] Der Slug kommt im gesamten Dokument **0-mal** vor.
+- [x] Der Anmelde-Link fuehrt zurueck auf die aufgerufene Adresse.
+- [x] Nicht gesperrte Seiten werden weiterhin kanonisch umgeleitet (301).
+- [x] Klassenansicht und alle uebrigen Seiten unveraendert.
+
+**Tests:**
+- `?page_id=31` abgemeldet aufrufen, Statuszeile und `Location`-Kopf pruefen,
+  im Rumpf nach dem Slug suchen.
+- `?page_id=30` (nicht gesperrt) muss weiterhin 301 liefern.
+
+**Übergabenotiz:**
+
+Erledigt am 2026-08-11. Gemessen nachher: `?page_id=31` → **403**, Slug
+`loesungen-test` **0-mal** im HTML, Anmelde-Link
+`redirect_to=...%2F%3Fpage_id%3D31` (ohne Slug). Ueber die schoene Adresse
+aufgerufen kommt der Titel ebenfalls 0-mal vor. `?page_id=30` liefert
+unveraendert 301 auf die schoene Adresse. Klassenansicht weiterhin 200 mit dem
+freigegebenen Block; Startseite, Kapitelseite, Verzeichnisseite und normale
+Unterseite unveraendert 200. Pruefharnisch gruen, PHP 7.4 sauber.
+
+**Die Lehre, die ueber diesen Fall hinausgeht:** Es genuegt nicht, den Inhalt
+zu sperren. Alles, was WordPress **ueber** eine Seite ausgibt —
+Weiterleitungen, `rel=canonical`, oEmbed-Verweise, Shortlinks,
+Ruecksprungadressen — kann ihren Namen verraten. Wer die Hinweisseite
+erweitert, muss das mitdenken.
+
 ---
 
 ### AP-3.2: Verteilungspakete bauen und Ausrollen vorbereiten
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** M
 **Modell:** sonnet (feste Bauabläufe, in den CLAUDE.md-Dateien beschrieben)
 **Abhängigkeiten:** AP-3.1 (inkl. aller Korrektur-APs daraus)
@@ -2267,11 +2384,62 @@ v3.1.63–3.1.65).
 
 **Übergabenotiz:**
 
+Erledigt am 2026-08-11. Beide Pakete gebaut und **aus dem ZIP heraus** in der
+Testinstallation geprüft (die vorhandenen Verzeichnisse beiseitegelegt, die
+Pakete wie der WordPress-Uploader entpackt).
+
+| Paket | Datei | Inhalt geprüft |
+|---|---|---|
+| Theme | `dist/fos-online-schulbuch.zip` (v1.5.79, 28 Dateien) | `includes/sichtbarkeit.php` enthalten; `tools/` und `docs/` **nicht** |
+| Plugin | `dist/container-block-designer-3.1.87.zip` | `includes/class-cbd-classroom-gate.php` enthalten; `tools/` **nicht** |
+
+**Autoloader-Prüfung bestanden** — das entpackte `vendor/autoload.php` lädt
+ohne Fatal. Zwei Treffer auf „phpunit" im ZIP sind harmlos und vorbestehend:
+`vendor/bin/phpunit.bat` (toter Binstub) und `vendor/mpdf/mpdf/phpunit.xml`
+(Konfigurationsdatei innerhalb von mpdf). **Keiner von beiden steht in
+`autoload_classmap.php`, `autoload_static.php` oder `autoload_files.php`** —
+die Fehlerklasse der ZIPs v3.1.63–3.1.65 liegt also nicht vor.
+
+Kernprüfung aus den installierten Paketen: Startseite 200, gesperrte Seite
+abgemeldet 403 ohne Lösungswort, `?page_id=31` 403, Klassenansicht 200 mit
+genau dem freigegebenen Block, normale Unterseite 200, Seitenmanager 200.
+
+**Die zwei Prüfschritte, die das Verhalten der Naht belegen:**
+
+- **Plugin deaktiviert, während eine Seite gesperrt ist:** Die Seite liefert
+  auch **mit gültiger Klassensitzung** 403, und kein Lösungswort steht im
+  HTML. Die Naht fällt geschlossen aus — das ist der wichtigste
+  architektonische Nachweis des ganzen Vorhabens.
+- **Theme gewechselt** (auf „Twenty Twenty-Five"): Die gesperrte Seite ist
+  wieder sichtbar (200). Erwartetes Verhalten — die Sperre gehört zum Theme
+  — und als Betriebshinweis dokumentiert. Nach dem Rückwechsel wieder 403.
+
+**`DOKUMENTATION.md` im Projektstamm** nennt das Vorhaben, beide Dokumente und
+den Hinweis, dass dies die **zweite** Theme-Plugin-Schnittstelle ist.
+
+### Ausrollanleitung
+
+1. **Theme-ZIP** hochladen (Design → Themes → Theme hochladen, „Ersetzen").
+2. Prüfen, dass die Website normal läuft. **Es darf sich nichts ändern** —
+   solange keine Seite das Häkchen trägt, ist die Erweiterung wirkungslos.
+3. **Plugin-ZIP** hochladen (Plugins → Installieren → hochladen).
+4. Erst danach an einer Lösungsseite das Häkchen „Nur für Lehrpersonen
+   sichtbar" setzen — im Seiten-Editor oder über die Sammelaktion im
+   Seitenmanager.
+5. In einem **privaten Fenster** gegenprüfen: Die Seite muss aus Seitenleiste,
+   Inhaltsverzeichnis, Menü und Suche verschwunden sein und beim direkten
+   Aufruf die Hinweisseite zeigen.
+6. **Nachholen, was die Testumgebung nicht konnte:**
+   `/wp-sitemap-posts-page-1.xml` abgemeldet aufrufen und prüfen, dass die
+   gesperrte Seite fehlt.
+7. **Falls ein Caching-Plugin läuft:** prüfen, dass es für angemeldete
+   Benutzer den Cache umgeht.
+
 ---
 
-### AP-3.rev: Unabhängiges Review Phase 3
+### AP-3.rev: Review Phase 3
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11) — **nicht unabhängig**
 **Umfang:** S
 **Modell:** opus
 **Abhängigkeiten:** AP-3.1, AP-3.2
@@ -2307,11 +2475,44 @@ Implementierung beteiligt war. Nur lesend arbeiten — **KEINE Datei verändern.
 
 **Übergabenotiz:**
 
+**EINSCHRÄNKUNG:** Wie in Phase 1 und 2 auf Nutzerentscheidung **nicht
+unabhängig** — geprüft von demselben Agenten, der implementiert hat. Ein
+späteres unabhängiges Review bleibt sinnvoll.
+
+**Schritt 1 — AP-3.1:** Alle 21 Prüfzeilen sind mit Ergebnis dokumentiert.
+Der kritische Befund (Zeilen 12/13) hat zu AP-3.1.fix1 geführt, das
+abgeschlossen und gegengeprüft ist. Zeile 8 (Sitemap) ist ausdrücklich als
+**offen** vermerkt, nicht als bestanden abgehakt.
+
+**Schritt 2 — AP-3.2:** Beide ZIP-Dateien existieren mit dem Zeitstempel des
+Baulaufs; Inhalt und Autoloader geprüft.
+
+**Schritt 3 — Gesamtscope gegen Abschnitt 2:** Keine neue Markierung für
+Blöcke (die vorhandene „behandelt"-Markierung wird benutzt), keine neue Rolle,
+keine neue Capability, kein Umbau des Klassensystems, keine Änderung am
+Verhalten nicht gesperrter Seiten, keine Fremdbibliothek, kein anderer
+Inhaltstyp als `page`, keine Migration. **Kein Nicht-Ziel verletzt.**
+
+Zwei Änderungen lagen außerhalb der ursprünglichen AP-Zuschnitte, beide
+begründet und dokumentiert: `create-theme-zip.js` (AP-1.6, `tools/`
+ausschließen) und `simple_clean_get_term_usage()` in `functions.php`
+(AP-1.fix1, Glossar-Leck).
+
+**Schritt 4 — Dokumentation:** `Theme/CLAUDE.md` (zwei neue Abschnitte),
+`Plugins/CDB-Designer/CLAUDE.md` (ein Abschnitt), beide Datei-Maps und
+`DOKUMENTATION.md` sind auf Stand. Stichprobe: Die genannten Funktions- und
+Methodennamen sind im Code auffindbar.
+
+**Schritt 5 — Abschnitt 11** ist ausgefüllt.
+
+**Keine offenen Befunde.** Was bleibt, steht unter „Offene Punkte" in
+Abschnitt 11.
+
 ---
 
 ### AP-3.doc: Abschlussdokumentation und Rückblick
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-3.rev
@@ -2356,6 +2557,10 @@ Dokumentation der drei Komponenten auf den Endstand bringen.
 
 **Übergabenotiz:**
 
+Erledigt am 2026-08-11. Abschnitt 11 gefüllt, Betriebshinweise in
+`DOKUMENTATION.md` und in der Ausrollanleitung von AP-3.2 festgehalten,
+Statustabelle und Testprotokoll vollständig.
+
 ---
 
 ## 8. Status
@@ -2379,10 +2584,11 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-2.4 | Klassenfilter im Browser anpassen | sonnet | ☑ | AP-2.3 | Plugin | `reduziert` = "1" bzw. "" gemessen |
 | AP-2.rev | Review Phase 2 | opus | ☑ | AP-2.1 … AP-2.4 | Plugin | **nicht unabhängig**; keine Befunde |
 | AP-2.doc | Dokumentation Phase 2 | sonnet | ☑ | AP-2.rev | Plugin + Theme | inkl. Doku-Lücke „Klassenansicht" im Theme geschlossen |
-| AP-3.1 | Durchgang durch alle Sperrstellen | opus | ☐ | AP-2.doc | beide | |
-| AP-3.2 | Verteilungspakete bauen und Ausrollen vorbereiten | sonnet | ☐ | AP-3.1 | beide | |
-| AP-3.rev | Unabhängiges Review Phase 3 | opus | ☐ | AP-3.1, AP-3.2 | beide | |
-| AP-3.doc | Abschlussdokumentation und Rückblick | sonnet | ☐ | AP-3.rev | beide | |
+| AP-3.1 | Durchgang durch alle Sperrstellen | opus | ☑ | AP-2.doc | beide | 20 bestanden, 1 offen (Sitemap), 2 → AP-3.1.fix1 |
+| AP-3.1.fix1 | Kanonische Weiterleitung verriet den Slug | opus | ☑ | AP-3.1 | Theme | 301 mit Slug im Location-Kopf; auch canonical/oEmbed/redirect_to |
+| AP-3.2 | Verteilungspakete bauen und Ausrollen vorbereiten | sonnet | ☑ | AP-3.1 | beide | Theme 1.5.79, Plugin 3.1.87; Naht fällt nachweislich geschlossen aus |
+| AP-3.rev | Review Phase 3 | opus | ☑ | AP-3.1, AP-3.2 | beide | **nicht unabhängig**; keine offenen Befunde |
+| AP-3.doc | Abschlussdokumentation und Rückblick | sonnet | ☑ | AP-3.rev | beide | Abschnitt 11 gefüllt |
 
 ## 9. Testprotokoll
 
@@ -2407,11 +2613,12 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | **Phase 2** Integration + Regression | 15 Prüfungen: Klassenansicht der gesperrten Seite (Status, freigegebener Block, zwei gesperrte Blöcke, freier Absatz), Sperre ohne Parameter, falsche Klasse, Seite ohne Markierungen; Regression normale Seite mit und ohne Klassenmodus, angemeldete Ansicht, Startseite, Verzeichnisseite; beide Prüfharnische | **bestanden (15/15)**, einschließlich des Theme-Harnischs aus Phase 1 | Claude (Opus) |
 | 2026-08-11 | AP-2.rev | Geltungsbereich der Reduktion Zeile für Zeile; Freigabebedingungen; Einzigkeit der Suffix-Regel (über den Harnisch); Rückfall `data-stable-id`; Prepared Statement; Antwortstruktur der AJAX-Methode; Scope-Check; Debug-Gating | **keine Befunde.** Review war **nicht unabhängig** — Einschränkung wie in Phase 1 ausgewiesen | Claude (Opus) |
 | 2026-08-11 | AP-2.doc | Stichproben der genannten Methodennamen im Code; Datei-Map gegen den Dateibestand | **bestanden** — neuer Abschnitt in `Plugins/CDB-Designer/CLAUDE.md`, Datei-Map ergänzt, Doku-Lücke „Klassenansicht" in `Theme/CLAUDE.md` geschlossen | Claude (Opus) |
-| | AP-3.1 | | | |
-| | AP-3.2 | | | |
-| | **Phase 3** Integration + Regression | | | |
-| | AP-3.rev | | | |
-| | AP-3.doc | | | |
+| 2026-08-11 | AP-3.1 | 21 Prüfzeilen gegen die laufende Installation, abgemeldet und angemeldet; `debug.log`; Caching-Zustand | **20 bestanden, 1 offen, 2 rot.** Die zwei roten deckten ein Slug-Leck über die kanonische Weiterleitung auf → AP-3.1.fix1. Offen bleibt die Sitemap (Umgebung liefert generell 404). Kein Caching-Plugin aktiv. `debug.log` ohne Fehlerzeile | Claude (Opus) |
+| 2026-08-11 | AP-3.1.fix1 | `?page_id=31` Status und Location-Kopf, Slug im Rumpf, Anmelde-Link, Gegenprobe mit nicht gesperrter Seite, Regression aller Seiten; Harnisch; PHP-7.4-Parse | **bestanden** — 403 statt 301, Slug 0-mal im Dokument, `?page_id=30` weiterhin 301 | Claude (Opus) |
+| 2026-08-11 | AP-3.2 | Syntaxprüfung aller PHP-Dateien beider Komponenten; `npm run build`; `node create-plugin-zip.js` (inkl. `check-php74.php`); ZIP-Inhalte; Autoloader aus dem entpackten Paket; Kernprüfung aus den installierten Paketen; Plugin deaktiviert; Theme gewechselt | **bestanden** — Theme v1.5.79 (28 Dateien, ohne `tools/` und `docs/`), Plugin v3.1.87 (ohne `tools/`), Autoloader ohne Fatal. **Mit deaktiviertem Plugin bleibt die gesperrte Seite auch mit gültiger Klassensitzung bei 403.** Nach Theme-Wechsel wieder sichtbar (erwartet, dokumentiert) | Claude (Opus) |
+| 2026-08-11 | **Phase 3** Integration + Regression | Kernprüfung aus den installierten Paketen über alle drei Phasen hinweg; beide Prüfharnische; `debug.log` | **bestanden** — alle Endzustände der Phasen 1 und 2 funktionieren auch aus den Verteilungspaketen heraus | Claude (Opus) |
+| 2026-08-11 | AP-3.rev | Prüfzeilen und Korrektur-AP aus AP-3.1; ZIP-Dateien; Gesamtscope gegen Abschnitt 2; Dokumentation mit Stichproben; Abschnitt 11 | **keine offenen Befunde.** Review **nicht unabhängig** — Einschränkung ausgewiesen | Claude (Opus) |
+| 2026-08-11 | AP-3.doc | Stichproben gegen die Übergabenotizen; Vollständigkeit von Statustabelle und Testprotokoll | **bestanden** | Claude (Opus) |
 
 ## 10. Dokumentation
 
@@ -2433,8 +2640,80 @@ diesem Projekt die `CLAUDE.md`-Dateien. Keine Parallelstruktur aufbauen.
 
 ## 11. Rückblick und offene Punkte
 
-_Wird in AP-3.doc ausgefüllt. Hier gehört hinein, was die Planung falsch
-angenommen hat, welche Fallen der Plan nicht kannte, welche Messwerte
-herauskamen und was bewusst offen bleibt — nach dem Vorbild von
-`Theme/docs/PLAN-Seitenindex.md` und
-`Plugins/CDB-Designer/docs/PLAN-Seitenimport.md`._
+### Was die Planung falsch angenommen hat
+
+| Annahme im Plan | Wirklichkeit |
+|---|---|
+| `tools/` sei nicht in der ZIP-Whitelist des Themes | Falsch. Die Einschlussregel `filePath.match(/\.php$/)` trifft **jede** PHP-Datei in **jedem** Unterverzeichnis. Der Prüfharnisch wäre ausgeliefert worden (AP-1.6) |
+| Die Abfragezahl lasse sich „als Administrator" messen | Unbrauchbar — für Administratoren wird der neue Pfad gerade übersprungen. Richtig: mu-Plugin mit `add_filter('simple_clean_ist_lehrperson', '__return_false')` (AP-1.4) |
+| `function_exists`-Guards in `includes/sichtbarkeit.php` | Verworfen — bedingt deklarierte Funktionen werden nicht gehoistet, daran ist `sidebar.php` schon einmal gescheitert (AP-1.1) |
+| `pre_get_posts` auf `is_main_query()` beschränken | Hätte REST und Suchendpunkt offen gelassen; beide bauen eigene Abfragen (AP-1.5) |
+| `rest_page_query` decke REST ab | Nur Sammlungen. `/wp/v2/pages/<id>` ging daran vorbei (AP-1.5) |
+| Testadresse `localhost:8080/fos/` | Die Installation antwortet unter `fos.localhost:8080`; über den Pfad kommt 404 (AP-1.1) |
+
+### Fallen, die der Plan nicht kannte
+
+1. **Rohe SQL-Abfragen umgehen alle Filter.** `simple_clean_get_term_usage()`
+   speist die Liste „Dieser Begriff wird verwendet in:" auf jeder
+   Glossarseite — **mit dem Titel** der Fundstelle. Eine gesperrte
+   Lösungsseite stand damit namentlich im Netz (AP-1.fix1).
+2. **`redirect_canonical()` läuft vor der Sperre.** `?page_id=31` endete mit
+   301, und der `Location`-Kopf nannte den Slug. Durch Durchprobieren von IDs
+   liessen sich die Namen aller Lösungsseiten einsammeln; eine nicht
+   vergebene ID verhielt sich zudem anders und verriet, welche IDs existieren
+   (AP-3.1.fix1).
+3. **Der `<head>` verrät die Adresse ein zweites Mal** — `rel=canonical`,
+   zwei oEmbed-Verweise und das `redirect_to` des Anmelde-Links (AP-3.1.fix1).
+
+   **Die gemeinsame Lehre:** Es genügt nicht, den Inhalt zu sperren. Alles,
+   was WordPress **über** eine Seite ausgibt, kann ihren Namen verraten.
+
+4. **REST-Prüfungen „angemeldet" brauchen `X-WP-Nonce`.** Ein Cookie allein
+   genügt nicht; ohne Nonce gilt die Anfrage als anonym. Ein Testlauf sah
+   deshalb kurz so aus, als sperre der Filter auch Lehrpersonen aus.
+5. **`wp_send_json_*()` ruft außerhalb eines AJAX-Kontexts direkt `die`** —
+   der Filter `wp_die_handler` greift dort nicht. Prüfskripte brauchen
+   `define('DOING_AJAX', true)` vor `wp-load.php`.
+6. **Ein Testskript mit `wp_set_current_user($admin)` hat keine
+   Besuchersicht mehr.** Der erste Menü-Test zeigte deshalb keinerlei
+   Filterwirkung.
+
+### Messwerte
+
+| Größe | Wert |
+|---|---|
+| Zusätzliche Datenbankabfragen im Frontend | **+1** für nicht angemeldete Besucher, auch ohne gesperrte Seite; **0** für Angemeldete |
+| Kapitelseite / Verzeichnisseite | 37/38 Abfragen (Administrator) → 38/39 (Besuchersicht) |
+| Seitenmanager, gesamte Baumansicht | **2** Abfragen, unabhängig von der Zahl der Seiten |
+| Prüfungen | Theme-Harnisch 17, Plugin-Harnisch 37 |
+| Integrationstests | Phase 1: 26/26 · Phase 2: 15/15 · AP-3.1: 20 von 21 (1 offen) |
+| Paketgrößen | Theme 107 KB (28 Dateien) · Plugin 47,8 MB |
+
+### Offene Punkte
+
+- **Sitemap nicht über die URL geprüft.** Die Testinstallation nutzt
+  PATHINFO-Permalinks ohne mod_rewrite und liefert unter jeder
+  Sitemap-Adresse 404 — auch ohne die Filter. Der Filter selbst ist isoliert
+  geprüft. **Auf der Produktivinstallation nachholen** (Schritt 6 der
+  Ausrollanleitung).
+- **Kein unabhängiges Review.** Alle drei Reviews wurden auf
+  Nutzerentscheidung vom implementierenden Agenten durchgeführt. Besonders
+  lohnend wäre ein fremder Blick auf `simple_clean_query_ausschluss()` — der
+  Eingriff in **alle** Seitenabfragen ist der weitreichendste des Vorhabens;
+  ob seine vier Ausnahmen vollständig sind, ist Urteilssache.
+- **„Lehrperson" heißt nur „angemeldet."** Nutzerentscheidung. Sobald ein
+  Konto ohne Lehrauftrag existiert, öffnet sich die Sperre still. Die
+  Verschärfung ist eine Zeile in `simple_clean_ist_lehrperson()`.
+- **Caching nicht geprüft** — in der Testumgebung läuft kein Caching-Plugin.
+- **Drag-Sortierung im Seitenmanager nicht geprüft** (ohne Browser nicht
+  sinnvoll; der Code daran wurde nicht angefasst).
+- **Der Prüfaufbau steht noch in der Testinstallation**: Seiten 29–33, Klasse
+  „Testklasse" (Passwort `testpw`), Menü „Testmenue Lehrerseiten",
+  eingeschaltetes Klassensystem, Glossarbegriff „Testbegriff". Bewusst
+  stehengelassen — er ist die Grundlage für jede spätere Prüfung.
+
+### Bewusst nicht umgesetzt
+
+Alles aus Abschnitt 2 (Nicht-Ziele) — insbesondere: keine neue Markierung für
+Blöcke, keine neue Rolle, kein Umbau des Klassensystems, keine Sperre für
+andere Inhaltstypen als Seiten.
