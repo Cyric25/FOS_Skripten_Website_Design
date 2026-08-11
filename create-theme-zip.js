@@ -39,7 +39,18 @@ const EXCLUDE_PATTERNS = [
     'CLAUDE.md',
     '.vscode',
     '.idea',
-    'dist/*.zip'
+    'dist/*.zip',
+    // Pruefharnische gehoeren nicht auf die Live-Site.
+    //
+    // ACHTUNG, leicht zu uebersehen: Die Einschlussregel weiter unten lautet
+    // filePath.match(/\.php$/) und trifft damit JEDE PHP-Datei in jedem
+    // Unterverzeichnis, nicht nur die im Wurzelverzeichnis. Ohne diesen
+    // Ausschluss landete tools/test-sichtbarkeit.php im Verteilungspaket
+    // (aufgefallen beim Bau von v1.5.77).
+    //
+    // Mit Schraegstrich, damit kuenftige Dateien wie includes/tools-helper.php
+    // nicht versehentlich mit ausgeschlossen werden.
+    'tools/'
 ];
 
 async function shouldIncludeFile(filePath) {

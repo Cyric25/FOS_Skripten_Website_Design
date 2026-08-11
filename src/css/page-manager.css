@@ -558,3 +558,14 @@
         max-width: 100%;
     }
 }
+
+/* Kennzeichnung „nur für Lehrpersonen" in der Baumzeile.
+   Gesetzt in includes/admin/page-manager.php, wenn das Meta
+   _simple_clean_nur_lehrpersonen gesetzt ist. */
+.page-lehrer-marker {
+    margin-left: 6px;
+    cursor: help;
+    opacity: 0.75;
+    font-size: 0.95em;
+    line-height: 1;
+}

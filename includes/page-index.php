@@ -160,6 +160,22 @@ function simple_clean_page_index_daten() {
     // array_flip, damit die Prüfung unten ein isset() ist und keine Suche.
     $ausgeschlossen = array_flip(array_map('intval', (array) $ausgeschlossen));
 
+    // Seiten, die nur für Lehrpersonen sichtbar sind, kommen für nicht
+    // angemeldete Besucher hinzu. Vereinigung über die Schlüssel — die Werte
+    // spielen keine Rolle, unten wird ausschließlich isset() geprüft.
+    //
+    // Den Unterbaum muss hier niemand berechnen: Die Breitensuche weiter
+    // unten startet an der Wurzel, ein ausgeschlossener Knoten nimmt seine
+    // Nachfahren also mit. Genau wie bei _simple_clean_hide_from_index.
+    //
+    // KEIN persistenter Zwischenspeicher für diese Daten (Transient, Option).
+    // Er würde Titel gesperrter Seiten an Nichtberechtigte ausliefern, sobald
+    // ein Aufruf einer Lehrperson den Speicher füllt. Die statische Variable
+    // oben gilt nur für die Dauer eines Aufrufs und ist deshalb unbedenklich.
+    if (function_exists('simple_clean_ist_lehrperson') && !simple_clean_ist_lehrperson()) {
+        $ausgeschlossen = $ausgeschlossen + simple_clean_gesperrte_seiten();
+    }
+
     $roh    = array();
     $kinder = array();
     foreach ($zeilen as $zeile) {
