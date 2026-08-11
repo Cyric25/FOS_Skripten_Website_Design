@@ -1250,6 +1250,130 @@ zweite Checkbox der Meta-Box „Navigation & Inhaltsverzeichnis". Die Seite
 entfällt **samt ihrem gesamten Unterbaum**, bleibt aber erreichbar und in der
 Seitenleiste sichtbar.
 
+## Seiten nur für Lehrpersonen (seit v1.5.78)
+
+Einzelne Seiten lassen sich sperren: Für nicht angemeldete Besucher
+verschwinden sie aus Seitenleiste, Inhaltsverzeichnis, Menü, Suche, REST und
+Sitemap; der direkte Aufruf endet mit **HTTP 403** auf einer Hinweisseite.
+Gedacht für Lösungsseiten. Code in `includes/sichtbarkeit.php`, Plan und
+Analyse in `docs/PLAN-Lehrerseiten.md` bzw.
+`docs/ERWEITERUNGSANALYSE-Lehrerseiten.md`.
+
+**Gesetzt wird das Meta `_simple_clean_nur_lehrpersonen`** (String `'1'`, sonst
+gelöscht) an zwei Stellen: dem dritten Häkchen der Meta-Box „Navigation,
+Verzeichnis & Zugriff" (`functions.php`) und den Sammelaktionen
+`lock_teacher` / `unlock_teacher` im Seitenmanager.
+
+### Die fünf Funktionen
+
+| Funktion | Aufgabe |
+|---|---|
+| `simple_clean_ist_lehrperson()` | **Die einzige Definition von „Lehrperson".** Filter `simple_clean_ist_lehrperson` |
+| `simple_clean_gesperrte_seiten()` | IDs mit gesetztem Meta, `array(ID => true)`, eine Abfrage, statisch gehalten |
+| `simple_clean_gesperrte_seiten_mit_unterbaum()` | dieselben plus **alle Nachfahren**. Ohne gesperrte Seite: kein Baumaufbau, keine zweite Abfrage |
+| `simple_clean_seite_nur_lehrpersonen($id)` | Seite selbst oder ein Vorfahre gesperrt? |
+| `simple_clean_seite_sichtbar($id)` | die Gesamtentscheidung inkl. Freigabe-Filter |
+
+Dazu `simple_clean_sichtbarkeit_cache_leeren()` — verwirft die statisch
+gehaltenen Listen (Tests, WP-CLI, Importe).
+
+### „Lehrperson" heißt derzeit nur „angemeldet" — Warnung
+
+Das trägt, solange es ausschließlich Lehrer-Konten gibt; Schülerinnen und
+Schüler melden sich nie an, sie kommen über das Klassenpasswort des
+CDB-Plugins. **Sobald ein Konto ohne Lehrauftrag existiert** — ein Abonnent,
+ein Testkonto, ein späterer Schülerzugang —, öffnet sich die Sperre still.
+Verschärft wird an **einer** Stelle: `simple_clean_ist_lehrperson()` bzw. dem
+gleichnamigen Filter, etwa auf `current_user_can('cbd_edit_blocks')`. Alle
+übrigen Fundstellen fragen nur diese Funktion.
+
+### Die Sperre vererbt sich auf den Unterbaum
+
+Wie `_simple_clean_hide_from_index`. **In den Baumdarstellungen kommt das
+gratis:** Seitenleiste und Inhaltsverzeichnis laufen von der Wurzel abwärts,
+ein entfernter Knoten nimmt seine Nachfahren mit. Dort genügt
+`simple_clean_gesperrte_seiten()`.
+
+**In flachen Listen nicht** — Menü, Suche, REST, Sitemap. Eine Unterseite steht
+dort für sich; deshalb `simple_clean_gesperrte_seiten_mit_unterbaum()`.
+
+### Reihenfolge auf `template_redirect` — die zählt
+
+| Priorität | Funktion |
+|---|---|
+| 1 | `simple_clean_block_ai_user_agents()` |
+| 10 | `simple_clean_password_protection_check()` |
+| **20** | `simple_clean_lehrerseite_pruefen()` |
+
+Die Lehrersperre kommt zuletzt. Sonst käme ein Besucher, der das
+Website-Passwort nicht kennt, über die Hinweisseite an der Passwortabfrage
+vorbei — und wüsste, dass es die Seite gibt.
+
+### Zwei Dinge, die nicht verändert werden dürfen
+
+**Der Filter `simple_clean_lehrerseite_freigeben` hat den Standardwert
+`false`.** Er ist die Naht, an der sich das CDB-Plugin einhängt, um gesperrte
+Seiten in der Klassenansicht freizugeben. Fehlt das Plugin oder greift der
+Filter nicht, bleibt die Seite gesperrt — ein Fehler in der Naht zeigt zu
+wenig, nie zu viel.
+
+**Kein persistenter Zwischenspeicher für die Seitenbäume** (Transient,
+Option). Er würde Titel gesperrter Seiten an Nichtberechtigte ausliefern,
+sobald ein Aufruf einer Lehrperson ihn füllt. Die statischen Variablen gelten
+nur für die Dauer eines Aufrufs und sind unbedenklich. (Gegen einen
+Zwischenspeicher für den Seitenindex sprach ohnehin schon eine Messung, siehe
+Abschnitt „Inhaltsverzeichnis-Block".)
+
+### Falle: rohe SQL-Abfragen greifen die Filter nicht ab
+
+Die Ausblend-Filter hängen an WordPress-APIs (`pre_get_posts`,
+`wp_get_nav_menu_items`, `rest_page_query`, …). **Wo das Theme mit rohem
+`$wpdb` arbeitet, wirkt keiner davon.** Genau daran hing ein Leck:
+`simple_clean_get_term_usage()` speist die Liste „Dieser Begriff wird verwendet
+in:" auf jeder Glossarseite — mit dem **Titel** der Fundstelle. Eine gesperrte
+Lösungsseite stand damit namentlich im Netz, obwohl die Hinweisseite ihren
+Titel verbirgt. Die Funktion filtert jetzt selbst.
+
+**Wer eine neue Stelle baut, die Seiten auflistet oder verlinkt, muss prüfen,
+ob sie über eine WordPress-API läuft.** Wenn nicht: `simple_clean_seite_sichtbar()`
+bzw. `simple_clean_gesperrte_seiten_mit_unterbaum()` von Hand einsetzen. Die
+vollständige Liste der geprüften Fundstellen steht in
+`docs/PLAN-Lehrerseiten.md`, AP-1.rev.
+
+### REST: Sammlung UND Einzelabruf
+
+`rest_page_query` filtert nur Sammlungen. Der Abruf einer einzelnen Seite
+(`/wp-json/wp/v2/pages/<id>`) geht daran vorbei und lieferte sonst Titel und
+vollständigen Inhalt an jeden — die Sperre wäre mit einer URL auszuhebeln.
+Dafür gibt es zusätzlich einen Filter auf `rest_pre_dispatch`.
+
+Angemeldete sind nicht betroffen; nachgewiesen mit `X-WP-Nonce`. **Beim
+Prüfen daran denken:** Cookie-Anmeldung allein genügt der REST-Schnittstelle
+nicht, ohne Nonce gilt die Anfrage als anonym.
+
+### `pre_get_posts` gilt für alle Abfragen, nicht nur die Hauptabfrage
+
+REST und der Suchendpunkt bauen eigene Abfragen. **Ausgenommen sind
+`is_singular()`-Abfragen** — sonst fände die Abfrage die gesperrte Seite nicht
+mehr, und statt der Hinweisseite mit 403 käme ein gewöhnliches 404 ohne
+Erklärung und ohne Anmelde-Link. Ebenfalls ausgenommen: Abfragen fremder
+Inhaltstypen.
+
+### Prüfharnisch
+
+`php tools/test-sichtbarkeit.php` — 17 Prüfungen ohne WordPress, mit Stubs.
+Der `$wpdb`-Doppel zählt Abfragen mit, damit nachweisbar bleibt, dass ohne
+gesperrte Seiten keine zweite Abfrage läuft. **`tools/` ist von
+`create-theme-zip.js` ausgeschlossen** — nötig, weil die Einschlussregel
+`filePath.match(/\.php$/)` jede PHP-Datei in jedem Unterverzeichnis trifft.
+
+Kosten: **+1 Datenbankabfrage** je Aufruf für nicht angemeldete Besucher, auch
+wenn nichts gesperrt ist. Für Angemeldete keine.
+**Zum Nachmessen:** nicht einfach „als Administrator" — dort wird der Pfad
+übersprungen. Ein mu-Plugin mit
+`add_filter('simple_clean_ist_lehrperson', '__return_false');` erzwingt die
+Besuchersicht, während `?sc_perf=1` weiter ausgibt.
+
 ## Diagnose: Wo geht die Zeit hin?
 
 Auf einem Shared Hosting ohne SSH und ohne WP-CLI steht kein Profiler zur

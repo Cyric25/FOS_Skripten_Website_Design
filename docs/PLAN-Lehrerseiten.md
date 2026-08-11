@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.rev und AP-1.fix1 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (Phase 1 abgeschlossen)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -1415,7 +1415,7 @@ dokumentiert, sie behebt einen Fehler der Planung selbst.
 
 ### AP-1.doc: Dokumentation Phase 1
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-1.rev
@@ -1475,6 +1475,34 @@ werden kann.
   `grep` in `Theme/includes/sichtbarkeit.php` wiederfinden.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. Neuer Abschnitt „Seiten nur für Lehrpersonen" in
+`Theme/CLAUDE.md`, eingefügt vor „Diagnose: Wo geht die Zeit hin?".
+
+Er hält alles fest, was in dieser Phase Geld gekostet hat: die fünf
+Funktionen, die **Warnung zur Rollen-Definition**, warum die Vererbung in
+Bäumen gratis kommt und in flachen Listen nicht, die Hakenreihenfolge
+1/10/20, den Filter-Standardwert `false`, das Verbot eines persistenten
+Zwischenspeichers, die **Falle mit den rohen SQL-Abfragen** (Befund
+AP-1.fix1), REST-Sammlung *und* -Einzelabruf samt Nonce-Hinweis, die
+Sonderrolle von `is_singular()` bei `pre_get_posts`, den Prüfharnisch und die
+richtige Art, die Abfragezahl zu messen.
+
+Datei-Map auf Stand 2026-08-11 / Version 1.5.78; die Zeilen zu
+`functions.php`, `sidebar.php`, `single-glossar.php`,
+`includes/page-index.php`, `includes/admin/page-manager.php`,
+`create-theme-zip.js` sind nachgezogen, `includes/sichtbarkeit.php`,
+`tools/test-sichtbarkeit.php` und die zwei Dokumente in `docs/` sind neu
+eingetragen.
+
+Stichproben bestanden: Alle acht in `CLAUDE.md` genannten Funktionsnamen sind
+im Code auffindbar. Abschluss-Regression nach AP-1.fix1: Startseite,
+Kapitelseite, normale Unterseite, Verzeichnisseite und Glossarseite liefern
+200, die gesperrte Seite weiterhin 403, Prüfharnisch grün.
+
+**Noch nicht dokumentiert:** der Abschnitt „Klassenansicht (kommt aus dem
+CDB-Plugin)" in `Theme/CLAUDE.md`. Der ist AP-2.doc zugeordnet, weil er das
+Zusammenspiel beschreibt, das erst in Phase 2 entsteht.
 
 ---
 
@@ -2344,7 +2372,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP-1.6 | Seitenmanager – Sammelaktionen und Kennzeichnung | sonnet | ☑ | AP-1.1, AP-1.2 | Theme | 10 Aktionen; Baumansicht 2 Abfragen; `tools/` aus dem ZIP ausgeschlossen |
 | AP-1.rev | Review Phase 1 | opus | ☑ | AP-1.1 … AP-1.6 | Theme | **nicht unabhängig** (auf Nutzerentscheidung selbst geprüft); 1 kritischer Befund → AP-1.fix1 |
 | AP-1.fix1 | Glossar-Verwendungsnachweise verraten gesperrte Titel | opus | ☑ | AP-1.rev | Theme | rohe $wpdb-Abfrage ging an pre_get_posts vorbei |
-| AP-1.doc | Dokumentation Phase 1 | sonnet | ☐ | AP-1.rev | Theme | |
+| AP-1.doc | Dokumentation Phase 1 | sonnet | ☑ | AP-1.rev | Theme | CLAUDE.md-Abschnitt + Datei-Map auf Stand 1.5.78 |
 | AP-2.1 | Geteilte Helfer für behandelte Container herauslösen | sonnet | ☐ | – | Plugin | |
 | AP-2.2 | Klassensitzung prüfen und den Filter bedienen | opus | ☐ | AP-1.3, AP-2.1 | Plugin | |
 | AP-2.3 | Serverseitige Reduktion des Seiteninhalts | opus | ☐ | AP-2.2 | Plugin | |
@@ -2371,7 +2399,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-11 | **Phase 1** Integration + Regression | 26 Einzelprüfungen in einem Durchlauf: gesperrte Seite und Unterseite (Status, Titel- und Kunstwort-Leck), Seitenleiste, Inhaltsverzeichnis, Menü, Suche, REST-Sammlung und -Einzelseiten — je abgemeldet; Regression von Startseite, Kapitelseite, normaler Unterseite, Verzeichnisseite, Suche, Anmeldeseite; angemeldete Vollsicht inkl. Seitenmanager mit Marker; Prüfharnisch; `debug.log` | **bestanden (26/26).** Vier Zeilen waren zunächst rot, alle vier durch Fehler im Prüfskript: Seitentitel erscheinen sowohl im Menü **als auch** in der Seitenleiste (2 Treffer sind richtig), ein Suchergebnis wird zweimal verlinkt (Titel + Weiterlesen), und ein `grep`-Bereich reichte über den Kopfbereich hinaus. Nachgemessen: Menü hat abgemeldet genau 3 Punkte, der Waisen-Untereintrag ist entfernt; Suche liefert genau 1 eindeutige Ergebnis-URL; `debug.log` hat 551 Zeilen Plugin-Protokoll und **0 Fehlerzeilen** | Claude (Opus) |
 | 2026-08-11 | AP-1.rev | Sechs APs gegen ihre Akzeptanzkriterien; `grep` über alle `*.php` nach elf Seiten-Auflistungs- und Verlinkungsmustern, jede Fundstelle beurteilt; Einzigkeit von `simple_clean_ist_lehrperson()`; Filter-Standardwert; Hakenreihenfolge; Scope-Check; Sicherheitsdurchsicht | **1 kritischer Befund** (Glossar-Verwendungsnachweise, siehe AP-1.fix1), sonst keine offenen Befunde. Review war nicht unabhängig — Einschränkung in der Übergabenotiz ausgewiesen | Claude (Opus) |
 | 2026-08-11 | AP-1.fix1 | `simple_clean_get_term_usage()` abgemeldet und angemeldet; gerenderte Glossarseite; `php -l`; PHP-7.4-Parse | **bestanden** — vorher lieferte die Liste anonym `#31 Loesungen Test`, jetzt nur noch `#30`. Angemeldet unverändert beide. Titel auf der Glossarseite 0-mal | Claude (Opus) |
-| | AP-1.doc | | | |
+| 2026-08-11 | AP-1.doc | Stichprobe: alle acht in `CLAUDE.md` genannten Funktionsnamen per `grep` im Code wiedergefunden; Datei-Map gegen den Dateibestand abgeglichen; Abschluss-Regression aller Seiten | **bestanden** — Funktionen existieren, Verweise stimmen, alle Seiten laden (gesperrte weiterhin 403), Harnisch grün | Claude (Opus) |
 | | AP-2.1 | | | |
 | | AP-2.2 | | | |
 | | AP-2.3 | | | |

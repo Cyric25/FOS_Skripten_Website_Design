@@ -1,6 +1,6 @@
 # Datei-Map: Theme „FOS Online Schulbuch"
 
-_Stand: 2026-08-10 · Theme-Version 1.5.76_
+_Stand: 2026-08-11 · Theme-Version 1.5.78_
 
 Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 `CLAUDE.md`, insbesondere in der Funktionsübersicht der `functions.php`.
@@ -9,7 +9,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 
 | Datei | Zweck | Wichtige Funktionen/Inhalte | Hängt ab von |
 |---|---|---|---|
-| `functions.php` | Sammelstelle aller Theme-Subsysteme, ~3900 Zeilen | Setup, Asset-Einbindung, Customizer (Farben + Inhaltsverzeichnis), Meta-Box „Navigation & Inhaltsverzeichnis", Glossar-System, Passwortschutz, AI-Blocker, SVG-Pipeline, Lightbox, Diagnoseausgabe `simple_clean_perf_footer()`. Gliederung siehe `CLAUDE.md`. Bindet `includes/sichtbarkeit.php` ein (außerhalb des `is_admin()`-Blocks — die Sperre wirkt im Frontend) | `includes/*`, `dist/*` |
+| `functions.php` | Sammelstelle aller Theme-Subsysteme, ~3900 Zeilen | Setup, Asset-Einbindung, Customizer (Farben + Inhaltsverzeichnis), Meta-Box „Navigation, Verzeichnis & Zugriff" (drei Häkchen), Glossar-System, Passwortschutz, AI-Blocker, SVG-Pipeline, Lightbox, Diagnoseausgabe `simple_clean_perf_footer()`. Gliederung siehe `CLAUDE.md`. Bindet `includes/sichtbarkeit.php` ein (außerhalb des `is_admin()`-Blocks — die Sperre wirkt im Frontend) | `includes/*`, `dist/*` |
 | `header.php` | Kopfbereich, Hauptmenü | Inline-Script für den Mobil-Menü-Umschalter (inkl. ARIA, ESC, Klick daneben) | – |
 | `footer.php` | Fußbereich | Copyright, Anmelde-Link, `wp_footer()` | – |
 | `index.php` | Beitragsliste | Auszüge, Datum/Autor, Blätternavigation | `header.php`, `footer.php` |
@@ -17,7 +17,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 | `page.php` | Statische Seite | Bindet die Seitenleiste ein, sofern nicht per Meta abgeschaltet | `sidebar.php` |
 | `sidebar.php` | Hierarchischer Seitenbaum links; nimmt gesperrte Seiten samt Unterbaum für nicht Angemeldete heraus (`simple_clean_gesperrte_seiten()`, mit `function_exists`-Absicherung) | `get_root_page_id()`, `display_page_tree_item()` — **beide bewusst am Dateianfang** in `function_exists`-Guards (kein Hoisting, sonst Fatal); eine `get_pages()`-Abfrage plus Parent-Kind-Map; Swipe/ESC/Klick-daneben im Inline-Script | `functions.php` (Meta `_simple_clean_hide_navigation`) |
 | `archive-glossar.php` | Glossar-Übersicht | Liste aller Begriffe | `functions.php` |
-| `single-glossar.php` | Einzelner Glossarbegriff | Definition, Verwendungsnachweise | `functions.php` |
+| `single-glossar.php` | Einzelner Glossarbegriff | Definition, Verwendungsnachweise. Die Liste „Dieser Begriff wird verwendet in:" stammt aus `simple_clean_get_term_usage()` und **filtert gesperrte Seiten selbst** — die rohe Abfrage dort greift `pre_get_posts` nicht ab | `functions.php` |
 | `style.css` | Haupt-Stylesheet **und** Theme-Header | Theme-Name und Version (von `backup-and-build.js` gepflegt), `:root`-Variablen, Layout, Navigation, Inhalt, Seitenleiste, Haltepunkte 992/768/480 | – |
 
 ## Eingebundene Module
