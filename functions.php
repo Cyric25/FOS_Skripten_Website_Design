@@ -492,11 +492,11 @@ add_filter('body_class', 'simple_clean_body_classes');
 function simple_clean_add_navigation_meta_box() {
     add_meta_box(
         'simple_clean_hide_navigation',
-        // Titel angepasst (v1.5.74): Die Box regelt jetzt zwei Dinge.
+        // Titel angepasst (v1.5.77): Die Box regelt jetzt drei Dinge.
         // Die Meta-Box-ID bleibt bewusst 'simple_clean_hide_navigation' —
         // daran hängen die gespeicherten Bildschirmeinstellungen der Benutzer
         // (auf-/zugeklappt, Reihenfolge). Eine Änderung würde sie verwerfen.
-        'Navigation & Inhaltsverzeichnis',
+        'Navigation, Verzeichnis & Zugriff',
         'simple_clean_navigation_meta_box_callback',
         'page',
         'side',
@@ -574,6 +574,39 @@ function simple_clean_navigation_meta_box_callback($post) {
             🚫 <strong>Status:</strong> Diese Seite und ihre Unterseiten fehlen im Inhaltsverzeichnis
         </div>
     <?php endif; ?>
+
+    <?php
+    // Dritte Einstellung: Sperre für nicht angemeldete Besucher.
+    // Ausgewertet wird das Meta in includes/sichtbarkeit.php
+    // (simple_clean_seite_nur_lehrpersonen) — dort gilt es samt Unterbaum.
+    // Kein zweites Nonce: Das Feld ganz oben deckt die ganze Box ab.
+    $nur_lehrpersonen = get_post_meta($post->ID, '_simple_clean_nur_lehrpersonen', true);
+    ?>
+
+    <div style="padding: 10px; background: #f0f7fb; border-left: 4px solid #0073aa; margin: 14px 0 10px;">
+        <label for="simple_clean_nur_lehrpersonen" style="display: block; margin-bottom: 8px;">
+            <input type="checkbox"
+                   id="simple_clean_nur_lehrpersonen"
+                   name="simple_clean_nur_lehrpersonen"
+                   value="1"
+                   <?php checked($nur_lehrpersonen, '1'); ?>
+                   style="margin-right: 5px;">
+            <strong>Nur für Lehrpersonen sichtbar</strong>
+        </label>
+        <p class="description" style="margin: 5px 0 0; color: #666;">
+            Für nicht angemeldete Besucher verschwindet die Seite aus Seitenleiste,
+            Inhaltsverzeichnis, Menü und Suche; der direkte Aufruf zeigt einen Hinweis.<br>
+            <strong>Achtung:</strong> Auch <em>alle Unterseiten</em> sind dann gesperrt.<br>
+            Blöcke, die im Tafelmodus für eine Klasse als <em>behandelt</em> markiert
+            sind, bleiben in der Klassenansicht sichtbar.
+        </p>
+    </div>
+
+    <?php if ($nur_lehrpersonen === '1'): ?>
+        <div style="padding: 8px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+            🔒 <strong>Status:</strong> Diese Seite und ihre Unterseiten sind nur für angemeldete Lehrpersonen sichtbar
+        </div>
+    <?php endif; ?>
     <?php
 }
 
@@ -613,6 +646,16 @@ function simple_clean_save_navigation_meta($post_id) {
         update_post_meta($post_id, '_simple_clean_hide_from_index', '1');
     } else {
         delete_post_meta($post_id, '_simple_clean_hide_from_index');
+    }
+
+    // Dritte Einstellung derselben Meta-Box: Sperre für nicht angemeldete
+    // Besucher. Ausgewertet in includes/sichtbarkeit.php. Die Prüfungen oben
+    // (Nonce, Autosave, edit_post, post_type) gelten mit — hier bewusst keine
+    // zweite Prüfung.
+    if (isset($_POST['simple_clean_nur_lehrpersonen']) && $_POST['simple_clean_nur_lehrpersonen'] === '1') {
+        update_post_meta($post_id, '_simple_clean_nur_lehrpersonen', '1');
+    } else {
+        delete_post_meta($post_id, '_simple_clean_nur_lehrpersonen');
     }
 }
 add_action('save_post', 'simple_clean_save_navigation_meta');

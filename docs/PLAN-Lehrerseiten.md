@@ -1,6 +1,6 @@
 # Projektplan: Seiten nur für Lehrpersonen
 
-_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.1 erledigt)_
+_Erstellt am: 2026-08-11 · Letzte Aktualisierung: 2026-08-11 (AP-1.2 erledigt)_
 
 Grundlage: `Theme/docs/ERWEITERUNGSANALYSE-Lehrerseiten.md` (vom Nutzer bestätigt).
 
@@ -453,7 +453,7 @@ dauerhaften 7.4-Prüfer bekommen soll; derzeit gibt es keinen.
 
 ### AP-1.2: Häkchen „Nur für Lehrpersonen" in der Meta-Box
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt (2026-08-11)
 **Umfang:** S
 **Modell:** sonnet (Lösungsweg vollständig vorgezeichnet, zwei bestehende Felder als Vorlage)
 **Abhängigkeiten:** AP-1.1 (Meta-Name und Konvention stehen fest)
@@ -538,6 +538,37 @@ Einführung des zweiten Feldes.
   Inhaltsverzeichnis (`_simple_clean_hide_from_index`) reagieren wie vorher.
 
 **Übergabenotiz:**
+
+Erledigt am 2026-08-11. Meta-Box-Titel jetzt „Navigation, Verzeichnis &
+Zugriff"; Meta-Box-ID unverändert `simple_clean_hide_navigation`.
+
+**Geprüft wurde skriptgesteuert, nicht per Mausklick.** Ein Skript im Webroot
+(danach wieder entfernt) legt eine Testseite mit Elternseite an, ruft
+`simple_clean_navigation_meta_box_callback()` und `simple_clean_save_navigation_meta()`
+mit echtem Nonce auf und liest anschließend `wp_postmeta` direkt aus. Damit
+läuft derselbe Codeweg wie beim Speichern im Editor. 20 Prüfungen, alle grün;
+die Testseiten werden am Ende wieder gelöscht.
+
+Geprüft wurden dabei auch drei Dinge, die über die Akzeptanzkriterien
+hinausgehen und für Folge-APs nützlich sind:
+- Ein **ungültiges Nonce** schreibt nichts — die vorhandene Prüfung deckt das
+  neue Feld mit ab, wie beabsichtigt.
+- Das Meta wirkt sofort in `simple_clean_seite_nur_lehrpersonen()` (nach
+  `simple_clean_sichtbarkeit_cache_leeren()`), die Elternseite bleibt frei.
+  Die Vererbung läuft also nur abwärts, nicht aufwärts.
+- Die zwei bestehenden Häkchen setzen und löschen unverändert ihre Metas, ohne
+  das neue zu berühren.
+
+**Eine Prüfung war zunächst rot — der Fehler lag in meiner Messung.** Sie
+zählte, wie oft die Zeichenkette `simple_clean_navigation_nonce` im HTML
+vorkommt, und erwartete 1. Tatsächlich sind es 2, weil `wp_nonce_field()` den
+Namen sowohl als `id=` als auch als `name=` ausgibt — es ist trotzdem genau
+**ein** Feld aus genau **einem** Aufruf (per `sed` im Quelltext gegengeprüft).
+Die Messung zählt jetzt `name="…"`. Das Kriterium selbst wurde nicht
+aufgeweicht.
+
+Für AP-1.6 relevant: Das Meta wird als String `'1'` geschrieben und per
+`delete_post_meta()` entfernt — die Sammelaktionen müssen es genauso halten.
 
 ---
 
@@ -1902,7 +1933,7 @@ Wird während der Ausführung gepflegt. Legende: ☐ offen · ◐ in Arbeit · �
 | AP | Titel | Modell | Status | Abhängig von | Repository | Notiz |
 |---|---|---|---|---|---|---|
 | AP-1.1 | Zentrale Sichtbarkeitslogik mit Prüfharnisch (TDD) | opus | ☑ | – | Theme | 17 Prüfungen grün; keine `function_exists`-Guards (Hoisting), Begründung in der Übergabenotiz |
-| AP-1.2 | Häkchen „Nur für Lehrpersonen" in der Meta-Box | sonnet | ☐ | AP-1.1 | Theme | |
+| AP-1.2 | Häkchen „Nur für Lehrpersonen" in der Meta-Box | sonnet | ☑ | AP-1.1 | Theme | 20 Prüfungen grün; Box heißt jetzt „Navigation, Verzeichnis & Zugriff" |
 | AP-1.3 | Durchsetzung beim Seitenaufruf und die Hinweisseite | opus | ☐ | AP-1.1 | Theme | |
 | AP-1.4 | Ausblenden in Seitenleiste und Inhaltsverzeichnis | sonnet | ☐ | AP-1.1 | Theme | parallel zu 1.2/1.3/1.5 |
 | AP-1.5 | Ausblenden in Menü, Suche, REST und Sitemap | sonnet | ☐ | AP-1.1, AP-1.3 | Theme | |
@@ -1927,7 +1958,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | Datum | AP / Phase | Getestet | Ergebnis | Getestet von |
 |---|---|---|---|---|
 | 2026-08-11 | AP-1.1 | `php tools/test-sichtbarkeit.php` (17 Prüfungen); `php -l` auf drei Dateien; PHP-7.4-Parse aller drei Dateien; Smoke-Test http://fos.localhost:8080/ ; `debug.log` | **bestanden** — 17/17 grün, Exit 0. Roter Vorlauf: 20 Fehler (Commit `d42989b`). PHP 7.4 sauber. Startseite HTTP 200. `debug.log` ohne Theme-Einträge | Claude (Opus) |
-| | AP-1.2 | | | |
+| 2026-08-11 | AP-1.2 | Skript im Webroot: Meta-Box rendern, mit echtem Nonce speichern, `wp_postmeta` direkt auslesen, Löschen prüfen, Regression der zwei bestehenden Häkchen, ungültiges Nonce; `php -l`; PHP-7.4-Parse | **bestanden** — 20/20 grün. Eine Prüfung war anfangs rot (Messfehler: `wp_nonce_field` schreibt den Namen als `id=` **und** `name=`; es ist genau ein Feld). `debug.log` ohne Theme-Einträge | Claude (Opus) |
 | | AP-1.3 | | | |
 | | AP-1.4 | | | |
 | | AP-1.5 | | | |
