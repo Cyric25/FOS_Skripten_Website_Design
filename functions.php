@@ -492,11 +492,13 @@ add_filter('body_class', 'simple_clean_body_classes');
 function simple_clean_add_navigation_meta_box() {
     add_meta_box(
         'simple_clean_hide_navigation',
-        // Titel angepasst (v1.5.77): Die Box regelt jetzt drei Dinge.
+        // Titel zuletzt in v1.5.77 angepasst (drei Dinge), jetzt um eine
+        // vierte Checkbox „Für Navigation sperren" erweitert (Plan
+        // Inhaltsverzeichnis-Navigation, AP-2).
         // Die Meta-Box-ID bleibt bewusst 'simple_clean_hide_navigation' —
         // daran hängen die gespeicherten Bildschirmeinstellungen der Benutzer
         // (auf-/zugeklappt, Reihenfolge). Eine Änderung würde sie verwerfen.
-        'Navigation, Verzeichnis & Zugriff',
+        'Navigation, Verzeichnis, Zugriff & Klicksperre',
         'simple_clean_navigation_meta_box_callback',
         'page',
         'side',
@@ -607,6 +609,49 @@ function simple_clean_navigation_meta_box_callback($post) {
             🔒 <strong>Status:</strong> Diese Seite und ihre Unterseiten sind nur für angemeldete Lehrpersonen sichtbar
         </div>
     <?php endif; ?>
+
+    <?php
+    // Vierte Einstellung: Klicksperre für Inhaltsverzeichnis und Seitenleiste.
+    // Ausgewertet in includes/page-index.php und sidebar.php (AP-3 dieses
+    // Plans) — dort wird aus dem Link ein reiner <span>, der Unterbaum
+    // bleibt sichtbar und anklickbar. Kein zweites Nonce: Das Feld ganz oben
+    // deckt die ganze Box ab.
+    //
+    // WICHTIG: Das ist KEIN Zugriffsschutz. Die Seite bleibt über ihre
+    // Adresse erreichbar und erscheint in der Suche — anders als
+    // „Nur für Lehrpersonen sichtbar" oben, das zusätzlich verbirgt. Der
+    // Hilfetext unten muss diesen Unterschied ausdrücklich benennen, sonst
+    // hält jemand die Sperre für Vertraulichkeit und markiert damit eine
+    // Lösungsseite, die weiterhin öffentlich abrufbar bleibt.
+    $nav_gesperrt = get_post_meta($post->ID, '_simple_clean_nav_gesperrt', true);
+    ?>
+
+    <div style="padding: 10px; background: #f0f7fb; border-left: 4px solid #0073aa; margin: 14px 0 10px;">
+        <label for="simple_clean_nav_gesperrt" style="display: block; margin-bottom: 8px;">
+            <input type="checkbox"
+                   id="simple_clean_nav_gesperrt"
+                   name="simple_clean_nav_gesperrt"
+                   value="1"
+                   <?php checked($nav_gesperrt, '1'); ?>
+                   style="margin-right: 5px;">
+            <strong>Für Navigation sperren</strong>
+        </label>
+        <p class="description" style="margin: 5px 0 0; color: #666;">
+            Die Seite lässt sich im Inhaltsverzeichnis und in der Seitenleiste
+            nicht mehr anklicken; im Inhaltsverzeichnis klappt ein Klick auf
+            den Eintrag weiterhin ihre Unterseiten auf und zu.<br>
+            <strong>Das ist kein Zugriffsschutz: Die Seite bleibt über ihre
+            Adresse erreichbar</strong> und erscheint weiterhin in der Suche.
+            Wer eine Seite wirklich verbergen will, nutzt oben
+            „Nur für Lehrpersonen sichtbar".
+        </p>
+    </div>
+
+    <?php if ($nav_gesperrt === '1'): ?>
+        <div style="padding: 8px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+            ⛔ <strong>Status:</strong> Diese Seite ist im Inhaltsverzeichnis und in der Seitenleiste nicht anklickbar (bleibt aber erreichbar)
+        </div>
+    <?php endif; ?>
     <?php
 }
 
@@ -656,6 +701,17 @@ function simple_clean_save_navigation_meta($post_id) {
         update_post_meta($post_id, '_simple_clean_nur_lehrpersonen', '1');
     } else {
         delete_post_meta($post_id, '_simple_clean_nur_lehrpersonen');
+    }
+
+    // Vierte Einstellung derselben Meta-Box: Klicksperre für Inhaltsverzeichnis
+    // und Seitenleiste (kein Zugriffsschutz). Ausgewertet in
+    // includes/page-index.php und sidebar.php. Die Prüfungen oben (Nonce,
+    // Autosave, edit_post, post_type) gelten mit — hier bewusst keine zweite
+    // Prüfung und kein zweiter Speicherweg.
+    if (isset($_POST['simple_clean_nav_gesperrt']) && $_POST['simple_clean_nav_gesperrt'] === '1') {
+        update_post_meta($post_id, '_simple_clean_nav_gesperrt', '1');
+    } else {
+        delete_post_meta($post_id, '_simple_clean_nav_gesperrt');
     }
 }
 add_action('save_post', 'simple_clean_save_navigation_meta');
