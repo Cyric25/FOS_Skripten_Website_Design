@@ -245,6 +245,73 @@ Darstellungen (`cards`, `list`, `columns`), mit und ohne `showCounts`.
 
 ---
 
+### AP-1.fix1: Die Suche findet klappbare Kapitel nicht mehr
+
+**Modell:** sonnet
+**Abhängigkeiten:** AP-1
+**Dateien:** `src/js/page-index.js`
+**Anlass:** Befund von AP-1. **Lücke in diesem Plan** — die Datei stand weder
+im Dateiblock von AP-1 noch in der Ausgangslage-Tabelle, obwohl sie vom
+Umbau betroffen ist.
+
+**Der Befund.** `src/js/page-index.js:47` liest den Kapiteltitel so:
+
+```js
+var link = element.querySelector(':scope > a');
+```
+
+Seit AP-1 sitzt der Titel nicht mehr als direktes Kind im `<li>`, sondern in
+`details > summary`. Der Ausdruck findet ihn nicht mehr, und die Suche
+liefert für den Titel eines **klappbaren** Kapitels „Keine Treffer".
+AP-1 hat es mit dem echten gebauten Skript gemessen:
+
+| Suche | Ergebnis |
+|---|---|
+| Titel eines **klappbaren** Kapitels | **„Keine Treffer"** ← Regression |
+| Titel eines Kapitels **ohne** Unterseiten | gefunden |
+| Titel einer Unterseite (Ebene 1) | Kapitel wird sichtbar |
+| Titel einer Unterseite (Ebene 2) | Kapitel wird sichtbar |
+
+Betroffen ist also genau ein Fall — aber der häufigste, denn Kapitel **mit**
+Unterseiten sind der Regelfall.
+
+**Umsetzung.** AP-1 hat die Behebung an einer Kopie im Webroot verifiziert
+(die Theme-Datei selbst blieb unangetastet):
+
+```js
+var summary = element.querySelector(':scope > details > summary');
+var link = summary
+    ? summary.querySelector('.page-index__chapter-link, .page-index__chapter-title')
+    : element.querySelector(':scope > a, :scope > span');
+```
+
+Zwei Feinheiten, die nicht wegvereinfacht werden dürfen:
+
+1. **Die Klassenauswahl statt `> a`** — sonst träfe der Ausdruck die
+   Anzahl-Anzeige `.page-index__chapter-count`, die ebenfalls im `<summary>`
+   sitzt, und die Suche vergliche gegen „3 Seiten" statt gegen den Titel.
+2. **Die `span`-Varianten** decken die gesperrten Seiten aus AP-3 gleich mit
+   ab. Wer sie weglässt, baut denselben Fehler ein zweites Mal, sobald AP-3
+   fertig ist.
+
+Danach `npm run build:js` — **nicht** `npm run build`. Letzteres ruft
+`backup-and-build.js` und erhöht die Versionsnummer in `package.json` und
+`style.css`, was Pflichtregel 7 dieses Plans untersagt.
+
+**Akzeptanzkriterien:**
+
+- AK1: Die Suche findet ein klappbares Kapitel über seinen Titel.
+- AK2: Die drei bisher funktionierenden Fälle aus der Tabelle oben
+  funktionieren weiterhin.
+- AK3: Ein Suchbegriff, der nur in der Anzahl-Anzeige vorkommt (etwa
+  „Seiten"), führt **nicht** zu einem Treffer auf jedem Kapitel.
+- AK4: `node --check src/js/page-index.js` grün.
+- AK5: `package.json` und `style.css` sind **unverändert** — Nachweis über
+  `git diff`.
+- AK6: Das gebaute Ergebnis liegt vor und ist auf den Testserver kopiert.
+
+---
+
 ### AP-3: Sperre in Inhaltsverzeichnis und Seitenleiste auswerten
 
 **Modell:** opus
@@ -343,9 +410,10 @@ Darstellungen (`cards`, `list`, `columns`), mit und ohne `showCounts`.
 
 | AP | Titel | Modell | Abhängig von | Status |
 |---|---|---|---|---|
-| AP-1 | Aufklappen über die Elternseite, Zählung, nur Ebene 0 | opus | – | ☐ |
-| AP-2 | Seiten-Option „Für Navigation sperren" | sonnet | – | ☐ |
-| AP-3 | Sperre in Verzeichnis und Seitenleiste auswerten | opus | 1, 2 | ☐ |
+| AP-1 | Aufklappen über die Elternseite, Zählung, nur Ebene 0 | opus | – | ☑ |
+| AP-2 | Seiten-Option „Für Navigation sperren" | sonnet | – | ☑ |
+| AP-1.fix1 | Die Suche findet klappbare Kapitel nicht mehr | sonnet | 1 | ◐ |
+| AP-3 | Sperre in Verzeichnis und Seitenleiste auswerten | opus | 1, 2 | ◐ |
 | AP-4 | Abnahme auf dem Testserver | opus | 1, 2, 3 | ☐ |
 | AP-5 | Dokumentation | sonnet | 4 | ☐ |
 
