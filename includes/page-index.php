@@ -297,6 +297,18 @@ function simple_clean_page_index_url($node) {
  * Index (0-basiert), $attrs['maxDepth'] die Anzahl der Ebenen — bei
  * maxDepth = 2 wird also Ebene 0 und Ebene 1 ausgegeben.
  *
+ * AUFGEKLAPPT WIRD AUSSCHLIESSLICH AUF EBENE 0.
+ * Ein Kapitel mit Unterseiten steckt samt seinem Titel in einem <details>:
+ * der Titel im <summary>, die Anzahl daneben. Ebene 1 und tiefer hängen ihre
+ * Unterliste flach an. Sie klappen dadurch MIT dem Kapitel ein, können ihre
+ * eigenen Kinder aber nicht verbergen — genau das ist gefordert: Ebene 2 soll
+ * von Ebene 1 nicht einklappbar sein. Ein <details> je Ebene würde es
+ * ermöglichen und ist deshalb bewusst nicht da.
+ *
+ * KEIN <details> OHNE KINDER. Ein Kapitel ohne Unterseiten bleibt ein
+ * gewöhnlicher Link — der häufigste Fall im Bestand. Ein leeres
+ * Aufklapp-Element wäre dort ein Klickziel, hinter dem nichts steckt.
+ *
  * @param array $ids     IDs der auszugebenden Knoten.
  * @param array $daten   Rückgabewert von simple_clean_page_index_daten().
  * @param array $attrs   Bereinigte Blockattribute.
@@ -309,10 +321,10 @@ function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht) 
         return '';
     }
 
-    $ist_kapitel = (0 === $ebene);
-    $listen_klasse = $ist_kapitel ? 'page-index__chapters' : 'page-index__pages';
+    $ist_kapitel    = (0 === $ebene);
+    $listen_klasse  = $ist_kapitel ? 'page-index__chapters' : 'page-index__pages';
     $eintrag_klasse = $ist_kapitel ? 'page-index__chapter' : 'page-index__page';
-    $link_klasse = $ist_kapitel ? 'page-index__chapter-link' : 'page-index__page-link';
+    $link_klasse    = $ist_kapitel ? 'page-index__chapter-link' : 'page-index__page-link';
 
     $html = '<ul class="' . esc_attr($listen_klasse) . '">';
 
@@ -324,31 +336,62 @@ function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht) 
 
         $node = $daten['nodes'][$id];
 
-        $html .= '<li class="' . esc_attr($eintrag_klasse) . '">';
-        $html .= '<a class="' . esc_attr($link_klasse) . '" href="'
+        // Der Titel als eigenes Stück HTML, weil er an zwei Stellen landen
+        // kann: im <summary> eines aufklappbaren Kapitels oder direkt im <li>.
+        //
+        // HIER SETZT AP-3 AN (Seiten-Option "Für Navigation sperren"):
+        // Ist die Seite über das Meta _simple_clean_nav_gesperrt gesperrt,
+        // tritt an die Stelle dieses <a> ein <span> mit demselben Text und der
+        // Klasse page-index__chapter-title (Ebene 0) bzw.
+        // page-index__page-title (Ebene 1 und tiefer). Ein <a> im <summary>
+        // täte beim Klick beides — navigieren UND klappen; für eine Seite, die
+        // man nicht öffnen soll, darf er gar nicht erst entstehen. Beide
+        // span-Klassen sind in src/css/page-index.css bereits gestaltet; an
+        // der CSS-Datei ist dafür nichts mehr zu tun.
+        $titel_html = '<a class="' . esc_attr($link_klasse) . '" href="'
             . esc_url(simple_clean_page_index_url($node)) . '">'
             . esc_html($node['title']) . '</a>';
 
-        $kind_ids = isset($daten['children'][$id]) ? $daten['children'][$id] : array();
+        $kind_ids   = isset($daten['children'][$id]) ? $daten['children'][$id] : array();
         $unterliste = simple_clean_page_index_liste($kind_ids, $daten, $attrs, $ebene + 1, $besucht);
 
-        if ('' !== $unterliste) {
-            if ($attrs['collapsible']) {
-                $beschriftung = $attrs['showCounts']
-                    ? sprintf(
-                        /* translators: %d: Anzahl der Unterseiten */
-                        _n('%d Unterseite', '%d Unterseiten', count($kind_ids), 'fos-online-schulbuch'),
-                        count($kind_ids)
-                    )
-                    : __('Unterseiten', 'fos-online-schulbuch');
+        // Drei Bedingungen, alle drei nötig: Aufklappen eingeschaltet, Ebene 0,
+        // und es gibt überhaupt etwas aufzuklappen.
+        $klappbar = $attrs['collapsible'] && $ist_kapitel && '' !== $unterliste;
 
-                $html .= '<details class="page-index__sub"' . ($attrs['openByDefault'] ? ' open' : '') . '>';
-                $html .= '<summary class="page-index__sub-toggle">' . esc_html($beschriftung) . '</summary>';
-                $html .= $unterliste;
-                $html .= '</details>';
-            } else {
-                $html .= $unterliste;
+        $html .= '<li class="' . esc_attr($eintrag_klasse) . '">';
+
+        if ($klappbar) {
+            // Die Klasse page-index__sub bleibt am <details>: src/js/page-index.js
+            // merkt sich darüber den Aufklappzustand, um ihn nach dem Suchen
+            // wiederherzustellen.
+            $html .= '<details class="page-index__sub"' . ($attrs['openByDefault'] ? ' open' : '') . '>';
+            $html .= '<summary class="page-index__chapter-summary">';
+            $html .= $titel_html;
+
+            if ($attrs['showCounts']) {
+                // Dieselbe _n()-Behandlung wie bisher, nur kürzer beschriftet:
+                // Die Zahl steht jetzt neben einem Titel und nicht mehr allein
+                // in einer eigenen Zeile.
+                $anzahl = count($kind_ids);
+                $html .= '<span class="page-index__chapter-count">'
+                    . esc_html(sprintf(
+                        /* translators: %d: Anzahl der Unterseiten */
+                        _n('%d Seite', '%d Seiten', $anzahl, 'fos-online-schulbuch'),
+                        $anzahl
+                    ))
+                    . '</span>';
             }
+
+            $html .= '</summary>';
+            $html .= $unterliste;
+            $html .= '</details>';
+        } else {
+            $html .= $titel_html;
+            // Leere Zeichenkette, wenn es keine Unterseiten gibt, maxDepth
+            // erreicht ist oder das Aufklappen abgeschaltet wurde. In den
+            // ersten beiden Fällen bleibt der Eintrag ein reiner Link.
+            $html .= $unterliste;
         }
 
         $html .= '</li>';

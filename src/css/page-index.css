@@ -88,8 +88,20 @@
 	border-color: var(--pidx-accent);
 }
 
-.page-index__chapter-link {
+/* --------------------------------------------------------------------
+   Kapiteltitel
+   Landet bei einem Kapitel MIT Unterseiten im <summary> (siehe unten),
+   sonst direkt im <li>. Beide Faelle sehen gleich aus.
+   Die Variante __chapter-title ist der Textfall ohne Link (AP-3, Seiten mit
+   gesetztem Meta _simple_clean_nav_gesperrt) - kein Hover, keine
+   Unterstreichung, aber sonst dasselbe Schriftbild.
+   -------------------------------------------------------------------- */
+.page-index__chapter-link,
+.page-index__chapter-title {
 	display: block;
+	/* Erlaubt dem Titel, im Flex-Kontext des <summary> zu schrumpfen und
+	   umzubrechen, statt die Zeile zu sprengen. */
+	min-width: 0;
 	font-size: 1.1rem;
 	font-weight: 600;
 	line-height: 1.3;
@@ -103,51 +115,67 @@
 }
 
 /* --------------------------------------------------------------------
-   Aufklappebene
+   Aufklappebene - AUSSCHLIESSLICH auf Ebene 0
    Natives <details>: barrierefrei, tastaturbedienbar, funktioniert ohne
-   JavaScript. Das voreingestellte Dreieck wird ersetzt, damit es sich
-   drehen laesst.
+   JavaScript. Das <summary> traegt jetzt den Kapiteltitel selbst; eine
+   eigene Zeile "Unterseiten" gibt es nicht mehr.
+   Ebene 1 und tiefer bekommen kein <details> - sie klappen mit dem Kapitel
+   ein, koennen aber ihrerseits nichts einklappen.
    -------------------------------------------------------------------- */
-.page-index__sub {
-	margin-top: 0.6rem;
-}
-
-.page-index__sub-toggle {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4rem;
-	padding: 0.15rem 0;
-	font-size: 0.9rem;
-	color: var(--color-text-primary, #333);
+.page-index__chapter-summary {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
 	cursor: pointer;
+	/* Voreingestellten Marker entfernen - je nach Browser anders benannt.
+	   Ohne diese drei Stellen stuende das Standard-Dreieck links neben dem
+	   Titel, waehrend der eigene Klapp-Hinweis rechts sitzt. */
 	list-style: none;
 }
 
-/* Voreingestellten Marker entfernen - je nach Browser anders benannt. */
-.page-index__sub-toggle::-webkit-details-marker {
+.page-index__chapter-summary::-webkit-details-marker {
 	display: none;
 }
 
-.page-index__sub-toggle::marker {
+.page-index__chapter-summary::marker {
 	content: "";
 }
 
-.page-index__sub-toggle::before {
+/* Klapp-Hinweis am rechten Rand. Bewusst dort und nicht neben dem Titel:
+   Der Titel ist im Regelfall ein Link, der beim Klick navigiert. Der
+   Chevron liegt weit genug davon entfernt, dass er verlaesslich klappt. */
+.page-index__chapter-summary::after {
 	content: "\25B8"; /* ▸ */
-	display: inline-block;
+	flex: 0 0 auto;
+	margin-left: auto;
 	color: var(--pidx-accent);
 	transition: transform 0.15s ease;
 }
 
-.page-index__sub[open] > .page-index__sub-toggle::before {
+.page-index__sub[open] > .page-index__chapter-summary::after {
 	transform: rotate(90deg);
 }
 
-/* Sichtbarer Fokusrahmen - ohne ihn waere die Tastaturbedienung blind. */
-.page-index__sub-toggle:focus-visible {
+/* Sichtbarer Fokusrahmen - das <summary> IST das tastaturbedienbare
+   Element dieser Zeile. Ohne ihn waere die Tastaturbedienung blind. */
+.page-index__chapter-summary:focus-visible {
 	outline: 2px solid var(--pidx-accent);
 	outline-offset: 2px;
 	border-radius: 3px;
+}
+
+/* Anzahl der Unterseiten, direkt neben dem Titel (Attribut showCounts).
+   Zurueckhaltend gehalten, damit sie den Titel nicht ueberstimmt: keine
+   eigene Farbe, nur die Textfarbe des Themes mit weniger Deckkraft - so
+   bleibt die Customizer-Einstellung massgeblich. */
+.page-index__chapter-count {
+	flex: 0 0 auto;
+	font-size: 0.85rem;
+	font-weight: 400;
+	line-height: 1.3;
+	color: var(--color-text-primary, #333);
+	opacity: 0.7;
+	white-space: nowrap;
 }
 
 /* --------------------------------------------------------------------
@@ -163,7 +191,8 @@
 	margin: 0.15rem 0;
 }
 
-.page-index__page-link {
+.page-index__page-link,
+.page-index__page-title {
 	color: var(--color-text-primary, #333);
 	text-decoration: none;
 	line-height: 1.5;
@@ -175,9 +204,11 @@
 	text-decoration: underline;
 }
 
-/* Verschachtelte Ebenen leicht einruecken. */
-.page-index__pages .page-index__sub {
-	margin-top: 0.25rem;
+/* Textfall ohne Link auf Ebene 1 und tiefer (AP-3). Anders als auf Ebene 0
+   klappt hier nichts, deshalb der Standardzeiger statt der Hand. */
+.page-index__page-title {
+	cursor: default;
+	opacity: 0.75;
 }
 
 /* --------------------------------------------------------------------
@@ -274,7 +305,8 @@
 		padding: 0.85rem 0.9rem;
 	}
 
-	.page-index__chapter-link {
+	.page-index__chapter-link,
+	.page-index__chapter-title {
 		font-size: 1.05rem;
 	}
 }
@@ -308,11 +340,13 @@
 		display: block !important;
 	}
 
-	.page-index__sub-toggle {
+	.page-index__chapter-summary {
 		list-style: none;
 	}
 
-	.page-index__sub-toggle::before {
+	/* Der Klapp-Hinweis ergibt auf Papier keinen Sinn - dort ist ohnehin
+	   alles aufgeklappt. */
+	.page-index__chapter-summary::after {
 		content: "";
 	}
 
@@ -330,7 +364,7 @@
    -------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
 	.page-index__chapter,
-	.page-index__sub-toggle::before {
+	.page-index__chapter-summary::after {
 		transition: none;
 	}
 }
