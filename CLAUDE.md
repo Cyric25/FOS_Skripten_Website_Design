@@ -1260,9 +1260,21 @@ die Hülle, dieselbe Quelle wie `_get_page_link()` im Kern. **Wer hier wieder
 selbst zusammensetzt, baut den Fehler nach.**
 
 **Seiten ausnehmen:** Meta `_simple_clean_hide_from_index`, gesetzt über die
-zweite Checkbox der Meta-Box „Navigation & Inhaltsverzeichnis". Die Seite
+zweite Checkbox der Meta-Box „Navigation, Verzeichnis & Zugriff". Die Seite
 entfällt **samt ihrem gesamten Unterbaum**, bleibt aber erreichbar und in der
 Seitenleiste sichtbar.
+
+**Gegenstück seit 2026-08-21:** `_simple_clean_hide_from_sidebar` (fünftes
+Kästchen, „Nicht in der Seitenleiste anzeigen") nimmt eine Seite samt Unterbaum
+aus dem Seitenbaum links, lässt sie im Verzeichnis aber stehen. Nachgeschlagen
+wird sie über `simple_clean_seitenleiste_versteckte_seiten()` in
+`includes/page-index.php` — dort, weil sie die gleiche Art Frage beantwortet
+wie `simple_clean_nav_gesperrte_seiten()` daneben, obwohl nur `sidebar.php` sie
+liest. **Bewusst zwei getrennte Metas:** Das Verzeichnis ist die kuratierte
+Übersicht, die Seitenleiste der vollständige Arbeitsbaum. Das
+Verzeichnis-Häkchen um die Seitenleiste zu erweitern hätte jede Seite, die es
+heute schon trägt, still aus der Navigation genommen. **Beides ist kein
+Zugriffsschutz** — dafür gibt es „Nur für Lehrpersonen sichtbar".
 
 ## Seiten nur für Lehrpersonen (seit v1.5.78)
 

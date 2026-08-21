@@ -190,6 +190,34 @@ function display_page_tree_item($page, $current_page_id, $children_map, $current
             }
         }
 
+        // Seiten mit dem Häkchen „Nicht in der Seitenleiste anzeigen"
+        // (_simple_clean_hide_from_sidebar) aus dem Baum nehmen. Gleiches
+        // Vorgehen wie eine Ebene höher: Der Baum wird von der Wurzel abwärts
+        // aufgebaut, ein fehlender Knoten nimmt seinen Unterbaum von selbst
+        // mit — deshalb muss hier nichts rekursiv gesammelt werden.
+        //
+        // Das ist KEIN Zugriffsschutz, sondern reine Aufräumhilfe: Die Seite
+        // bleibt über ihre Adresse erreichbar, steht weiter im
+        // Inhaltsverzeichnis und in der Suche. Wer wirklich verbergen will,
+        // nimmt „Nur für Lehrpersonen sichtbar" — das eine Ebene höher
+        // ausgewertet wird.
+        //
+        // function_exists wie oben: sidebar.php ist ein Template und soll
+        // ohne includes/page-index.php weiterlaufen statt zu fatalen.
+        if (function_exists('simple_clean_seitenleiste_versteckte_seiten')) {
+            $sidebar_versteckt = simple_clean_seitenleiste_versteckte_seiten();
+
+            if (!empty($sidebar_versteckt)) {
+                if (isset($sidebar_versteckt[(int) $root_page_id])) {
+                    $all_pages = array();
+                } else {
+                    $all_pages = array_filter($all_pages, function ($tree_page) use ($sidebar_versteckt) {
+                        return !isset($sidebar_versteckt[(int) $tree_page->ID]);
+                    });
+                }
+            }
+        }
+
         $children_map = array();
         foreach ($all_pages as $tree_page) {
             $children_map[$tree_page->post_parent][] = $tree_page;

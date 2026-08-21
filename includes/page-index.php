@@ -376,6 +376,49 @@ function simple_clean_nav_gesperrte_seiten() {
 }
 
 /**
+ * IDs aller Seiten, die nicht in der Seitenleiste erscheinen sollen.
+ *
+ * Gesetzt wird das Meta _simple_clean_hide_from_sidebar über das fünfte
+ * Kästchen der Meta-Box „Navigation, Verzeichnis & Zugriff" (functions.php).
+ * Gelesen wird es an genau EINER Stelle: sidebar.php.
+ *
+ * Die Funktion steht trotzdem hier, neben simple_clean_nav_gesperrte_seiten():
+ * Beide beantworten dieselbe Art Frage (welche Seiten trägt ein
+ * Navigations-Meta?), auf demselben Weg und mit derselben Kostenstruktur. Sie
+ * auseinanderzuziehen hieße, beim nächsten Navigations-Häkchen raten zu
+ * müssen, wo es hingehört. Nicht in includes/sichtbarkeit.php — dort geht es
+ * um Vertraulichkeit, und dieses Häkchen verbirgt nichts.
+ *
+ * Der Unterbaum entfällt ohne Zutun: sidebar.php baut den Baum von der Wurzel
+ * abwärts, ein fehlender Knoten nimmt seine Nachfahren mit.
+ *
+ * Eine Abfrage je Aufruf, danach statisch gehalten. KEIN persistenter
+ * Zwischenspeicher — aus demselben Grund wie oben.
+ *
+ * @return array ID => true für jede ausgeblendete Seite.
+ */
+function simple_clean_seitenleiste_versteckte_seiten() {
+    static $versteckt = null;
+
+    if ($versteckt !== null) {
+        return $versteckt;
+    }
+
+    global $wpdb;
+
+    // Keine Nutzereingaben in der Abfrage; $wpdb->postmeta kommt über die
+    // Eigenschaft, nicht als zusammengebaute Zeichenkette.
+    $ids = $wpdb->get_col(
+        "SELECT post_id FROM {$wpdb->postmeta}
+         WHERE meta_key = '_simple_clean_hide_from_sidebar' AND meta_value = '1'"
+    );
+
+    $versteckt = array_fill_keys(array_map('intval', (array) $ids), true);
+
+    return $versteckt;
+}
+
+/**
  * Rendert eine Liste von Knoten samt Unterebenen.
  *
  * Ebene 0 sind die Kapitel, alles darunter sind Unterseiten. $ebene ist der

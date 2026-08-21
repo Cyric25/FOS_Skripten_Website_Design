@@ -498,7 +498,7 @@ function simple_clean_add_navigation_meta_box() {
         // Die Meta-Box-ID bleibt bewusst 'simple_clean_hide_navigation' —
         // daran hängen die gespeicherten Bildschirmeinstellungen der Benutzer
         // (auf-/zugeklappt, Reihenfolge). Eine Änderung würde sie verwerfen.
-        'Navigation, Verzeichnis, Zugriff & Klicksperre',
+        'Navigation, Verzeichnis & Zugriff',
         'simple_clean_navigation_meta_box_callback',
         'page',
         'side',
@@ -653,6 +653,48 @@ function simple_clean_navigation_meta_box_callback($post) {
         </div>
     <?php endif; ?>
     <?php
+    // ---- Fünfte Einstellung: aus der Seitenleiste nehmen -------------------
+    // Gegenstück zu „Nicht im Inhaltsverzeichnis anzeigen" — bewusst ein
+    // eigenes Meta und kein gemeinsames. Verzeichnis und Seitenleiste haben
+    // verschiedene Aufgaben: das Verzeichnis ist die kuratierte Übersicht,
+    // die Seitenleiste der vollständige Arbeitsbaum. Wer beides will, setzt
+    // beide Häkchen; das eine Häkchen zu erweitern hätte alle Seiten, die es
+    // heute schon tragen, still aus der Navigation genommen.
+    //
+    // Wie beim Verzeichnis-Häkchen entfällt der ganze Unterbaum: Der Baum
+    // wird in sidebar.php von der Wurzel abwärts aufgebaut, ein fehlender
+    // Knoten nimmt seine Nachfahren von selbst mit.
+    //
+    // Ebenfalls KEIN Zugriffsschutz — dieselbe Warnung wie beim vierten
+    // Häkchen gilt hier genauso.
+    $sidebar_versteckt = get_post_meta($post->ID, '_simple_clean_hide_from_sidebar', true);
+    ?>
+    <div style="padding: 10px; background: #f0f7fb; border-left: 4px solid #0073aa; margin: 14px 0 10px;">
+        <label for="simple_clean_hide_from_sidebar" style="display: block; margin-bottom: 8px;">
+            <input type="checkbox"
+                   id="simple_clean_hide_from_sidebar"
+                   name="simple_clean_hide_from_sidebar"
+                   value="1"
+                   <?php checked($sidebar_versteckt, '1'); ?>
+                   style="margin-right: 5px;">
+            <strong>Nicht in der Seitenleiste anzeigen</strong>
+        </label>
+        <p class="description" style="margin: 5px 0 0; color: #666;">
+            Nimmt diese Seite aus dem Seitenbaum am linken Rand.<br>
+            <strong>Achtung:</strong> Auch <em>alle Unterseiten</em> verschwinden
+            dann aus der Seitenleiste.<br>
+            Im Inhaltsverzeichnis bleibt die Seite stehen — dafür gibt es das
+            Häkchen weiter oben.<br>
+            <strong>Kein Zugriffsschutz:</strong> Die Seite bleibt über ihre
+            Adresse erreichbar und erscheint weiterhin in der Suche.
+        </p>
+    </div>
+    <?php if ($sidebar_versteckt === '1'): ?>
+        <div style="padding: 8px; background: #d4edda; border-left: 4px solid #28a745; color: #155724;">
+            ✓ <strong>Status:</strong> Diese Seite (samt Unterseiten) erscheint nicht in der Seitenleiste
+        </div>
+    <?php endif; ?>
+    <?php
 }
 
 // Save meta box data
@@ -712,6 +754,16 @@ function simple_clean_save_navigation_meta($post_id) {
         update_post_meta($post_id, '_simple_clean_nav_gesperrt', '1');
     } else {
         delete_post_meta($post_id, '_simple_clean_nav_gesperrt');
+    }
+
+    // Fünfte Einstellung: Seite aus dem Seitenbaum der Seitenleiste nehmen.
+    // Ausgewertet ausschließlich in sidebar.php über
+    // simple_clean_seitenleiste_versteckte_seiten(). Die Prüfungen oben
+    // (Nonce, Autosave, edit_post, post_type) gelten mit.
+    if (isset($_POST['simple_clean_hide_from_sidebar']) && $_POST['simple_clean_hide_from_sidebar'] === '1') {
+        update_post_meta($post_id, '_simple_clean_hide_from_sidebar', '1');
+    } else {
+        delete_post_meta($post_id, '_simple_clean_hide_from_sidebar');
     }
 }
 add_action('save_post', 'simple_clean_save_navigation_meta');
