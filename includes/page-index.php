@@ -291,6 +291,63 @@ function simple_clean_page_index_url($node) {
 }
 
 /**
+ * IDs aller Seiten, die für die Navigation gesperrt sind.
+ *
+ * Gesetzt wird das Meta _simple_clean_nav_gesperrt über die vierte Checkbox
+ * der Meta-Box "Navigation, Verzeichnis & Zugriff" (functions.php). Gelesen
+ * wird es an genau ZWEI Stellen: hier im Inhaltsverzeichnis und in
+ * sidebar.php. Nirgends sonst.
+ *
+ * NICHT ZU VERWECHSELN MIT _simple_clean_hide_from_index. Dort fällt die Seite
+ * SAMT IHREM GESAMTEN UNTERBAUM aus dem Verzeichnis heraus, schon in
+ * simple_clean_page_index_daten(). Hier bleibt der Knoten stehen und behält
+ * seine Unterseiten — er wird lediglich vom Link zum reinen Text. Genau darum
+ * geht es: leere Elternseiten zur Gliederung, die man aufklappen, aber nicht
+ * öffnen können soll. Verhielte sich diese Sperre wie die andere, wäre sie
+ * überflüssig.
+ *
+ * EBENSO WENIG ZU VERWECHSELN MIT _simple_clean_nur_lehrpersonen: Die Sperre
+ * hier ist KEIN Zugriffsschutz. Die Seite bleibt über ihre Adresse erreichbar
+ * und erscheint weiter in der Suche — das ist gewollt und in der Meta-Box so
+ * beschrieben.
+ *
+ * EINE Abfrage je Seitenaufruf, Ergebnis als Nachschlagekarte ID => true in
+ * einer statischen Variablen. Eine Abfrage je Knoten wäre bei rund 260 Seiten
+ * der Anfang eines Lastproblems; die statische Variable sorgt zusätzlich
+ * dafür, dass Inhaltsverzeichnis und Seitenleiste sich diese eine Abfrage
+ * teilen, wenn beide auf derselben Seite laufen.
+ *
+ * KEIN persistenter Zwischenspeicher (Transient, Option) — aus demselben Grund
+ * wie beim Seitenbaum weiter oben: Er löste kein gemessenes Problem,
+ * ermöglichte aber veraltete Ausgabe nach Änderungen im Seitenmanager, der an
+ * save_post vorbei schreibt.
+ *
+ * @return array ID => true für jede gesperrte Seite.
+ */
+function simple_clean_nav_gesperrte_seiten() {
+    static $gesperrt = null;
+
+    if ($gesperrt !== null) {
+        return $gesperrt;
+    }
+
+    global $wpdb;
+
+    // Keine Nutzereingaben in der Abfrage; $wpdb->postmeta kommt über die
+    // Eigenschaft, nicht als zusammengebaute Zeichenkette.
+    $ids = $wpdb->get_col(
+        "SELECT post_id FROM {$wpdb->postmeta}
+         WHERE meta_key = '_simple_clean_nav_gesperrt' AND meta_value = '1'"
+    );
+
+    // array_fill_keys, damit die Prüfung beim Rendern ein isset() ist und
+    // keine Suche durch die Liste.
+    $gesperrt = array_fill_keys(array_map('intval', (array) $ids), true);
+
+    return $gesperrt;
+}
+
+/**
  * Rendert eine Liste von Knoten samt Unterebenen.
  *
  * Ebene 0 sind die Kapitel, alles darunter sind Unterseiten. $ebene ist der
@@ -309,14 +366,30 @@ function simple_clean_page_index_url($node) {
  * gewöhnlicher Link — der häufigste Fall im Bestand. Ein leeres
  * Aufklapp-Element wäre dort ein Klickziel, hinter dem nichts steckt.
  *
- * @param array $ids     IDs der auszugebenden Knoten.
- * @param array $daten   Rückgabewert von simple_clean_page_index_daten().
- * @param array $attrs   Bereinigte Blockattribute.
- * @param int   $ebene   Aktuelle Ebene, 0-basiert.
- * @param array $besucht Referenz auf die Besuchsliste (Rekursionsschutz).
+ * GESPERRTE SEITEN BLEIBEN STEHEN, SAMT UNTERBAUM.
+ * Ist eine Seite über das Meta _simple_clean_nav_gesperrt gesperrt, tritt an
+ * die Stelle ihres <a> ein <span> mit demselben Text. Der Knoten bleibt
+ * sichtbar, ein Kapitel bleibt aufklappbar, und seine Unterseiten bleiben
+ * anklickbar. Das ist der Unterschied zu _simple_clean_hide_from_index, das
+ * die Seite samt Unterbaum entfernt (dort schon in
+ * simple_clean_page_index_daten()); die beiden dürfen sich nicht vermischen.
+ * Die IDs kommen EINMAL vor der Rekursion aus
+ * simple_clean_nav_gesperrte_seiten() und werden durchgereicht — eine Abfrage
+ * je Knoten wäre bei rund 260 Seiten der Anfang eines Lastproblems.
+ *
+ * @param array $ids          IDs der auszugebenden Knoten.
+ * @param array $daten        Rückgabewert von simple_clean_page_index_daten().
+ * @param array $attrs        Bereinigte Blockattribute.
+ * @param int   $ebene        Aktuelle Ebene, 0-basiert.
+ * @param array $besucht      Referenz auf die Besuchsliste (Rekursionsschutz).
+ * @param array $nav_gesperrt Nachschlagekarte ID => true der gesperrten Seiten.
+ *                            Der Standardwert array() bedeutet "nichts
+ *                            gesperrt" und entspricht damit dem Verhalten vor
+ *                            AP-3 — ein vergessenes Durchreichen fiele so
+ *                            harmlos aus statt in einen Fehler.
  * @return string HTML oder leere Zeichenkette.
  */
-function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht) {
+function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht, $nav_gesperrt = array()) {
     if (empty($ids) || $ebene >= $attrs['maxDepth']) {
         return '';
     }
@@ -325,6 +398,9 @@ function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht) 
     $listen_klasse  = $ist_kapitel ? 'page-index__chapters' : 'page-index__pages';
     $eintrag_klasse = $ist_kapitel ? 'page-index__chapter' : 'page-index__page';
     $link_klasse    = $ist_kapitel ? 'page-index__chapter-link' : 'page-index__page-link';
+    // Textfall für gesperrte Seiten. Beide Klassen sind in
+    // src/css/page-index.css bereits gestaltet (AP-1 hat sie vorbereitet).
+    $titel_klasse   = $ist_kapitel ? 'page-index__chapter-title' : 'page-index__page-title';
 
     $html = '<ul class="' . esc_attr($listen_klasse) . '">';
 
@@ -339,21 +415,28 @@ function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht) 
         // Der Titel als eigenes Stück HTML, weil er an zwei Stellen landen
         // kann: im <summary> eines aufklappbaren Kapitels oder direkt im <li>.
         //
-        // HIER SETZT AP-3 AN (Seiten-Option "Für Navigation sperren"):
-        // Ist die Seite über das Meta _simple_clean_nav_gesperrt gesperrt,
-        // tritt an die Stelle dieses <a> ein <span> mit demselben Text und der
-        // Klasse page-index__chapter-title (Ebene 0) bzw.
-        // page-index__page-title (Ebene 1 und tiefer). Ein <a> im <summary>
-        // täte beim Klick beides — navigieren UND klappen; für eine Seite, die
-        // man nicht öffnen soll, darf er gar nicht erst entstehen. Beide
-        // span-Klassen sind in src/css/page-index.css bereits gestaltet; an
-        // der CSS-Datei ist dafür nichts mehr zu tun.
-        $titel_html = '<a class="' . esc_attr($link_klasse) . '" href="'
-            . esc_url(simple_clean_page_index_url($node)) . '">'
-            . esc_html($node['title']) . '</a>';
+        // Seiten-Option "Für Navigation sperren" (_simple_clean_nav_gesperrt):
+        // An die Stelle des <a> tritt ein <span> mit demselben Text. Ein <a>
+        // im <summary> täte beim Klick beides — navigieren UND klappen; für
+        // eine Seite, die man nicht öffnen soll, darf er gar nicht erst
+        // entstehen. Ihn auszugeben und per JavaScript abzufangen, griffe ohne
+        // JavaScript nicht.
+        //
+        // Der Unterbaum bleibt davon unberührt: $kind_ids und $unterliste
+        // gleich darunter werden unverändert berechnet, die Unterseiten
+        // bleiben sichtbar und anklickbar. Genau das unterscheidet diese
+        // Sperre von _simple_clean_hide_from_index.
+        if (isset($nav_gesperrt[$id])) {
+            $titel_html = '<span class="' . esc_attr($titel_klasse) . '">'
+                . esc_html($node['title']) . '</span>';
+        } else {
+            $titel_html = '<a class="' . esc_attr($link_klasse) . '" href="'
+                . esc_url(simple_clean_page_index_url($node)) . '">'
+                . esc_html($node['title']) . '</a>';
+        }
 
         $kind_ids   = isset($daten['children'][$id]) ? $daten['children'][$id] : array();
-        $unterliste = simple_clean_page_index_liste($kind_ids, $daten, $attrs, $ebene + 1, $besucht);
+        $unterliste = simple_clean_page_index_liste($kind_ids, $daten, $attrs, $ebene + 1, $besucht, $nav_gesperrt);
 
         // Drei Bedingungen, alle drei nötig: Aufklappen eingeschaltet, Ebene 0,
         // und es gibt überhaupt etwas aufzuklappen.
@@ -429,7 +512,13 @@ function simple_clean_render_page_index($attributes = array(), $content = '', $b
     $start_ids = isset($daten['children'][$wurzel]) ? $daten['children'][$wurzel] : array();
 
     $besucht = array();
-    $liste   = simple_clean_page_index_liste($start_ids, $daten, $attrs, 0, $besucht);
+
+    // Die gesperrten IDs EINMAL holen und durch die Rekursion reichen, statt
+    // sie je Knoten abzufragen. Das kostet genau eine Abfrage, unabhängig
+    // davon, wie viele Seiten der Baum hat.
+    $nav_gesperrt = simple_clean_nav_gesperrte_seiten();
+
+    $liste = simple_clean_page_index_liste($start_ids, $daten, $attrs, 0, $besucht, $nav_gesperrt);
 
     $inhalt = '';
 

@@ -47,9 +47,16 @@ function get_root_page_id($page_id) {
  * @param array $current_ancestors Ancestor IDs of the currently viewed page
  * @param int $depth Current depth level
  * @param bool $auto_expand Auto-expand all items
+ * @param array $nav_gesperrt Map: Seiten-ID => true für Seiten mit gesetzter
+ *                            Klicksperre (_simple_clean_nav_gesperrt). EINMAL
+ *                            vor der Rekursion geholt und durchgereicht — eine
+ *                            Abfrage je Knoten wäre bei rund 260 Seiten der
+ *                            Anfang eines Lastproblems. Der Standardwert
+ *                            array() bedeutet "nichts gesperrt" und entspricht
+ *                            dem Verhalten vor AP-3.
  */
 if (!function_exists('display_page_tree_item')) {
-function display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, $depth = 0, $auto_expand = true) {
+function display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, $depth = 0, $auto_expand = true, $nav_gesperrt = array()) {
     // Get child pages from the prebuilt map (no extra query per node)
     $children = isset($children_map[$page->ID]) ? $children_map[$page->ID] : array();
 
@@ -83,16 +90,40 @@ function display_page_tree_item($page, $current_page_id, $children_map, $current
         echo '</button>';
     }
 
-    // Page link
-    echo '<a href="' . esc_url(get_permalink($page->ID)) . '" class="page-link">';
-    echo '<span class="page-title">' . esc_html($page->post_title) . '</span>';
-    echo '</a>';
+    // Page link — oder reiner Text, wenn die Seite über das Meta
+    // _simple_clean_nav_gesperrt für die Navigation gesperrt ist.
+    //
+    // DAS IST KEIN ZUGRIFFSSCHUTZ: Die Seite bleibt über ihre Adresse
+    // erreichbar und erscheint weiter in der Suche. Wer eine Seite wirklich
+    // verbergen will, nutzt "nur für Lehrpersonen"
+    // (_simple_clean_nur_lehrpersonen) — das nimmt oben beim Aufbau von
+    // $all_pages ganze Zweige aus dem Baum. Hier bleibt der Knoten stehen.
+    //
+    // Der Unterbaum bleibt unberührt: Die Unterseiten weiter unten werden
+    // unverändert ausgegeben und bleiben anklickbar. Genau darum geht es —
+    // leere Elternseiten zur Gliederung, die man aufklappen, aber nicht öffnen
+    // können soll.
+    //
+    // Die Klasse page-link bleibt am <span>: An ihr hängen Einrückung,
+    // Zustandsfarben (.current-page, .current-page-ancestor) und die Sprungmarke
+    // des Inline-Scripts weiter unten, das .page-item.current-page .page-link
+    // sucht. Ein <span> statt eines <a> bekommt vom Browser von sich aus den
+    // Standardzeiger — .page-link setzt kein cursor: pointer.
+    if (isset($nav_gesperrt[(int) $page->ID])) {
+        echo '<span class="page-link page-link-gesperrt">';
+        echo '<span class="page-title">' . esc_html($page->post_title) . '</span>';
+        echo '</span>';
+    } else {
+        echo '<a href="' . esc_url(get_permalink($page->ID)) . '" class="page-link">';
+        echo '<span class="page-title">' . esc_html($page->post_title) . '</span>';
+        echo '</a>';
+    }
 
     // Render child pages if they exist
     if ($has_children) {
         echo '<ul class="page-tree-children">';
         foreach ($children as $child) {
-            display_page_tree_item($child, $current_page_id, $children_map, $current_ancestors, $depth + 1, $auto_expand);
+            display_page_tree_item($child, $current_page_id, $children_map, $current_ancestors, $depth + 1, $auto_expand, $nav_gesperrt);
         }
         echo '</ul>';
     }
@@ -167,13 +198,29 @@ function display_page_tree_item($page, $current_page_id, $children_map, $current
         // Ancestors of the current page, computed once for the whole tree
         $current_ancestors = get_post_ancestors($current_page_id);
 
+        // Seiten mit Klicksperre: die IDs EINMAL vor der Rekursion holen und
+        // durch display_page_tree_item() durchreichen. Eine Abfrage je Knoten
+        // wäre bei rund 260 Seiten der Anfang eines Lastproblems; so bleibt es
+        // bei genau einer, unabhängig von der Seitenzahl. Läuft auf derselben
+        // Seite auch der Inhaltsverzeichnis-Block, teilen sich beide diese
+        // Abfrage über die statische Variable in der Funktion.
+        //
+        // Die function_exists-Prüfung ist Absicht — dieselbe Überlegung wie
+        // oben bei simple_clean_ist_lehrperson(): Die Funktion steht in
+        // includes/page-index.php. Fehlt die Datei einmal, bleibt die
+        // Seitenleiste eine gewöhnliche Linkliste, statt mit einem Fatal
+        // auszusteigen. sidebar.php läuft auf jeder Seite des Auftritts.
+        $nav_gesperrt = function_exists('simple_clean_nav_gesperrte_seiten')
+            ? simple_clean_nav_gesperrte_seiten()
+            : array();
+
         $pages = isset($children_map[$root_page_id]) ? $children_map[$root_page_id] : array();
 
         if ($pages) {
             echo '<ul class="page-tree">';
 
             foreach ($pages as $page) {
-                display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, 0, true); // true = auto-expand all
+                display_page_tree_item($page, $current_page_id, $children_map, $current_ancestors, 0, true, $nav_gesperrt); // true = auto-expand all
             }
 
             echo '</ul>';
