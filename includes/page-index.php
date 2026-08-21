@@ -280,14 +280,42 @@ function simple_clean_page_index_daten() {
  * @return string
  */
 function simple_clean_page_index_url($node) {
-    static $sprechend = null;
-    if ($sprechend === null) {
-        $sprechend = (bool) get_option('permalink_structure');
+    // Bewusst nicht get_permalink(): Das löst je Seite die Elternkette erneut
+    // auf (siehe Kopfkommentar dieser Datei). Der fertige Pfad steht im Knoten
+    // bereits; gebraucht wird nur die Hülle darum — und die liefert WordPress.
+    //
+    // FALLE (behoben 2026-08-21): Vorher stand hier home_url('/' . uri . '/').
+    // Das unterstellt, dass eine sprechende Permalink-Struktur unmittelbar
+    // unter der Startadresse liegt. Für die PATHINFO-Struktur
+    // "/index.php/%postname%/" stimmt das nicht — und genau die wird
+    // eingestellt, wenn kein mod_rewrite bzw. keine .htaccess zur Verfügung
+    // steht. Jeder Link im Verzeichnis endete dort auf 404, während die
+    // Seitenleiste (sie ruft get_permalink()) korrekt verlinkte. Der Fehler
+    // fiel lange nicht auf, weil die verbreitete Struktur "/%postname%/"
+    // zufällig dasselbe Ergebnis liefert.
+    //
+    // WP_Rewrite::get_page_permastruct() liefert die Hülle inklusive des
+    // "index.php/"-Präfixes und ist dieselbe Quelle, aus der _get_page_link()
+    // im Kern schöpft. Sie kostet keinen Datenbankzugriff und wird ohnehin nur
+    // einmal je Aufruf gelesen.
+    static $permastruct = null;
+    if ($permastruct === null) {
+        global $wp_rewrite;
+        $permastruct = ($wp_rewrite instanceof WP_Rewrite)
+            ? (string) $wp_rewrite->get_page_permastruct()
+            : '';
     }
 
-    return $sprechend
-        ? home_url('/' . $node['uri'] . '/')
-        : home_url('/?page_id=' . $node['id']);
+    // Ohne sprechende Adressen (oder bei einer Struktur ohne %pagename%)
+    // bleibt die Abfrage-Adresse der einzig sichere Weg.
+    if ($permastruct === '' || strpos($permastruct, '%pagename%') === false) {
+        return home_url('/?page_id=' . $node['id']);
+    }
+
+    return user_trailingslashit(
+        home_url(str_replace('%pagename%', $node['uri'], $permastruct)),
+        'page'
+    );
 }
 
 /**

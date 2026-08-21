@@ -1245,6 +1245,20 @@ blendet den Regler bei den anderen Darstellungen aus. Wer das Raster für
 Karten zurückholen will, braucht drei Änderungen — CSS, Klassenausgabe in
 `simple_clean_render_page_index()` und die Bedingung im Editor-Script.
 
+**Adressen baut der Block selbst** — `simple_clean_page_index_url()`, nicht
+`get_permalink()`. Das ist Absicht: `get_permalink()` löst je Seite die
+Elternkette erneut auf, der fertige Pfad steht im Knoten aber schon.
+**Die Hülle darum muss trotzdem von WordPress kommen.** Bis 2026-08-21 stand
+dort `home_url('/' . $uri . '/')`, was unterstellt, sprechende Adressen lägen
+unmittelbar unter der Startadresse. Für die PATHINFO-Struktur
+`/index.php/%postname%/` — eingestellt, wo mod_rewrite oder `.htaccess`
+fehlen, etwa auf dem Testserver — stimmt das nicht: **jeder Link im
+Verzeichnis endete auf 404**, während die Seitenleiste richtig verlinkte.
+Auffällig spät bemerkt, weil die verbreitete Struktur `/%postname%/` zufällig
+dasselbe Ergebnis liefert. Jetzt liefert `WP_Rewrite::get_page_permastruct()`
+die Hülle, dieselbe Quelle wie `_get_page_link()` im Kern. **Wer hier wieder
+selbst zusammensetzt, baut den Fehler nach.**
+
 **Seiten ausnehmen:** Meta `_simple_clean_hide_from_index`, gesetzt über die
 zweite Checkbox der Meta-Box „Navigation & Inhaltsverzeichnis". Die Seite
 entfällt **samt ihrem gesamten Unterbaum**, bleibt aber erreichbar und in der
