@@ -412,8 +412,8 @@ Danach `npm run build:js` — **nicht** `npm run build`. Letzteres ruft
 |---|---|---|---|---|
 | AP-1 | Aufklappen über die Elternseite, Zählung, nur Ebene 0 | opus | – | ☑ |
 | AP-2 | Seiten-Option „Für Navigation sperren" | sonnet | – | ☑ |
-| AP-1.fix1 | Die Suche findet klappbare Kapitel nicht mehr | sonnet | 1 | ◐ |
-| AP-3 | Sperre in Verzeichnis und Seitenleiste auswerten | opus | 1, 2 | ◐ |
+| AP-1.fix1 | Die Suche findet klappbare Kapitel nicht mehr | sonnet | 1 | ☑ |
+| AP-3 | Sperre in Verzeichnis und Seitenleiste auswerten | opus | 1, 2 | ☑ (vom Orchestrator gerettet und geprueft) |
 | AP-4 | Abnahme auf dem Testserver | opus | 1, 2, 3 | ☐ |
 | AP-5 | Dokumentation | sonnet | 4 | ☐ |
 
@@ -428,8 +428,11 @@ AP-2 ausschließlich in `functions.php`. AP-3 braucht beide.
 | AP-1 | Klappen über den Kapiteleintrag, keine Zeile „Unterseiten" | – | – |
 | AP-1 | Nur Ebene 0 klappbar, Kapitel ohne Kinder unverändert | – | – |
 | AP-2 | Checkbox speichert, Hilfetext nennt die Erreichbarkeit | – | – |
-| AP-3 | Gesperrte Seite: klappt, öffnet nicht, Kinder anklickbar | – | – |
-| AP-3 | Abfragenzahl wächst nicht mit der Seitenzahl | – | – |
+| AP-1.fix1 | Vier Suchfälle im echten Browser gegen das gebaute Skript | **bestanden.** Kontrollversuch mit dem alten Selektor reproduziert die Regression, mit dem neuen ist sie weg. Suche nach „Seiten" (nur im Zählbadge) liefert korrekt **keine** Treffer | 2026-08-21 |
+| AP-3 | Ausführungsprüfung `sidebar.php` (Lehre v1.5.57→58) | **bestanden**, vom Orchestrator nachgeholt: Seiten 69, 70, 72, 33 alle HTTP 200, **null** Fatal- oder Parse-Errors |  2026-08-21 |
+| AP-3 | Gesperrte Seite: klappt, öffnet nicht, Kinder anklickbar | **bestanden.** Sperre testweise auf Seite 70 gesetzt: In der Seitenleiste erscheint sie als `<span class="page-link page-link-gesperrt">`, ihr Kind bleibt ein `<a>`. Nach dem Entfernen wieder ein Link | 2026-08-21 |
+| AP-3 | Abfragenzahl wächst nicht mit der Seitenzahl | **bestanden, in Produktivgröße gemessen.** Bei **274** veröffentlichten Seiten mit 42 gesperrten: `simple_clean_nav_gesperrte_seiten()` = **1 Abfrage**, zweiter Aufruf **0** (memoisiert); vollständiges Inhaltsverzeichnis über alle 274 Seiten = **3 Abfragen** insgesamt. Alle 42 gesperrten Knoten als `<span>` gerendert | 2026-08-21 |
+| AP-3 | AK4: Gesperrte Seite bleibt erreichbar | **bestanden** — direkter Aufruf HTTP 200, Seite erscheint weiter in der Suche. Das ist der gewollte Unterschied zur Lehrpersonen-Sperre |  2026-08-21 |
 | AP-3 | `hide_from_index` und Lehrpersonen-Sperre unverändert | – | – |
 | AP-4 | Ohne JavaScript und mit der Tastatur | – | – |
 | AP-4 | Alle drei Darstellungen, `showCounts` ein und aus | – | – |
