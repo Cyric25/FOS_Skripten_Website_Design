@@ -44,7 +44,15 @@
 	 * @return {boolean} true, wenn der Eintrag sichtbar bleibt.
 	 */
 	function filtereEintrag(element, suchtext) {
-		var link = element.querySelector(':scope > a');
+		// Der Titel steckt an zwei moeglichen Stellen: bei einem aufklappbaren
+		// Kapitel im <summary> (dort per Klasse gesucht, sonst traefe der
+		// Ausdruck auch die Anzahl-Anzeige .page-index__chapter-count), sonst
+		// direkt als Kind im <li>. Die span-Varianten decken gesperrte Seiten
+		// ab (AP-3): dort steht statt eines <a> ein <span> mit dem Titel.
+		var summary = element.querySelector(':scope > details > summary');
+		var link = summary
+			? summary.querySelector('.page-index__chapter-link, .page-index__chapter-title')
+			: element.querySelector(':scope > a, :scope > span');
 		var text = link ? link.textContent.toLowerCase() : '';
 		var selbstTreffer = suchtext === '' || text.indexOf(suchtext) !== -1;
 
