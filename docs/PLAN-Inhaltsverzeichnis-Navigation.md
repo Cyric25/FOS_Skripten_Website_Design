@@ -414,8 +414,8 @@ Danach `npm run build:js` — **nicht** `npm run build`. Letzteres ruft
 | AP-2 | Seiten-Option „Für Navigation sperren" | sonnet | – | ☑ |
 | AP-1.fix1 | Die Suche findet klappbare Kapitel nicht mehr | sonnet | 1 | ☑ |
 | AP-3 | Sperre in Verzeichnis und Seitenleiste auswerten | opus | 1, 2 | ☑ (vom Orchestrator gerettet und geprueft) |
-| AP-4 | Abnahme auf dem Testserver | opus | 1, 2, 3 | ☐ |
-| AP-5 | Dokumentation | sonnet | 4 | ☐ |
+| AP-4 | Abnahme auf dem Testserver | opus | 1, 2, 3 | ☑ (Nutzer, 2026-08-21; zwei Funde, siehe Abschnitt 10) |
+| AP-5 | Dokumentation | sonnet | 4 | ☑ (Theme/CLAUDE.md, Abschnitt Inhaltsverzeichnis-Block) |
 
 **AP-1 und AP-2 sind voneinander unabhängig und dürfen parallel laufen** —
 AP-1 arbeitet in `includes/page-index.php` und `src/css/page-index.css`,
@@ -434,7 +434,66 @@ AP-2 ausschließlich in `functions.php`. AP-3 braucht beide.
 | AP-3 | Abfragenzahl wächst nicht mit der Seitenzahl | **bestanden, in Produktivgröße gemessen.** Bei **274** veröffentlichten Seiten mit 42 gesperrten: `simple_clean_nav_gesperrte_seiten()` = **1 Abfrage**, zweiter Aufruf **0** (memoisiert); vollständiges Inhaltsverzeichnis über alle 274 Seiten = **3 Abfragen** insgesamt. Alle 42 gesperrten Knoten als `<span>` gerendert | 2026-08-21 |
 | AP-3 | AK4: Gesperrte Seite bleibt erreichbar | **bestanden** — direkter Aufruf HTTP 200, Seite erscheint weiter in der Suche. Das ist der gewollte Unterschied zur Lehrpersonen-Sperre |  2026-08-21 |
 | AP-3 | `hide_from_index` und Lehrpersonen-Sperre unverändert | – | – |
-| AP-4 | Ohne JavaScript und mit der Tastatur | – | – |
-| AP-4 | Alle drei Darstellungen, `showCounts` ein und aus | – | – |
-| AP-4 | Urteil des Nutzers zum Klick auf ungesperrte Elternseiten | – | – |
-| AP-5 | Mojibake-Kontrolle | – | – |
+| AP-4 | Ohne JavaScript und mit der Tastatur | **offen, nicht geprüft** — das Aufklappen läuft über natives `<details>`, funktioniert also bauartbedingt ohne Skript | – |
+| AP-4 | Alle drei Darstellungen, `showCounts` ein und aus | teilweise: der Testbaum läuft mit `cards` und `showCounts` an, beides nachgemessen. `list`/`columns` **nicht** geprüft | 2026-08-21 |
+| AP-4 | Urteil des Nutzers zum Klick auf ungesperrte Elternseiten | **entschieden durch die Abnahme:** Der Nutzer nimmt die jetzige Form an (Titel als Link im `<summary>`, Klick daneben klappt). Keine Änderung | 2026-08-21 |
+| AP-5 | Mojibake-Kontrolle | **bestanden** — durchweg Roh-Zeichenketten, null Steuerzeichen | 2026-08-21 |
+
+---
+
+## 10. Funde bei der Abnahme (2026-08-21)
+
+### 10.1 Alle Links des Verzeichnisses endeten auf 404 (nicht vom Vorhaben)
+
+`simple_clean_page_index_url()` setzte die Adresse als
+`home_url('/' . $node['uri'] . '/')` zusammen. Das unterstellt, dass eine
+sprechende Permalink-Struktur unmittelbar unter der Startadresse liegt. Für die
+PATHINFO-Struktur `/index.php/%postname%/` trifft das nicht zu — und die wird
+eingestellt, wo `mod_rewrite` oder `.htaccess` fehlen, wie auf dem Testserver
+(Apache dort mit `AllowOverride none`, keine `.htaccess`). Jeder Link im
+Verzeichnis führte auf 404, **während die Seitenleiste korrekt verlinkte**: Sie
+ruft `get_permalink()`.
+
+Zwei Gründe, warum das so lange unbemerkt blieb: Die verbreitete Struktur
+`/%postname%/` liefert zufällig dasselbe Ergebnis, und alle Testanweisungen
+dieses Vorhabens nannten `?page_id=`-Adressen. **Für künftige Testanweisungen:
+mindestens einen Link im Verzeichnis wirklich anklicken lassen.**
+
+Die Hülle kommt jetzt aus `WP_Rewrite::get_page_permastruct()`, derselben
+Quelle wie `_get_page_link()` im Kern, abgeschlossen mit
+`user_trailingslashit()`. Der Grund, `get_permalink()` zu meiden, bleibt
+bestehen — es löst je Seite die Elternkette neu auf, während der Pfad im Knoten
+schon fertig steht.
+
+### 10.2 Nachtrag zum Vorhaben: fünftes Kästchen für die Seitenleiste
+
+Bei der Abnahme fiel dem Nutzer auf, dass Kapitel D zwar aus dem Verzeichnis
+verschwindet, nicht aber aus der Seitenleiste. Das war kein Fehler — für
+„öffentlich erreichbar, aber nicht im Seitenbaum" gab es schlicht keinen
+Schalter. Die vier vorhandenen decken es nicht ab:
+
+| Kästchen | Wirkung |
+|---|---|
+| Seitenleiste am linken Rand ausblenden | schaltet die Leiste **auf** dieser Seite ab |
+| Nicht im Inhaltsverzeichnis anzeigen | nur der Block |
+| Nur für Lehrpersonen sichtbar | verbirgt für Nicht-Angemeldete |
+| Für Navigation sperren | sichtbar, nur nicht anklickbar |
+
+Ergänzt wurde ein fünftes Meta `_simple_clean_hide_from_sidebar` mit eigener
+Nachschlagefunktion `simple_clean_seitenleiste_versteckte_seiten()` neben
+`simple_clean_nav_gesperrte_seiten()`. **Bewusst getrennt** vom
+Verzeichnis-Häkchen: Das bestehende zu erweitern hätte jede Seite, die es heute
+schon trägt, still aus der Navigation genommen — und auf der Produktivseite ist
+nicht nachzusehen, wie viele das sind.
+
+Nachgemessen: Kapitel E samt Unterseite fehlt in der Seitenleiste und steht im
+Verzeichnis, Kapitel D genau umgekehrt. 42 bzw. 44 Abfragen je Aufruf.
+
+### 10.3 Der Testbaum
+
+Für die Abnahme neu angelegt, mit sprechenden Titeln, unter
+`http://fos.localhost:8080/index.php/a6/`. Alle Seiten tragen das Meta
+`_a6_testbaum` — daran sind sie später wieder zu finden und zu entfernen.
+Jede Eigenschaft kommt genau einmal vor: A mit Unterseiten und zweiter Ebene,
+B ohne, C navigationsgesperrt, D nicht im Verzeichnis, E nicht in der
+Seitenleiste.
