@@ -759,25 +759,16 @@ git pull origin main
 
 ### Changing Colors
 
-**Method 1: Direct replacement** (quick)
-```bash
-# Search and replace in styles.css
-#0073aa → #your-color  (accent color)
-#333 → #your-dark       (text color)
-```
+**Recommended: WordPress Customizer** (no code changes needed)
+Design → Customizer → Farbeinstellungen. Changes there update the CSS
+variables described in the „Color Scheme" section above at runtime via
+`simple_clean_customizer_css()`.
 
-**Method 2: CSS Variables** (recommended)
-```css
-/* Add to top of style.css after theme header */
-:root {
-    --color-primary: #0073aa;
-    --color-text: #333;
-    --color-background: #fff;
-    --color-border: #eee;
-}
-
-/* Then replace hardcoded colors with var(--color-primary) etc. */
-```
+**For a new variable not yet covered by the Customizer:** add it to the
+`:root` block in `style.css` (see „Color Scheme" above for the current
+variable set) with the existing literal value as its initial value, then
+reference it as `var(--your-variable, #fallback)` wherever needed — never
+hardcode a hex value directly in a selector.
 
 ### Changing Fonts
 
