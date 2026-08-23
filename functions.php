@@ -408,6 +408,20 @@ function simple_clean_customizer_css() {
             --color-background: {$color_background};
             --color-background-light: {$color_background_light};
 
+            /* AP-1.2: Fallback-Ausgabe der acht in AP-1.1 (style.css :root)
+               neu definierten Variablen. Nicht im Customizer einstellbar,
+               daher reine Textwerte statt get_theme_mod() — sie sichern nur
+               ab, dass die Werte auch verfügbar sind, bevor der volle
+               Cache-Zyklus von style.css einmal durchgelaufen ist. */
+            --color-text-muted: #666666;
+            --color-border: #dddddd;
+            --color-border-light: #eeeeee;
+            --color-code-bg: #f1f1f1;
+            --color-success: #2ecc40;
+            --color-danger: #cc3333;
+            --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            --font-family-mono: 'Courier New', monospace;
+
             /* Inhaltsverzeichnis-Block. --pidx-accent bekommt bewusst KEINEN
                eigenen Regler: Die Akzentfarbe soll der übrigen Oberfläche
                folgen, sonst müsste man sie an zwei Stellen nachziehen. */
