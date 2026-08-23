@@ -45,6 +45,22 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
     --color-sidebar-bg: var(--color-ui-surface-light);
     --color-sidebar-border: var(--color-ui-surface);
 
+    /* Ergänzendes Vokabular (Vorhaben CSS-Variablen & Theme-Kopplung,
+       PLAN-CSS-Variablen-Darkmode.md, AP-1.1). Werte entsprechen den bisher
+       im Projekt hartcodierten Ist-Werten — reine Zentralisierung, keine
+       optische Änderung. --color-text-primary, --color-background und
+       --color-background-light existieren bereits als eigene
+       Customizer-Einstellungen (siehe functions.php) und werden hier
+       bewusst nicht dupliziert. */
+    --color-text-muted: #666666;
+    --color-border: #dddddd;
+    --color-border-light: #eeeeee;
+    --color-code-bg: #f1f1f1;
+    --color-success: #2ecc40;
+    --color-danger: #cc3333;
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-family-mono: 'Courier New', monospace;
+
     /* Fluid font sizes: min size, preferred (viewport-based), max size */
     --font-size-base: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
     --font-size-small: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
