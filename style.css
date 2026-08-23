@@ -86,10 +86,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: var(--font-family-base, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif);
     line-height: 1.6;
-    color: #333;
-    background-color: #fff;
+    color: var(--color-text-primary, #333);
+    background-color: var(--color-background, #fff);
     font-size: var(--font-size-base);
 }
 
@@ -105,7 +105,7 @@ body {
    Kachel-Optik. Der plastische Look gilt nur für den Navigations-Streifen der
    Seitenleiste (.sidebar-toggle-btn) — siehe CLAUDE.md. */
 .site-header {
-    background-color: #fff;
+    background-color: var(--color-background, #fff);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     position: sticky;
     top: 0;
@@ -123,7 +123,7 @@ body {
     font-size: 1.5rem;
     font-weight: bold;
     text-decoration: none;
-    color: #333;
+    color: var(--color-text-primary, #333);
 }
 
 .main-navigation ul {
@@ -134,7 +134,7 @@ body {
 
 .main-navigation a {
     text-decoration: none;
-    color: #333;
+    color: var(--color-text-primary, #333);
     font-weight: 500;
     transition: color 0.3s ease;
 }
@@ -167,7 +167,7 @@ body {
 .post {
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-lg);
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-light, #eee);
 }
 
 .post:last-child {
@@ -182,7 +182,7 @@ body {
 
 .entry-title a {
     text-decoration: none;
-    color: #333;
+    color: var(--color-text-primary, #333);
 }
 
 .entry-title a:hover {
@@ -190,7 +190,7 @@ body {
 }
 
 .entry-meta {
-    color: #666;
+    color: var(--color-text-muted, #666);
     font-size: 0.9rem;
     margin-bottom: 1rem;
 }
@@ -308,7 +308,7 @@ img[data-clb-src] { cursor: zoom-in; }
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
-    color: #333;
+    color: var(--color-text-primary, #333);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -326,7 +326,7 @@ figure {
 figcaption {
     margin-top: 0.5rem;
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-muted, #666);
     font-style: italic;
     text-align: center;
 }
@@ -469,15 +469,15 @@ video {
 }
 
 .entry-content code {
-    background-color: #f1f1f1;
+    background-color: var(--color-code-bg, #f1f1f1);
     padding: 0.2rem 0.4rem;
     border-radius: 3px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-family-mono, 'Courier New', monospace);
     font-size: 0.9rem;
 }
 
 .entry-content pre {
-    background-color: #f1f1f1;
+    background-color: var(--color-code-bg, #f1f1f1);
     padding: 1rem;
     border-radius: 5px;
     overflow-x: auto;
@@ -498,22 +498,22 @@ video {
 
 .entry-content th,
 .entry-content td {
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border, #ddd);
     padding: 0.75rem;
     text-align: left;
 }
 
 .entry-content th {
-    background-color: #f8f9fa;
+    background-color: var(--color-background-light, #f8f9fa);
     font-weight: bold;
 }
 
 /* Footer */
 .site-footer {
-    background-color: #f8f9fa;
+    background-color: var(--color-background-light, #f8f9fa);
     padding: var(--space-lg) 0;
     margin-top: var(--space-xl);
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--color-border-light, #eee);
 }
 
 .footer-content {
@@ -523,7 +523,7 @@ video {
 }
 
 .footer-text {
-    color: #666;
+    color: var(--color-text-muted, #666);
 }
 
 .admin-link {
@@ -548,7 +548,7 @@ video {
         top: 100%;
         left: 0;
         right: 0;
-        background-color: #fff;
+        background-color: var(--color-background, #fff);
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     
@@ -648,13 +648,13 @@ video {
     align-items: center;
     margin-bottom: var(--space-sm);
     padding-bottom: var(--space-sm);
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 2px solid var(--color-sidebar-border, #e0e0e0);
 }
 
 .sidebar-title {
     margin: 0;
     font-size: var(--font-size-xlarge);
-    color: #333;
+    color: var(--color-text-primary, #333);
 }
 
 /* Section title (root page name) */
@@ -671,7 +671,7 @@ video {
 
 /* No pages message */
 .no-pages-message {
-    color: #666;
+    color: var(--color-text-muted, #666);
     font-style: italic;
     padding: var(--space-sm);
     text-align: center;
@@ -684,7 +684,7 @@ video {
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0.25rem 0.5rem;
-    color: #666;
+    color: var(--color-text-muted, #666);
     line-height: 1;
     border-radius: 4px;
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -835,7 +835,7 @@ video {
     overflow: hidden;
     max-height: 0;
     transition: max-height 0.3s ease;
-    border-left: 1px solid #e0e0e0;
+    border-left: 1px solid var(--color-sidebar-border, #e0e0e0);
     margin-left: 0.5rem;
 }
 
@@ -868,7 +868,7 @@ video {
     border: none;
     cursor: pointer;
     padding: 0.5rem;
-    color: #666;
+    color: var(--color-text-muted, #666);
     font-size: 0.75rem;
     line-height: 1;
     transition: transform 0.3s ease, color 0.3s ease;
@@ -888,7 +888,7 @@ video {
     padding: var(--space-xs) var(--space-sm);
     padding-left: calc(var(--space-sm) * 2.2); /* Space for toggle button */
     text-decoration: none;
-    color: #333;
+    color: var(--color-text-primary, #333);
     border-radius: 5px;
     transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease;
     font-size: var(--font-size-base);
@@ -909,7 +909,7 @@ video {
 /* Current page highlighting */
 .page-item.current-page > .page-link {
     background-color: var(--color-ui-surface); /* Orange #e24614 */
-    color: #fff;
+    color: var(--color-background, #fff);
     font-weight: 600;
     border-left-color: var(--color-ui-surface-dark); /* Darker orange #c93d12 */
 }
