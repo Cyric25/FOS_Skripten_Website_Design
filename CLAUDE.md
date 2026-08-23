@@ -467,15 +467,57 @@ der ersten unbalancierten Klammer — schneller als Durchzählen.
 
 ### Color Scheme
 
-**Primary Colors:**
-- Accent/Links: `#0073aa` (WordPress blue)
-- Text: `#333` (near black)
-- Background: `#fff` (white)
-- Light background: `#f8f9fa`
-- Muted text: `#666`
-- Borders: `#eee`, `#ddd`
+**Stand: 2026-08-23 (PLAN-CSS-Variablen-Darkmode.md, Phase 1 abgeschlossen).**
+Die früher hier genannten Werte (`#0073aa` als angebliche Akzentfarbe, `#333`/
+`#fff` als „aktuelle" Primär-/Hintergrundfarbe) waren veraltet und kamen im
+Code so nicht mehr vor — entfernt.
 
-**To customize colors:** Search and replace hex values in `style.css` or add CSS variables.
+**Quelle der Wahrheit ist die Root-`CLAUDE.md`, Abschnitt „Color Scheme".**
+Dort stehen die acht Customizer-gekoppelten Grundvariablen
+(`--color-special-text`, `--color-ui-surface` + zwei Abstufungen,
+`--color-sidebar-border`, `--color-text-primary`, `--color-background`,
+`--color-background-light`) mit ihrer Anbindung an
+`simple_clean_customize_register()` / `simple_clean_customizer_css()` in
+`functions.php`. Diese Datei dupliziert das nicht.
+
+**Acht Ergänzungsvariablen** (AP-1.1, `style.css` `:root`; seit AP-1.2 auch
+als Fallback in `simple_clean_customizer_css()` ausgegeben) — nicht im
+Customizer einstellbar, aber ebenso zentral definiert:
+
+| Variable | Wert | Zweck |
+|---|---|---|
+| `--color-text-muted` | `#666666` | gedämpfter Fließtext (Meta-Angaben, Sekundärtext) |
+| `--color-border` | `#dddddd` | Rahmen, kräftigere Abstufung (z. B. Tabellenrahmen) |
+| `--color-border-light` | `#eeeeee` | Rahmen, hellere Abstufung (z. B. Trennlinien) |
+| `--color-code-bg` | `#f1f1f1` | Hintergrund von `<code>`/`<pre>`-Blöcken |
+| `--color-success` | `#2ecc40` | Erfolgsfarbe (u. a. `floating-pdf-button.js`) |
+| `--color-danger` | `#cc3333` | Fehler-/Warnfarbe (u. a. `floating-pdf-button.js`) |
+| `--font-family-base` | System-Sans-Serif-Stack (`-apple-system, …, sans-serif`) | Basis-Schriftfamilie |
+| `--font-family-mono` | `'Courier New', monospace` | Code-/Monospace-Schriftfamilie |
+
+**Seit AP-1.3/1.4 durchgehend variablenbasiert:** `style.css` (außerhalb
+`:root`) und `src/css/glossar.css` verwenden keine freistehenden Hex-Werte
+mehr, nur noch `var(--x, #bisheriger-wert)` mit dem jeweils bisherigen Wert
+als Fallback — am Erscheinungsbild ändert sich dadurch nichts. Zwei
+dokumentierte Ausnahmen in `style.css`: der `.sidebar-toggle-btn`-Block
+(„Plastischer Look", siehe oben) und `#clb-overlay { background: #f2f2f2; }`
+(Lightbox-Overlay, keine passende Variable im aktuellen Vokabular).
+
+**Vorgemerkt für ein künftiges Darkmode-Vorhaben** (Befund aus AP-1.rev,
+Schweregrad gering, nicht blockierend): `--color-background` wird an fünf
+Stellen zweckentfremdet als **Textfarbe** statt als Flächenhintergrund
+verwendet — `style.css` Z. 912 sowie `glossar.css` Z. 91, 416, 678, 725.
+Wertlich korrekt und aktuell optisch unauffällig, aber bei einem künftigen
+Darkmode mit dunklem `--color-background` würden diese Textstellen ungewollt
+mitkippen. Kein Fehler von AP-1.3/1.4 — im AP-1.1-Vokabular gab es keine
+passendere Variable dafür; vor einer echten Darkmode-Umsetzung an diesen
+fünf Stellen prüfen, ob eine eigene semantische Variable nötig ist.
+
+**To customize colors:** WordPress Admin → Design → Customizer →
+„Farbeinstellungen" (Details Root-`CLAUDE.md`). Für die acht
+Ergänzungsvariablen oben: Wert an beiden Stellen ändern —
+`style.css` `:root` **und** `simple_clean_customizer_css()` in
+`functions.php` —, sonst driften sie auseinander.
 
 ## Navigation System
 

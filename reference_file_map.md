@@ -1,6 +1,6 @@
 # Datei-Map: Theme „FOS Online Schulbuch"
 
-_Stand: 2026-08-11 · Theme-Version 1.5.78_
+_Stand: 2026-08-23 · Theme-Version 1.5.81_
 
 Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 `CLAUDE.md`, insbesondere in der Funktionsübersicht der `functions.php`.
@@ -9,7 +9,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 
 | Datei | Zweck | Wichtige Funktionen/Inhalte | Hängt ab von |
 |---|---|---|---|
-| `functions.php` | Sammelstelle aller Theme-Subsysteme, ~3900 Zeilen | Setup, Asset-Einbindung, Customizer (Farben + Inhaltsverzeichnis), Meta-Box „Navigation, Verzeichnis & Zugriff" (drei Häkchen), Glossar-System, Passwortschutz, AI-Blocker, SVG-Pipeline, Lightbox, Diagnoseausgabe `simple_clean_perf_footer()`. Gliederung siehe `CLAUDE.md`. Bindet `includes/sichtbarkeit.php` ein (außerhalb des `is_admin()`-Blocks — die Sperre wirkt im Frontend) | `includes/*`, `dist/*` |
+| `functions.php` | Sammelstelle aller Theme-Subsysteme, ~3900 Zeilen | Setup, Asset-Einbindung, Customizer (Farben + Inhaltsverzeichnis), Meta-Box „Navigation, Verzeichnis & Zugriff" (drei Häkchen), Glossar-System, Passwortschutz, AI-Blocker, SVG-Pipeline, Lightbox, Diagnoseausgabe `simple_clean_perf_footer()`. **Seit AP-1.2 (PLAN-CSS-Variablen-Darkmode.md) gibt `simple_clean_customizer_css()` zusätzlich die acht Ergänzungsvariablen aus AP-1.1 (`--color-text-muted`, `--color-border`, `--color-border-light`, `--color-code-bg`, `--color-success`, `--color-danger`, `--font-family-base`, `--font-family-mono`) als Fallback-`:root` aus** — nicht Customizer-einstellbar, reine Verfügbarkeitsgarantie, Werte identisch zu `style.css`. Gliederung siehe `CLAUDE.md`. Bindet `includes/sichtbarkeit.php` ein (außerhalb des `is_admin()`-Blocks — die Sperre wirkt im Frontend) | `includes/*`, `dist/*` |
 | `header.php` | Kopfbereich, Hauptmenü | Inline-Script für den Mobil-Menü-Umschalter (inkl. ARIA, ESC, Klick daneben) | – |
 | `footer.php` | Fußbereich | Copyright, Anmelde-Link, `wp_footer()` | – |
 | `index.php` | Beitragsliste | Auszüge, Datum/Autor, Blätternavigation | `header.php`, `footer.php` |
@@ -18,7 +18,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 | `sidebar.php` | Hierarchischer Seitenbaum links; nimmt gesperrte Seiten samt Unterbaum für nicht Angemeldete heraus (`simple_clean_gesperrte_seiten()`, mit `function_exists`-Absicherung) | `get_root_page_id()`, `display_page_tree_item()` — **beide bewusst am Dateianfang** in `function_exists`-Guards (kein Hoisting, sonst Fatal); eine `get_pages()`-Abfrage plus Parent-Kind-Map; Swipe/ESC/Klick-daneben im Inline-Script | `functions.php` (Meta `_simple_clean_hide_navigation`) |
 | `archive-glossar.php` | Glossar-Übersicht | Liste aller Begriffe | `functions.php` |
 | `single-glossar.php` | Einzelner Glossarbegriff | Definition, Verwendungsnachweise. Die Liste „Dieser Begriff wird verwendet in:" stammt aus `simple_clean_get_term_usage()` und **filtert gesperrte Seiten selbst** — die rohe Abfrage dort greift `pre_get_posts` nicht ab | `functions.php` |
-| `style.css` | Haupt-Stylesheet **und** Theme-Header | Theme-Name und Version (von `backup-and-build.js` gepflegt), `:root`-Variablen, Layout, Navigation, Inhalt, Seitenleiste, Haltepunkte 992/768/480 | – |
+| `style.css` | Haupt-Stylesheet **und** Theme-Header | Theme-Name und Version (von `backup-and-build.js` gepflegt), `:root`-Variablen (inkl. der acht Ergänzungsvariablen aus AP-1.1, siehe `functions.php`-Zeile oben), Layout, Navigation, Inhalt, Seitenleiste, Haltepunkte 992/768/480. **Seit AP-1.3 durchgehend variablenbasiert** — keine freistehenden Hex-Werte mehr außerhalb von `var(--x, #fallback)`; zwei dokumentierte Ausnahmen: `.sidebar-toggle-btn`-Block (Plastischer Look, siehe `CLAUDE.md`) und `#clb-overlay { background: #f2f2f2; }` (keine passende Variable) | – |
 
 ## Eingebundene Module
 
@@ -46,7 +46,7 @@ Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 | `src/js/page-manager.js` | Drag-Sortierung und Mehrfachauswahl im Seitenmanager | `aktualisiereAuswahl()`, `fuehreBulkAus()`, Bereichsauswahl mit Umschalttaste; Sortable zieht nur am `.drag-handle`, deshalb keine `cancel`-Option nötig | `includes/admin/page-manager.php` |
 | `src/js/page-index-editor.js` | Block im Editor registrieren und einstellen | `registerBlockType`, InspectorControls mit acht Einstellungen, Vorschau über `wp.serverSideRender`. **Ohne diese Datei erscheint der Block nicht im Einfügen-Menü** — serverseitige Registrierung allein genügt dafür nicht | `includes/page-index.php` |
 | `src/js/page-index.js` | Suchfeld-Filter im Frontend | rekursives Filtern, merkt sich den Ausgangszustand der Aufklappebenen, `aria-live`-Meldung | – |
-| `src/css/glossar.css` | Gestaltung des Glossars | – | – |
+| `src/css/glossar.css` | Gestaltung des Glossars | **Seit AP-1.4 durchgehend variablenbasiert** — keine freistehenden Hex-Werte mehr außerhalb von `var(--x, #fallback)`; `rgba(0,0,0,X)`/`rgba(226,70,20,X)`-Schatten- und Highlight-Werte bewusst nicht umgestellt (kein Hex, keine passende Variable im AP-1.1-Vokabular) | – |
 | `src/css/page-manager.css` | Gestaltung des Seitenmanagers | Baum, Werkzeugleiste, Modal und die Leiste `.page-bulk-bar` samt Auswahlkästchen | – |
 | `src/css/page-index.css` | Gestaltung des Inhaltsverzeichnisses | Kapitelkarten, Aufklappebenen, drei Darstellungen, Druckansicht. **Keine freistehenden Farbwerte** — alles über `--pidx-*` und die Theme-Variablen | `functions.php` (gibt die Variablen aus) |
 
