@@ -439,12 +439,21 @@ function simple_clean_customizer_css() {
            einstellbar, daher reine Textwerte — sichern nur ab, dass die
            dunklen Werte auch verfügbar sind, bevor der volle Cache-Zyklus
            von style.css einmal durchgelaufen ist. Werte müssen exakt mit
-           style.css übereinstimmen. */
+           style.css übereinstimmen.
+           Nachtrag (2026-08-24, Live-Fund): --color-sidebar-bg fehlte hier
+           komplett. Da der lichte :root-Block oben denselben Namen bereits
+           mit einem LITERALEN Wert belegt (Zeile ~406) und dieses <style>
+           spaeter als style.css ausgegeben wird, gewann dieser literale
+           lichte Wert bislang IMMER, auch im Darkmode - .sidebar blieb
+           dauerhaft hell, waehrend ihr Text (--color-text-primary) korrekt
+           dunkelmodus-hell wurde: heller Text auf hellem Grund, praktisch
+           unlesbar. Jetzt nachgetragen, exakt wie in style.css. */
         :root[data-theme=\"dark\"] {
             --color-special-text: #f0b090;
             --color-ui-surface: #e24614;
             --color-ui-surface-dark: #e64d18;
             --color-ui-surface-light: #3a2620;
+            --color-sidebar-bg: #3a2620;
             --color-sidebar-border: #444444;
             --color-text-primary: #e8e8e8;
             --color-background: #121212;

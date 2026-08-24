@@ -99,11 +99,22 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
    Nur die 14 FARB-Variablen werden überschrieben; Schriftfamilien, Schriftgrößen,
    Abstände und Breiten sind vom Farbmodus unabhängig und bleiben ungeändert.
-   Ebenso NICHT überschrieben:
+   Ebenso NICHT überschrieben (folgen automatisch, da sie die Grundfarben per
+   var()/color-mix() referenzieren statt eigene Werte zu tragen):
    - --color-text-on-accent (bleibt in beiden Modi #ffffff, siehe oben)
-   - die abgeleiteten Variablen (--color-link, --color-link-hover,
-     --color-glossary, --color-sidebar-bg, --plastic-*): sie referenzieren die
-     Grundfarben per var()/color-mix() und ziehen dadurch automatisch mit.
+   - --color-link, --color-link-hover, --plastic-*
+
+   AUSNAHME/FUND (2026-08-24, Live-Test): --color-sidebar-bg zieht TROTZ
+   var()-Referenz NICHT automatisch mit - simple_clean_customizer_css() in
+   functions.php gibt im lichten :root-Block einen LITERALEN Wert dafuer aus
+   (Customizer-Fallback-Muster wie bei den anderen dort gespiegelten
+   Variablen), der als spaeter ausgegebenes <style> gleicher Spezifitaet
+   gewinnt UND in KEINEM der beiden data-theme="dark"-Bloecke ein
+   Gegenstueck hatte. Ergebnis: .sidebar blieb dauerhaft beim lichten
+   Customizer-Wert haengen, unabhaengig vom Modus - im Darkmode dadurch
+   heller Text (--color-text-primary) auf weiterhin hellem Hintergrund,
+   praktisch unlesbar. Deshalb hier UND in functions.php explizit
+   nachgetragen, exakt wie bei den 14 Kernvariablen.
 
    Kontrastwerte (WCAG 2.1) siehe Übergabenotiz zu AP-1.1 im Projektplan.
    --------------------------------------------------------------------------- */
@@ -112,6 +123,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
     --color-ui-surface: #e24614;          /* Markenfarbe, in beiden Modi identisch */
     --color-ui-surface-dark: #e64d18;     /* Hover: hellt auf statt abzudunkeln (Abweichung, s. Notiz) */
     --color-ui-surface-light: #3a2620;    /* warm getönte Fläche (Seitenleiste, Hover-Zeilen) */
+    --color-sidebar-bg: var(--color-ui-surface-light); /* Fund 2026-08-24, s.o. */
     --color-sidebar-border: #444444;
     --color-text-primary: #e8e8e8;        /* 15.29:1 auf --color-background */
     --color-background: #121212;
