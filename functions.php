@@ -433,10 +433,15 @@ function simple_clean_customizer_css() {
             --pidx-gap: {$pidx_gap};
         }
 
-        /* Apply colors to elements */
+        /* Apply colors to elements
+           AP-1.1-Fund (PLAN-Darkmode-Umschaltung.md): vorher literale Werte statt
+           var() - das ueberschrieb die data-theme=dark-Kopplung im root-Block, weil
+           dieser Block spaeter als style.css ausgegeben wird und body{} mit
+           literalem Hex jede var()-basierte Regel gleicher Spezifitaet schlaegt.
+           Jetzt ueber var() mit demselben Customizer-Wert als Fallback. */
         body {
-            color: {$color_text_primary};
-            background-color: {$color_background};
+            color: var(--color-text-primary, {$color_text_primary});
+            background-color: var(--color-background, {$color_background});
         }
 
         /* Sidebar toggle button shadow with dynamic color */
@@ -448,9 +453,11 @@ function simple_clean_customizer_css() {
             box-shadow: 0 2px 8px rgba({$ui_surface_rgb}, 0.4);
         }
 
-        /* Footer */
+        /* Footer
+           AP-1.1-Fund (PLAN-Darkmode-Umschaltung.md): dieselbe Ursache wie beim
+           body-Fund oben - jetzt ueber var() statt literalem Hex. */
         .site-footer {
-            background-color: {$color_background_light};
+            background-color: var(--color-background-light, {$color_background_light});
         }
     </style>
     ";

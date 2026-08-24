@@ -25,6 +25,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
     --color-ui-surface: #e24614;          /* Bright orange for UI elements */
     --color-ui-surface-dark: #c93d12;     /* Darker orange for hover/active */
     --color-ui-surface-light: #f5ede9;    /* Light orange for backgrounds */
+    --color-text-on-accent: #ffffff;      /* Text auf der Akzentfläche (--color-ui-surface).
+                                             Bewusst in BEIDEN Farbmodi weiß, weil die
+                                             Akzentfläche selbst in beiden Modi derselbe
+                                             Orangeton bleibt — deshalb KEIN eigener Wert
+                                             im :root[data-theme="dark"]-Block unten. */
 
     /* Plastischer Look — verwendet ausschließlich vom Navigations-Streifen
        der Seitenleiste (.sidebar-toggle-btn). Header und Menü bleiben
@@ -83,6 +88,40 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
     /* Fluid container width */
     --container-width: clamp(300px, 90vw, 1400px);
+}
+
+/* ---------------------------------------------------------------------------
+   Dunkler Variablensatz (PLAN-Darkmode-Umschaltung.md, AP-1.1)
+
+   Ausgelöst ausschließlich durch das Attribut data-theme="dark" auf <html>,
+   gesetzt vom Umschalt-Knopf bzw. dem FOUC-Vermeidungs-Script in header.php.
+   KEIN prefers-color-scheme — ohne gespeicherte Wahl bleibt es immer hell.
+
+   Nur die 14 FARB-Variablen werden überschrieben; Schriftfamilien, Schriftgrößen,
+   Abstände und Breiten sind vom Farbmodus unabhängig und bleiben ungeändert.
+   Ebenso NICHT überschrieben:
+   - --color-text-on-accent (bleibt in beiden Modi #ffffff, siehe oben)
+   - die abgeleiteten Variablen (--color-link, --color-link-hover,
+     --color-glossary, --color-sidebar-bg, --plastic-*): sie referenzieren die
+     Grundfarben per var()/color-mix() und ziehen dadurch automatisch mit.
+
+   Kontrastwerte (WCAG 2.1) siehe Übergabenotiz zu AP-1.1 im Projektplan.
+   --------------------------------------------------------------------------- */
+:root[data-theme="dark"] {
+    --color-special-text: #f0b090;        /* helles Terrakotta, 10.10:1 auf --color-background */
+    --color-ui-surface: #e24614;          /* Markenfarbe, in beiden Modi identisch */
+    --color-ui-surface-dark: #e64d18;     /* Hover: hellt auf statt abzudunkeln (Abweichung, s. Notiz) */
+    --color-ui-surface-light: #3a2620;    /* warm getönte Fläche (Seitenleiste, Hover-Zeilen) */
+    --color-sidebar-border: #444444;
+    --color-text-primary: #e8e8e8;        /* 15.29:1 auf --color-background */
+    --color-background: #121212;
+    --color-background-light: #1e1e1e;
+    --color-text-muted: #a0a0a0;          /* 7.16:1 auf --color-background */
+    --color-border: #444444;
+    --color-border-light: #383838;
+    --color-code-bg: #2a2a2a;
+    --color-success: #4ade80;             /* 10.75:1 auf --color-background */
+    --color-danger: #f87171;              /* 6.77:1 auf --color-background */
 }
 
 body {
@@ -1131,4 +1170,47 @@ video {
 
 .sc-lehrerhinweis__zurueck {
     font-size: var(--font-size-small, 0.875rem);
+}
+
+/* ==========================================================================
+   Darkmode-Umschalter (AP-1.4)
+   Neuer, in sich geschlossener Abschnitt - greift keine bestehende Regel an.
+   Der Knopf steht im Markup VOR .menu-toggle; `margin-left: auto` schluckt den
+   gesamten freien Platz im space-between-Flex von .header-content. Dadurch
+   bleiben Navigation (Desktop) bzw. Hamburger (unter 768px) exakt an der
+   rechten Kante stehen, wie vor dieser Aenderung.
+   Farben ausschliesslich ueber CSS-Variablen mit bisherigem Wert als Fallback.
+   ========================================================================== */
+.theme-toggle-btn {
+    margin-left: auto;
+    margin-right: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--color-text-primary, #333333);
+    cursor: pointer;
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+.theme-toggle-btn:hover,
+.theme-toggle-btn:focus-visible {
+    color: var(--color-ui-surface, #e24614);
+}
+
+.theme-toggle-btn:focus-visible {
+    outline: 2px solid var(--color-ui-surface, #e24614);
+    outline-offset: 2px;
+}
+
+.theme-toggle-icon {
+    display: block;
+    pointer-events: none;
 }
