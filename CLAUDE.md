@@ -503,21 +503,70 @@ dokumentierte Ausnahmen in `style.css`: der `.sidebar-toggle-btn`-Block
 („Plastischer Look", siehe oben) und `#clb-overlay { background: #f2f2f2; }`
 (Lightbox-Overlay, keine passende Variable im aktuellen Vokabular).
 
-**Vorgemerkt für ein künftiges Darkmode-Vorhaben** (Befund aus AP-1.rev,
-Schweregrad gering, nicht blockierend): `--color-background` wird an fünf
-Stellen zweckentfremdet als **Textfarbe** statt als Flächenhintergrund
-verwendet — `style.css` Z. 912 sowie `glossar.css` Z. 91, 416, 678, 725.
-Wertlich korrekt und aktuell optisch unauffällig, aber bei einem künftigen
-Darkmode mit dunklem `--color-background` würden diese Textstellen ungewollt
-mitkippen. Kein Fehler von AP-1.3/1.4 — im AP-1.1-Vokabular gab es keine
-passendere Variable dafür; vor einer echten Darkmode-Umsetzung an diesen
-fünf Stellen prüfen, ob eine eigene semantische Variable nötig ist.
+**Behoben durch `PLAN-Darkmode-Umschaltung.md`, AP-1.3** (vormals hier als
+„vorgemerkt für ein künftiges Darkmode-Vorhaben" geführt, Befund aus dem
+AP-1.rev des Vorgänger-Plans `PLAN-CSS-Variablen-Darkmode.md`):
+`--color-background` wurde an fünf Stellen zweckentfremdet als **Textfarbe**
+statt als Flächenhintergrund verwendet — `style.css` Z. 912 sowie
+`glossar.css` Z. 91, 416, 678, 725 — plus eine sechste, während AP-1.1
+zusätzlich gefundene Stelle (`style.css`, `.sc-lehrerhinweis__anmelden`).
+Alle sechs wurden in `PLAN-Darkmode-Umschaltung.md`, AP-1.3, einzeln geprüft:
+fünf echte Fehlnutzungen sind jetzt auf die neue Variable
+`--color-text-on-accent` (`#ffffff` in beiden Modi, siehe Abschnitt
+„Darkmode" unten) umgestellt; `glossar.css:91` (Sprechblasenspitze) blieb
+bewusst unverändert, da der umgebende Container denselben Hintergrund trägt
+und beide gemeinsam mit dem Darkmode mitziehen.
 
 **To customize colors:** WordPress Admin → Design → Customizer →
 „Farbeinstellungen" (Details Root-`CLAUDE.md`). Für die acht
 Ergänzungsvariablen oben: Wert an beiden Stellen ändern —
 `style.css` `:root` **und** `simple_clean_customizer_css()` in
 `functions.php` —, sonst driften sie auseinander.
+
+## Darkmode (seit v1.5.83, `PLAN-Darkmode-Umschaltung.md`, Phase 1 abgeschlossen)
+
+Manueller, rein nutzergesteuerter Umschalter zwischen Hell- und Dunkelmodus.
+**Bewusst KEIN `prefers-color-scheme`** — die Systemeinstellung von
+Betriebssystem oder Browser wird an keiner Stelle abgefragt oder befolgt.
+Das ist ein explizites Nicht-Ziel des zugrundeliegenden Plans, kein Versehen
+und keine offene Baustelle (siehe dazu auch die Korrektur unter „Future
+Enhancements" unten).
+
+**Mechanismus:**
+- Der gesamte Zustand steckt in einem einzigen Attribut: `data-theme="dark"`
+  auf `<html>`. Fehlt das Attribut, gilt Lightmode — der Standardzustand.
+- Persistiert wird in `localStorage` unter dem Schlüssel
+  `fos-color-scheme` (Werte `'dark'` oder `'light'`).
+- Die eigentlichen Farbwerte stehen in einem `:root[data-theme="dark"]`-Block
+  direkt nach dem lichten `:root`-Block in `style.css` (14 Farbvariablen),
+  identisch gespiegelt als Fallback in `simple_clean_customizer_css()` in
+  `functions.php` — konkrete Werte siehe Abschnitt „Color Scheme" oben.
+
+**Wo im Code:**
+- **Toggle-Button:** `header.php`, Element `#fos-theme-toggle`
+  (`.theme-toggle-btn`), im Markup vor `.menu-toggle` (siehe `reference_file_map.md`
+  für die genaue Begründung der Platzierung). Eigenes Klick-Handler-Script
+  am Dateiende von `header.php`, nach dem bestehenden Menü-Toggle-Script.
+- **FOUC-Vermeidung:** ein blockierendes Inline-Script als erstes Element im
+  `<head>` von `header.php`, **vor** `wp_head()` — liest `localStorage` aus
+  und setzt `data-theme="dark"` auf `<html>`, bevor irgendein Stylesheet
+  geladen ist. Kein `defer`/`async`, kein `matchMedia`-Aufruf.
+
+**Pflicht-Konvention für neuen CSS-Code:** Neuer CSS-Code in diesem Theme
+verwendet ausschließlich `var(--x, #fallback)` mit den in der Root-`CLAUDE.md`
+(Abschnitt „Color Scheme") gelisteten Variablen — nie hartcodierte Hex-Werte.
+Nur so bleibt neuer Code automatisch darkmode-fähig, ohne dass der
+`:root[data-theme="dark"]`-Block nachgezogen werden muss.
+
+**Hintergrund/Historie:** `PLAN-CSS-Variablen-Darkmode.md` (Root-Verzeichnis)
+legte in einer Vorstufe die heutigen CSS-Variablen und ihre
+Customizer-Kopplung an, ohne selbst einen Umschalter zu bauen.
+`PLAN-Darkmode-Umschaltung.md` (Root-Verzeichnis), Phase 1 „Theme", baut
+darauf den eigentlichen manuellen Umschalter: dunklen Variablensatz
+definieren, `--color-background`-Fehlnutzungen als Textfarbe bereinigen
+(siehe oben), Toggle-Button samt FOUC-Script ergänzen und den plastischen
+Look gegenprüfen. Ein unabhängiges Review (`AP-1.rev`) hat Phase 1
+bestätigt.
 
 ## Navigation System
 
@@ -1020,10 +1069,13 @@ The project root contains the "#" character (C:/Users/.../OneDrive...//#Unterric
    - Editor stylesheet matching frontend
    - Block patterns for common layouts
 
-4. **Dark Mode**
-   - CSS variables for theming
-   - JavaScript toggle with localStorage
-   - Respect system preference
+4. **Dark Mode** — **umgesetzt seit `PLAN-Darkmode-Umschaltung.md`, Phase 1**
+   (siehe Abschnitt „Darkmode" oben): CSS-Variablen per
+   `:root[data-theme="dark"]`, manueller Toggle-Button mit
+   `localStorage`-Persistenz. **Bewusst KEINE Systempräferenz** — die
+   tatsächliche Umsetzung fragt `prefers-color-scheme` an keiner Stelle ab;
+   das ist ein explizites Nicht-Ziel des Plans, nicht eine noch offene
+   Erweiterung dieser Liste.
 
 5. **Animation Library**
    - Intersection Observer for scroll animations
