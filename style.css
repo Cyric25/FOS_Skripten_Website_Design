@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.81
+Version: 1.5.83
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -948,7 +948,7 @@ video {
 /* Current page highlighting */
 .page-item.current-page > .page-link {
     background-color: var(--color-ui-surface); /* Orange #e24614 */
-    color: var(--color-background, #fff);
+    color: var(--color-text-on-accent, #fff);
     font-weight: 600;
     border-left-color: var(--color-ui-surface-dark); /* Darker orange #c93d12 */
 }
@@ -1154,7 +1154,7 @@ video {
     display: inline-block;
     padding: 0.6em 1.6em;
     background-color: var(--color-ui-surface, #e24614);
-    color: var(--color-background, #ffffff);
+    color: var(--color-text-on-accent, #ffffff);
     border-radius: 6px;
     text-decoration: none;
     font-weight: 600;
@@ -1164,7 +1164,7 @@ video {
 .sc-lehrerhinweis__anmelden:hover,
 .sc-lehrerhinweis__anmelden:focus {
     background-color: var(--color-ui-surface-dark, #c93d12);
-    color: var(--color-background, #ffffff);
+    color: var(--color-text-on-accent, #ffffff);
     text-decoration: none;
 }
 

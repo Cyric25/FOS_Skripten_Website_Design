@@ -402,6 +402,7 @@ function simple_clean_customizer_css() {
             --color-ui-surface: {$color_ui_surface};
             --color-ui-surface-dark: {$color_ui_surface_dark};
             --color-ui-surface-light: {$color_ui_surface_light};
+            --color-text-on-accent: #ffffff;
             --color-sidebar-bg: {$color_ui_surface_light};
             --color-sidebar-border: {$color_sidebar_border};
             --color-text-primary: {$color_text_primary};
@@ -431,6 +432,29 @@ function simple_clean_customizer_css() {
             --pidx-accent: {$color_ui_surface};
             --pidx-radius: {$pidx_radius}px;
             --pidx-gap: {$pidx_gap};
+        }
+
+        /* AP-1.2: Fallback-Ausgabe des dunklen Variablensatzes aus AP-1.1
+           (style.css :root[data-theme=\"dark\"]). Nicht im Customizer
+           einstellbar, daher reine Textwerte — sichern nur ab, dass die
+           dunklen Werte auch verfügbar sind, bevor der volle Cache-Zyklus
+           von style.css einmal durchgelaufen ist. Werte müssen exakt mit
+           style.css übereinstimmen. */
+        :root[data-theme=\"dark\"] {
+            --color-special-text: #f0b090;
+            --color-ui-surface: #e24614;
+            --color-ui-surface-dark: #e64d18;
+            --color-ui-surface-light: #3a2620;
+            --color-sidebar-border: #444444;
+            --color-text-primary: #e8e8e8;
+            --color-background: #121212;
+            --color-background-light: #1e1e1e;
+            --color-text-muted: #a0a0a0;
+            --color-border: #444444;
+            --color-border-light: #383838;
+            --color-code-bg: #2a2a2a;
+            --color-success: #4ade80;
+            --color-danger: #f87171;
         }
 
         /* Apply colors to elements
