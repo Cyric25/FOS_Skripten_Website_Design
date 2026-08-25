@@ -1133,7 +1133,18 @@ function simple_clean_normalize_glossar_term($term) {
 }
 
 // Handle Glossar CSV Import
-function simple_clean_handle_glossar_import() {
+//
+// $file: optionales Einzeldatei-Array im $_FILES-Format (name, type,
+// tmp_name, error, size). Wird es nicht uebergeben (Standardaufruf),
+// liest die Funktion wie bisher direkt aus $_FILES['glossar_csv'] — das
+// erhaelt das Verhalten fuer den unveraenderten Einzeldatei-Fall exakt.
+// $existing_posts: optionale Referenz auf bereits geladene Glossar-Posts.
+// simple_clean_handle_glossar_import_multi() reicht hier ueber mehrere
+// Dateien hinweg dieselbe Liste durch, damit Duplikate auch
+// dateiuebergreifend erkannt werden (Fortsetzung des bestehenden Musters,
+// das within einer Datei schon galt). Ohne Uebergabe wird die Liste wie
+// bisher lokal geladen.
+function simple_clean_handle_glossar_import($file = null, &$existing_posts = null) {
     // Check permissions
     if (!current_user_can('manage_options')) {
         return array(
@@ -1142,8 +1153,12 @@ function simple_clean_handle_glossar_import() {
         );
     }
 
+    if ($file === null) {
+        $file = isset($_FILES['glossar_csv']) ? $_FILES['glossar_csv'] : null;
+    }
+
     // Check if file was uploaded
-    if (!isset($_FILES['glossar_csv']) || $_FILES['glossar_csv']['error'] !== UPLOAD_ERR_OK) {
+    if (!$file || !isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
         return array(
             'success' => false,
             'message' => 'Keine Datei hochgeladen oder Upload-Fehler.'
@@ -1151,8 +1166,8 @@ function simple_clean_handle_glossar_import() {
     }
 
     // Check file type
-    $file_info = pathinfo($_FILES['glossar_csv']['name']);
-    if (strtolower($file_info['extension']) !== 'csv') {
+    $file_info = pathinfo($file['name']);
+    if (!isset($file_info['extension']) || strtolower($file_info['extension']) !== 'csv') {
         return array(
             'success' => false,
             'message' => 'Ungültiges Dateiformat. Nur CSV-Dateien sind erlaubt.'
@@ -1163,8 +1178,8 @@ function simple_clean_handle_glossar_import() {
     $overwrite = isset($_POST['glossar_import_overwrite']) && $_POST['glossar_import_overwrite'] === '1';
 
     // Read CSV file
-    $file = fopen($_FILES['glossar_csv']['tmp_name'], 'r');
-    if (!$file) {
+    $handle = fopen($file['tmp_name'], 'r');
+    if (!$handle) {
         return array(
             'success' => false,
             'message' => 'Fehler beim Öffnen der CSV-Datei.'
@@ -1177,17 +1192,21 @@ function simple_clean_handle_glossar_import() {
     $errors = array();
     $row_number = 0;
 
-    // Bestehende Begriffe EINMAL laden statt pro CSV-Zeile
-    $existing_posts = get_posts(array(
-        'post_type' => 'glossar',
-        'posts_per_page' => -1,
-        'post_status' => array('publish', 'draft', 'pending'),
-    ));
+    // Bestehende Begriffe EINMAL laden statt pro CSV-Zeile (bzw. pro
+    // Datei bei Mehrfachimport, sofern nicht bereits vom Aufrufer
+    // uebergeben)
+    if ($existing_posts === null) {
+        $existing_posts = get_posts(array(
+            'post_type' => 'glossar',
+            'posts_per_page' => -1,
+            'post_status' => array('publish', 'draft', 'pending'),
+        ));
+    }
 
     // Trennzeichen ist immer Semikolon (deutsches Excel/Sheets-Standard).
     $delimiter = ';';
 
-    while (($data = fgetcsv($file, 10000, $delimiter)) !== false) {
+    while (($data = fgetcsv($handle, 10000, $delimiter)) !== false) {
         $row_number++;
 
         // Skip header row. Strip a leading UTF-8 BOM first, otherwise the
@@ -1290,7 +1309,7 @@ function simple_clean_handle_glossar_import() {
         }
     }
 
-    fclose($file);
+    fclose($handle);
 
     return array(
         'success' => true,
@@ -1298,6 +1317,83 @@ function simple_clean_handle_glossar_import() {
         'updated' => $updated,
         'skipped' => $skipped,
         'errors' => $errors
+    );
+}
+
+// Handle Glossar CSV Import - mehrere Dateien gleichzeitig
+//
+// Ruft simple_clean_handle_glossar_import() unveraendert je Datei auf und
+// reicht dabei $existing_posts durchgehend als Referenz weiter, damit
+// Duplikate auch dateiuebergreifend erkannt werden. Fehlerhafte
+// Einzeldateien werden uebersprungen (im Sammelergebnis vermerkt), die
+// uebrigen Dateien werden trotzdem importiert.
+function simple_clean_handle_glossar_import_multi() {
+    // Check permissions
+    if (!current_user_can('manage_options')) {
+        return array(
+            'success' => false,
+            'message' => 'Sie haben keine Berechtigung, diese Aktion auszuführen.'
+        );
+    }
+
+    if (!isset($_FILES['glossar_csv']['name']) || !is_array($_FILES['glossar_csv']['name']) || empty($_FILES['glossar_csv']['name'])) {
+        return array(
+            'success' => false,
+            'message' => 'Keine Datei hochgeladen oder Upload-Fehler.'
+        );
+    }
+
+    $existing_posts = null; // wird bei der ersten Datei geladen, danach ueber alle Dateien weitergereicht
+    $dateien = array();
+    $imported_gesamt = 0;
+    $updated_gesamt = 0;
+    $skipped_gesamt = 0;
+
+    $anzahl = count($_FILES['glossar_csv']['name']);
+    for ($i = 0; $i < $anzahl; $i++) {
+        $dateiname = $_FILES['glossar_csv']['name'][$i];
+
+        // Leere Datei-Slots ueberspringen statt einen Fehler zu melden
+        // (z. B. wenn der Browser bei "multiple" ein leeres Element liefert).
+        if (empty($dateiname)) {
+            continue;
+        }
+
+        $virtuelle_datei = array(
+            'name'     => $_FILES['glossar_csv']['name'][$i],
+            'type'     => $_FILES['glossar_csv']['type'][$i],
+            'tmp_name' => $_FILES['glossar_csv']['tmp_name'][$i],
+            'error'    => $_FILES['glossar_csv']['error'][$i],
+            'size'     => $_FILES['glossar_csv']['size'][$i],
+        );
+
+        $ergebnis = simple_clean_handle_glossar_import($virtuelle_datei, $existing_posts);
+        $ergebnis['dateiname'] = $dateiname;
+        $dateien[] = $ergebnis;
+
+        if ($ergebnis['success']) {
+            $imported_gesamt += $ergebnis['imported'];
+            $updated_gesamt += $ergebnis['updated'];
+            $skipped_gesamt += $ergebnis['skipped'];
+        }
+    }
+
+    if (empty($dateien)) {
+        return array(
+            'success' => false,
+            'message' => 'Keine Datei hochgeladen oder Upload-Fehler.'
+        );
+    }
+
+    return array(
+        'success'         => true,
+        'dateien'         => $dateien,
+        'imported_gesamt' => $imported_gesamt,
+        'updated_gesamt'  => $updated_gesamt,
+        'skipped_gesamt'  => $skipped_gesamt,
+        // Auto-Scan-Kopplung (AP-1.2): nur wenn ueber alle Dateien
+        // hinweg tatsaechlich etwas importiert oder aktualisiert wurde.
+        'sollScannen'     => ($imported_gesamt + $updated_gesamt) > 0,
     );
 }
 
@@ -3669,28 +3765,41 @@ function simple_clean_glossar_settings_page() {
         return;
     }
 
-    // Handle CSV import
+    // Handle CSV import (mehrere Dateien gleichzeitig moeglich, siehe
+    // simple_clean_handle_glossar_import_multi()). $glossar_import_ergebnis
+    // bleibt im Funktions-Scope verfuegbar fuer die Auto-Scan-Kopplung
+    // weiter unten (im <script>-Block dieser Funktion).
+    $glossar_import_ergebnis = null;
     if (isset($_POST['glossar_import']) && check_admin_referer('glossar_import', 'glossar_import_nonce')) {
-        $result = simple_clean_handle_glossar_import();
-        if ($result['success']) {
-            add_action('admin_notices', function() use ($result) {
-                echo '<div class="notice notice-success is-dismissible">';
-                echo '<p><strong>✓ Import erfolgreich!</strong></p>';
-                echo '<p>' . $result['imported'] . ' Begriffe importiert, ' . $result['updated'] . ' aktualisiert, ' . $result['skipped'] . ' übersprungen.</p>';
-                if (!empty($result['errors'])) {
-                    echo '<p><strong>Fehler:</strong></p><ul>';
-                    foreach ($result['errors'] as $error) {
-                        echo '<li>' . esc_html($error) . '</li>';
+        $glossar_import_ergebnis = simple_clean_handle_glossar_import_multi();
+        if ($glossar_import_ergebnis['success']) {
+            add_action('admin_notices', function() use ($glossar_import_ergebnis) {
+                foreach ($glossar_import_ergebnis['dateien'] as $datei_ergebnis) {
+                    if (empty($datei_ergebnis['success'])) {
+                        echo '<div class="notice notice-error is-dismissible">';
+                        echo '<p><strong>❌ Import fehlgeschlagen: ' . esc_html($datei_ergebnis['dateiname']) . '</strong></p>';
+                        echo '<p>' . esc_html($datei_ergebnis['message']) . '</p>';
+                        echo '</div>';
+                        continue;
                     }
-                    echo '</ul>';
+                    echo '<div class="notice notice-success is-dismissible">';
+                    echo '<p><strong>✓ ' . esc_html($datei_ergebnis['dateiname']) . '</strong></p>';
+                    echo '<p>' . $datei_ergebnis['imported'] . ' Begriffe importiert, ' . $datei_ergebnis['updated'] . ' aktualisiert, ' . $datei_ergebnis['skipped'] . ' übersprungen.</p>';
+                    if (!empty($datei_ergebnis['errors'])) {
+                        echo '<p><strong>Fehler:</strong></p><ul>';
+                        foreach ($datei_ergebnis['errors'] as $error) {
+                            echo '<li>' . esc_html($error) . '</li>';
+                        }
+                        echo '</ul>';
+                    }
+                    echo '</div>';
                 }
-                echo '</div>';
             });
         } else {
-            add_action('admin_notices', function() use ($result) {
+            add_action('admin_notices', function() use ($glossar_import_ergebnis) {
                 echo '<div class="notice notice-error is-dismissible">';
                 echo '<p><strong>❌ Import fehlgeschlagen!</strong></p>';
-                echo '<p>' . esc_html($result['message']) . '</p>';
+                echo '<p>' . esc_html($glossar_import_ergebnis['message']) . '</p>';
                 echo '</div>';
             });
         }
@@ -3787,7 +3896,7 @@ function simple_clean_glossar_settings_page() {
 
         <div class="card" style="max-width: 800px; margin-top: 20px;">
             <h2>📥 CSV Import</h2>
-            <p>Importiere Glossar-Begriffe aus einer CSV-Datei. Die CSV-Datei muss folgende Spalten enthalten:</p>
+            <p>Importiere Glossar-Begriffe aus einer oder mehreren CSV-Dateien (Mehrfachauswahl möglich). Jede CSV-Datei muss folgende Spalten enthalten:</p>
             <ul style="margin-left: 20px;">
                 <li><strong>Begriff</strong> (Pflichtfeld) - Der Glossarbegriff</li>
                 <li><strong>Definition</strong> (Pflichtfeld) - Die Erklärung des Begriffs</li>
@@ -3805,7 +3914,7 @@ Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen
             <form method="post" enctype="multipart/form-data">
                 <?php wp_nonce_field('glossar_import', 'glossar_import_nonce'); ?>
                 <p>
-                    <input type="file" name="glossar_csv" accept=".csv" required style="margin-right: 10px;">
+                    <input type="file" name="glossar_csv" accept=".csv" multiple required style="margin-right: 10px;">
                     <label>
                         <input type="checkbox" name="glossar_import_overwrite" value="1">
                         <?php _e('Bestehende Begriffe überschreiben (gleicher Slug)', 'simple-clean-theme'); ?>
