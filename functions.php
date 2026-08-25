@@ -3973,7 +3973,14 @@ Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen
         </div>
     </div>
 
+    <?php
+    // Auto-Scan-Kopplung (AP-1.2): Transportiert das Ergebnis von
+    // simple_clean_handle_glossar_import_multi() (sollScannen) aus dem
+    // PHP-Scope dieser Funktion in den folgenden <script>-Block.
+    $auto_scan = (isset($glossar_import_ergebnis) && !empty($glossar_import_ergebnis['sollScannen'])) ? 'true' : 'false';
+    ?>
     <script>
+    var glossarAutoScan = <?php echo $auto_scan; ?>;
     jQuery(document).ready(function($) {
         let totalPosts = 0;
         let processedPosts = 0;
@@ -4078,6 +4085,23 @@ Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen
         function resetUI() {
             $('#bulk-scan-controls').show();
             $('#bulk-scan-progress').hide();
+        }
+
+        // Auto-Scan (AP-1.2): Nach einem Mehrfach-Import mit mindestens
+        // einer echten Aenderung (imported+updated > 0) startet der Scan
+        // automatisch, OHNE den confirm()-Dialog des manuellen Buttons.
+        // Dieselbe UI-Vorbereitung wie im Klick-Handler oben, nur ohne
+        // Bestaetigung noetig.
+        if (glossarAutoScan) {
+            processedPosts = 0;
+            isCancelled = false;
+
+            $('#bulk-scan-controls').hide();
+            $('#bulk-scan-progress').show();
+            $('#bulk-scan-result').hide();
+            $('#progress-bar').css('width', '0%');
+
+            startBulkScan();
         }
     });
     </script>

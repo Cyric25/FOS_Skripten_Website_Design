@@ -364,7 +364,7 @@ vermerkt, sollte vor Produktiv-Deployment nachgeholt werden.
 
 ### AP-1.2: Automatischer Bulk-Scan nach Mehrfach-Import
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-1.1 (liefert `$glossar_import_ergebnis['sollScannen']`
@@ -457,7 +457,29 @@ und ohne dass der Nutzer klicken muss. Der bestehende manuelle Button samt
   Code-Nachvollzug statt Live-Test kennzeichnen.
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Agenten nach Abschluss ausgefüllt)
+Umgesetzt exakt wie im Vorgehen beschrieben: `glossarAutoScan`-Variable
+direkt vor dem bestehenden `<script>`-Block ausgegeben, Auto-Start-Block
+als letzte Anweisung im `jQuery(document).ready()`-Callback (nach
+`resetUI()`, vor dem schließenden `});`), ruft dieselbe UI-Vorbereitung
+wie der Klick-Handler auf, aber ohne `confirm()` und ruft `startBulkScan()`
+direkt auf statt ein Klick-Event zu simulieren.
+
+**Testnachweis (kein Admin-Login verfügbar, daher kein Live-Browser-Test –
+laut PLAN.md Abschnitt 3 zulässiger Fallback):** `php -l functions.php`
+fehlerfrei. Die PHP-Ausdrucksformel für `$auto_scan` wurde isoliert mit
+`php -r` für alle drei relevanten Fälle ausgeführt: `sollScannen=true` →
+`glossarAutoScan = true`; `sollScannen=false` (nur Duplikate) →
+`glossarAutoScan = false`; `$glossar_import_ergebnis` nicht gesetzt (kein
+Import stattgefunden) → `glossarAutoScan = false`. Der gesamte
+`<script>`-Block wurde zusätzlich per Node.js (`new Function(js)` nach
+Ersetzen der `<?php ... ?>`-Tags durch Platzhalter) auf reine
+JavaScript-Syntaxfehler geprüft — fehlerfrei. Der bestehende
+Klick-Handler auf `#start-bulk-scan` wurde nicht verändert (nur Code nach
+`resetUI()` ergänzt) — Diff bestätigt, dass sein `confirm()`-Aufruf
+unangetastet blieb. Live-UI-Test (tatsächliches Auslösen im Browser ohne
+Klick, Zusammenspiel mit dem manuellen Button in derselben Sitzung)
+konnte mangels WP-Admin-Zugangsdaten nicht durchgeführt werden — als
+offene Lücke vermerkt, siehe auch AP-1.1.
 
 ---
 
@@ -946,7 +968,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP | Titel | Modell | Status | Abhängig von | Notiz |
 |---|---|---|---|---|---|
 | AP-1.1 | Mehrfachdatei-CSV-Import im Backend | opus | ☑ | – | Verifiziert per Stub-Harness (echter Code), Live-UI-Test offen mangels Admin-Login |
-| AP-1.2 | Automatischer Bulk-Scan nach Mehrfach-Import | sonnet | ☐ | AP-1.1 | |
+| AP-1.2 | Automatischer Bulk-Scan nach Mehrfach-Import | sonnet | ☑ | AP-1.1 | JS-Syntax + PHP-Logik verifiziert, Live-UI-Test offen mangels Admin-Login |
 | AP-1.rev | Review Phase 1 | opus | ☐ | AP-1.1, AP-1.2 | |
 | AP-1.doc | Doku Phase 1 | sonnet | ☐ | AP-1.rev | |
 | AP-2.1 | Neue Seiten ans Ende anhängen | sonnet | ☐ | – | |
@@ -961,6 +983,7 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | Datum | AP / Phase | Getestet | Ergebnis | Getestet von |
 |---|---|---|---|---|
 | 2026-08-25 | AP-1.1 | `php -l`; Stub-Harness mit vier Fällen (Einzeldatei-Regression, dateiübergreifendes Duplikat, eine ungültige Datei blockiert die andere nicht, reine Duplikat-Skips ergeben `sollScannen=false`) | Bestanden (4/4), Live-UI-Test mangels Admin-Zugang offen | Stub-Harness (Code-Ausführung) |
+| 2026-08-25 | AP-1.2 | `php -l`; `$auto_scan`-Formel isoliert für alle drei Fälle per `php -r`; `<script>`-Block per Node.js auf JS-Syntaxfehler geprüft; Diff-Kontrolle, dass der manuelle `confirm()`-Klick-Handler unverändert blieb | Bestanden, Live-UI-Test mangels Admin-Zugang offen | Code-/Syntaxprüfung |
 
 ## 10. Dokumentation
 
