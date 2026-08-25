@@ -1155,6 +1155,34 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   `glossar_auto_rebuild`; Admin-Seite `simple_clean_glossar_settings_page()`
   (Untermenü des Glossar-CPT) mit CSV-Import/-Export und Bulk-Scan
   (AJAX `glossar_bulk_scan` / `glossar_bulk_scan_batch`).
+
+  **CSV-Import: mehrere Dateien gleichzeitig (seit
+  `PLAN-Glossar-Mehrfachimport-und-Seitenmanager-Ergaenzungen.md`,
+  Phase 1).** Das Datei-Input trägt `multiple` **und** den Feldnamen
+  `glossar_csv[]` (mit `[]` — ohne die Klammern liefert PHP bei einer
+  echten Formular-Absendung nie ein Array in `$_FILES`, das war ein
+  kritischer, im Review gefundener und in `AP-1.fix1` behobener Fehler:
+  der Import schlug dadurch selbst im Einzeldatei-Fall fehl). Neue
+  Funktion `simple_clean_handle_glossar_import_multi()` ruft die
+  bestehende `simple_clean_handle_glossar_import($file, &$existing_posts)`
+  je Datei mit einem aus dem PHP-Mehrfach-Upload-Array rekonstruierten
+  „virtuellen" `$_FILES`-Element auf; `$existing_posts` wird dabei per
+  Referenz über alle Dateien einer Sitzung hinweg weitergereicht, damit
+  Duplikate auch DATEIÜBERGREIFEND erkannt werden. Eine fehlerhafte
+  Einzeldatei (falsches Format, Lesefehler) wird übersprungen und im
+  `admin_notices`-Bericht je Datei vermerkt, die übrigen Dateien werden
+  trotzdem importiert.
+
+  **Auto-Scan nach Mehrfach-Import:** Liefert der Gesamtimport
+  `sollScannen === true` (mindestens ein Begriff über alle Dateien hinweg
+  neu importiert oder aktualisiert, `imported_gesamt + updated_gesamt > 0`),
+  startet der bestehende Bulk-Scan-AJAX-Ablauf beim Neuladen der
+  Einstellungsseite automatisch — ohne den `confirm()`-Dialog des
+  manuellen Buttons „Alle Seiten jetzt scannen", der unverändert und
+  zusätzlich nutzbar bleibt. Die Kopplung läuft über die JS-Variable
+  `glossarAutoScan` (aus `$glossar_import_ergebnis['sollScannen']`
+  abgeleitet), die denselben `startBulkScan()`-Ablauf aufruft wie der
+  Klick-Handler.
 - **Duplikat-Erkennung:** `simple_clean_glossar_term_exists_or_similar()`
   (Normalisierung, Singular/Plural-Heuristik, Levenshtein ≤ 2).
 - **REST:** `POST simple-clean/v1/glossar` (Permission: `edit_posts`) zum

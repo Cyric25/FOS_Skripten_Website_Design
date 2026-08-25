@@ -1,6 +1,6 @@
 # Projektplan: Glossar-Mehrfachimport (Auto-Scan) und Seitenmanager-Ergänzungen
 
-_Erstellt am: 2026-08-25 · Letzte Aktualisierung: 2026-08-25_
+_Erstellt am: 2026-08-25 · Letzte Aktualisierung: 2026-08-25 (Phase 1 abgeschlossen)_
 
 ## 0. Anweisungen für den ausführenden Agenten
 
@@ -647,7 +647,7 @@ Kein weiterer Korrektur-Bedarf.
 
 ### AP-1.doc: Dokumentation Phase 1 aktualisieren
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-1.rev
@@ -705,9 +705,20 @@ Vorhaben.
   Dokumentationsbeschreibung abgleichen.
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Agenten nach Abschluss ausgefüllt)
+`Theme/CLAUDE.md`, Abschnitt „Glossar-System": Nach der Zeile zur
+Admin-Seite `simple_clean_glossar_settings_page()` zwei neue Absätze
+ergänzt — Mehrfachdatei-Import (`simple_clean_handle_glossar_import_multi()`,
+Pflicht-Feldname `glossar_csv[]`, dateiübergreifende Duplikaterkennung,
+Hinweis auf den in AP-1.fix1 behobenen kritischen Fehler) und
+Auto-Scan-Kopplung (`sollScannen`, `glossarAutoScan`, manueller Button
+bleibt bestehen). `Theme/reference_file_map.md`: Zeile zu `functions.php`
+um denselben Sachverhalt kompakt ergänzt, „Stand"-Datum auf 2026-08-25 und
+Theme-Version auf 1.5.87 aktualisiert (beides war vorher auf
+2026-08-23/1.5.81 stehen geblieben).
 
-### Phase 2: Seitenmanager-Ergänzungen
+Stichprobe: `simple_clean_handle_glossar_import_multi()` im Quelltext
+gesucht — existiert mit der beschriebenen Signatur (keine Parameter,
+liest `$_FILES['glossar_csv']`), Verhalten entspricht der Beschreibung.
 
 ### AP-2.1: Neue Seiten immer ans Ende der Geschwisterseiten anhängen
 
@@ -1079,7 +1090,7 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP-1.2 | Automatischer Bulk-Scan nach Mehrfach-Import | sonnet | ☑ | AP-1.1 | JS-Syntax + PHP-Logik verifiziert, Live-UI-Test offen mangels Admin-Login |
 | AP-1.fix1 | Korrektur: fehlendes `[]` am Datei-Feldnamen | sonnet | ☑ | AP-1.1, AP-1.2 | Kritischer Fund aus AP-1.rev, per echtem HTTP-Test verifiziert behoben |
 | AP-1.rev | Review Phase 1 | opus | ☑ | AP-1.1, AP-1.2 | 1 kritischer Fund → AP-1.fix1; Kurz-Review nach Fix bestätigt Behebung |
-| AP-1.doc | Doku Phase 1 | sonnet | ☐ | AP-1.rev, AP-1.fix1 | |
+| AP-1.doc | Doku Phase 1 | sonnet | ☑ | AP-1.rev, AP-1.fix1 | |
 | AP-2.1 | Neue Seiten ans Ende anhängen | sonnet | ☐ | – | |
 | AP-2.2 | Bulk-Aktion „Für Navigation sperren" | sonnet | ☐ | AP-2.1 (gleiche Datei) | |
 | AP-2.rev | Review Phase 2 | opus | ☐ | AP-2.1, AP-2.2 | |
