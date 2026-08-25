@@ -1,6 +1,6 @@
 # Projektplan: Glossar-Mehrfachimport (Auto-Scan) und Seitenmanager-Ergänzungen
 
-_Erstellt am: 2026-08-25 · Letzte Aktualisierung: 2026-08-25 (Phase 1 abgeschlossen)_
+_Erstellt am: 2026-08-25 · Letzte Aktualisierung: 2026-08-25 (Phase 1 und Phase 2 abgeschlossen — Plan vollständig umgesetzt)_
 
 ## 0. Anweisungen für den ausführenden Agenten
 
@@ -1004,7 +1004,7 @@ nicht durchgeführt — offene Lücke, analog zu Phase 1 und AP-2.1.
 
 ### AP-2.rev: Unabhängiges Review Phase 2
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** M
 **Modell:** opus
 **Abhängigkeiten:** AP-2.1, AP-2.2 (inkl. Phasen-Integrationstest)
@@ -1049,15 +1049,50 @@ arbeiten (Read/Grep/Glob bzw. Dateien ansehen) – KEINE Datei verändern.
 - entfällt (Review-AP; das Ergebnis ist der Bericht).
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Review-Agenten nach Abschluss ausgefüllt:
-Review-Bericht mit Befunden je Schweregrad, Datei und Fundstelle,
-insbesondere das Ergebnis des Meta-Key-Abgleichs aus Vorgehen Punkt 3)
+Review durch einen unabhängigen, ausschließlich lesenden Agenten
+durchgeführt (Explore-Subagent ohne Schreibrechte, working tree nach
+Review nachweislich unverändert). Zusätzlich zum reinen Quelltext-Lesen
+wurde — als gezogene Lehre aus dem Phase-1-Fund — der echte Commit-Diff
+(`2a521f4`) sowie der reale Client→Server-Pfad in `src/js/page-manager.js`
+gegengeprüft, nicht nur die isolierten Funktionen.
+
+**Meta-Key-Abgleich (kritischster Prüfpunkt, Risiko aus Abschnitt 5):**
+`_simple_clean_nav_gesperrt` an allen vier Fundstellen zeichengleich
+bestätigt — `page-manager.php:861` (`update_post_meta`),
+`page-manager.php:866` (`delete_post_meta`), `functions.php:680`
+(`get_post_meta`), `functions.php:808/810`
+(`update_post_meta`/`delete_post_meta`). Keine Vermischung mit
+`_simple_clean_hide_navigation` (bleibt ausschließlich in den
+unveränderten `hide_nav`/`show_nav`-Blöcken).
+
+**Scope-Check per echtem Git-Diff:** Commit `2a521f4` enthält genau vier
+Hunks, deckungsgleich mit dem Plan (Whitelist, `<option>`-Zeilen,
+`menu_order`-Ermittlung, zwei neue `case`-Blöcke). Keine Änderung an
+`hide_nav`/`show_nav`, `ajax_update_order()`,
+`_simple_clean_hide_from_sidebar` (kein Bulk-Aktions-Fall dafür — korrekt
+außerhalb des Scopes), `set_parent` oder anderen bestehenden Aktionen.
+`$reload`-Array unverändert, `lock_nav`/`unlock_nav` korrekt nicht
+enthalten. `functions.php` wurde von diesem Commit gar nicht angefasst.
+
+**Weitere verifizierte Punkte:** `$wpdb->prepare()` in `ajax_create_page()`
+korrekt parametrisiert (kein String-Concat), `null`-Fallback liefert
+weiterhin `menu_order=0`. Rechteprüfung `current_user_can('edit_page', $id)`
+gilt für alle `case`-Blöcke einschließlich der neuen. `php -l` auf beiden
+Dateien selbst ausgeführt: fehlerfrei.
+
+**Geringfügiger, nicht blockierender Hinweis:** Die `MAX(menu_order)`-Abfrage
+berücksichtigt `post_status` nicht den Status `'future'` (geplante Seiten)
+— konsistent mit `render_admin_page()`s eigener `get_pages()`-Abfrage, die
+geplante Seiten ohnehin nicht im Baum zeigt, daher kein Fix nötig.
+
+**Ergebnis:** Keine kritischen oder mittleren Befunde. Kein Korrektur-AP
+nötig. Bereit für AP-2.doc.
 
 ---
 
 ### AP-2.doc: Dokumentation Phase 2 aktualisieren (und Gesamt-Vorhaben)
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-2.rev
@@ -1130,7 +1165,25 @@ PLAN-Datei gelistet (siehe bestehende Einträge dort, z. B. „Vorhaben
   gegen den tatsächlichen Quelltext prüfen (Zweck und Funktionen stimmen).
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Agenten nach Abschluss ausgefüllt)
+`Theme/CLAUDE.md`, Abschnitt „Admin-Werkzeuge (includes/admin/)": Zahl von
+„Acht Aktionen" (bereits vorher stale) auf „**Zwölf**" korrigiert,
+`lock_teacher`/`unlock_teacher` (waren in der Aufzählung vergessen) sowie
+die neuen `lock_nav`/`unlock_nav` ergänzt. Zwei neue Absätze: Abgrenzung
+`lock_nav`/`unlock_nav` (`_simple_clean_nav_gesperrt`) gegen
+`hide_nav`/`show_nav` (`_simple_clean_hide_navigation`) und gegen
+`_simple_clean_hide_from_sidebar`; sowie die neue
+`menu_order`-Berechnung in `ajax_create_page()`.
+`Theme/reference_file_map.md`: Zeile zu `page-manager.php` auf „zwölf"
+Aktionen aktualisiert, neue Schlüssel und `menu_order`-Verhalten ergänzt.
+Root-`DOKUMENTATION.md`: neuer Absatz „Vorhaben ‚Glossar-Mehrfachimport
+und Seitenmanager-Ergänzungen'" am Dateiende ergänzt (nach dem Vorhaben
+„PDF-Export- und Tafelmodus-Fixes"), mit Verweis auf diese PLAN-Datei,
+Zusammenfassung aller drei Teile inkl. des in AP-1.fix1 behobenen
+kritischen Fundes.
+
+Stichprobe: `bulk_aktionen()` und `ajax_create_page()` im tatsächlichen
+Quelltext von `page-manager.php` gegengelesen — beide entsprechen der
+Dokumentationsbeschreibung.
 
 ## 8. Status
 
@@ -1145,8 +1198,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP-1.doc | Doku Phase 1 | sonnet | ☑ | AP-1.rev, AP-1.fix1 | |
 | AP-2.1 | Neue Seiten ans Ende anhängen | sonnet | ☑ | – | Stub-Harness (4/4), Live-UI-Test offen mangels Admin-Login |
 | AP-2.2 | Bulk-Aktion „Für Navigation sperren" | sonnet | ☑ | AP-2.1 (gleiche Datei) | Stub-Harness (5/5), Live-UI-Test offen mangels Admin-Login |
-| AP-2.rev | Review Phase 2 | opus | ☐ | AP-2.1, AP-2.2 | |
-| AP-2.doc | Doku Phase 2 + Gesamt-Vorhaben | sonnet | ☐ | AP-2.rev | |
+| AP-2.rev | Review Phase 2 | opus | ☑ | AP-2.1, AP-2.2 | Keine kritischen/mittleren Befunde |
+| AP-2.doc | Doku Phase 2 + Gesamt-Vorhaben | sonnet | ☑ | AP-2.rev | |
 
 ## 9. Testprotokoll
 
@@ -1162,6 +1215,8 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-25 | AP-1.rev Kurz-Review (nach AP-1.fix1) | Feldname, Guard-Logik in `simple_clean_handle_glossar_import_multi()`, `php -l`, Reichweiten-Check auf verbleibende Annahmen des alten Skalar-Formats | Bestanden, keine weiteren Befunde | unabhängiger Explore-Subagent (read-only) |
 | 2026-08-25 | AP-2.1 | `php -l`; Stub-Harness mit vier Fällen (Unterseite mit Geschwistern, oberste Ebene mit Geschwistern, erste Unterseite ohne Geschwister, Papierkorb-Geschwister wird mitgezählt) | Bestanden (4/4), Live-UI-Test mangels Admin-Zugang offen | Stub-Harness (Code-Ausführung) |
 | 2026-08-25 | AP-2.2 | `php -l`; Stub-Harness mit fünf Fällen (lock_nav setzt Meta bei mehreren Seiten, unlock_nav löscht es, Unabhängigkeit von hide_nav, Regressionsstichprobe hide_index, Whitelist blockt unbekannte Aktion) | Bestanden (5/5), Live-UI-Test mangels Admin-Zugang offen | Stub-Harness (Code-Ausführung) |
+| 2026-08-25 | AP-2.rev | Unabhängiges Review inkl. echtem Commit-Diff-Abgleich und JS→AJAX-Pfad-Prüfung, Meta-Key-Abgleich, Scope-Check, `php -l` | Keine kritischen/mittleren Befunde | unabhängiger Explore-Subagent (read-only) |
+| 2026-08-25 | Phase 2 Integrationstest + Regressionscheck Phase 1 | `php -l` beider Dateien; Phase-1-Stub-Harness erneut ausgeführt (Regression); AP-2.1- und AP-2.2-Stub-Harness erneut ausgeführt | Alle bestanden, keine Regression in Phase 1 durch Phase-2-Änderungen | Code-Ausführung |
 
 ## 10. Dokumentation
 
