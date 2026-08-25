@@ -722,7 +722,7 @@ liest `$_FILES['glossar_csv']`), Verhalten entspricht der Beschreibung.
 
 ### AP-2.1: Neue Seiten immer ans Ende der Geschwisterseiten anhängen
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** keine
@@ -806,13 +806,34 @@ Ebene (`parent_id === 0`) — derselbe Codepfad, keine Fallunterscheidung.
   Neuanlage ändert sich.
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Agenten nach Abschluss ausgefüllt)
+Umgesetzt exakt wie im Vorgehen beschrieben: `$wpdb->prepare()` mit `%d`
+für `$parent_id`, `MAX(menu_order)` über `post_type='page'` und
+`post_status` inkl. `trash`. `$neuer_menu_order` ersetzt die hartcodierte
+`0` im `wp_insert_post()`-Aufruf. Gilt einheitlich für `parent_id=0` und
+`parent_id>0`, keine Fallunterscheidung im Code.
+
+**Testnachweis (kein Admin-Login verfügbar, daher Stub-Harness statt
+Browser-Test — laut PLAN.md Abschnitt 3 zulässiger Fallback):** `php -l`
+fehlerfrei. Ein Stub-Harness-Testskript extrahiert `ajax_create_page()`
+wörtlich aus `page-manager.php` und führt sie gegen eine gestubbte
+`$wpdb`-Klasse aus, die `MAX(menu_order)` über einen In-Memory-Postbestand
+nachbildet. Vier Testfälle, alle bestanden: (1) neue Unterseite unter
+einer Elternseite mit vorhandenen Geschwistern (`menu_order` 0, 1) erhält
+`menu_order=2`; (2) neue Seite auf oberster Ebene mit vorhandenen obersten
+Seiten (`menu_order` 0, 5) erhält `menu_order=6`; (3) erste Unterseite
+einer bisher kinderlosen Elternseite erhält weiterhin `menu_order=0`
+(Verhalten bei leerer Menge unverändert); (4) eine Papierkorb-Seite unter
+den Geschwistern wird bei der Max-Ermittlung korrekt mitgezählt
+(`menu_order=8` bei einem Papierkorb-Geschwister mit `menu_order=7`).
+Live-UI-Test (tatsächliches Anlegen im Seitenmanager, Sortierprüfung im
+Baum) mangels WP-Admin-Zugangsdaten nicht durchgeführt — offene Lücke,
+analog zu Phase 1.
 
 ---
 
 ### AP-2.2: Neue Bulk-Aktion „Für Navigation sperren"
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** S
 **Modell:** sonnet
 **Abhängigkeiten:** AP-2.1 (gleiche Datei — sequenziell nach AP-2.1
@@ -946,7 +967,38 @@ vorhandene Paar `hide_index`/`show_index` (Meta
   angefasst).
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Agenten nach Abschluss ausgefüllt)
+Umgesetzt exakt wie im Vorgehen beschrieben, keine Abweichungen. Neue
+Schlüssel `lock_nav`/`unlock_nav` in `bulk_aktionen()` nach `show_nav`
+ergänzt, neue `case`-Blöcke in `ajax_bulk_action()` nach `show_nav` (nicht
+nach `hide_index`/`show_index`, aber inhaltlich nach demselben Muster —
+Platzierung direkt neben den thematisch verwandten `hide_nav`/`show_nav`
+gewählt, mit Kommentar zur Abgrenzung). Meta-Key
+`_simple_clean_nav_gesperrt` vor dem Schreiben nochmals gegen
+`functions.php` Zeile 680/808/810 abgeglichen — zeichengleich. Zwei neue
+`<option>`-Zeilen in der Optgroup „Sichtbarkeit". `$reload`-Array
+unverändert (Zeile 888), `lock_nav`/`unlock_nav` korrekt NICHT enthalten.
+Keine JS-Änderung nötig — die Bulk-Aktion läuft über das bestehende
+generische `#page-bulk-action`-Select/AJAX-Muster.
+
+**Testnachweis (kein Admin-Login verfügbar, daher Stub-Harness statt
+Browser-Test):** `php -l` fehlerfrei. Ein Stub-Harness-Testskript
+extrahiert `bulk_aktionen()` und `ajax_bulk_action()` wörtlich aus
+`page-manager.php` (inkl. Auflösung der `self::`-Aufrufe auf
+freistehende Testfunktionen) und führt sie gegen gestubbte
+`update_post_meta()`/`get_post_meta()` aus. Fünf Testfälle, alle
+bestanden: (1) `lock_nav` auf zwei Seiten setzt
+`_simple_clean_nav_gesperrt='1'` bei beiden, ohne
+`_simple_clean_hide_navigation` anzurühren; (2) `unlock_nav` löscht das
+Meta wieder bei beiden; (3) eine Seite mit bereits aktivem
+`_simple_clean_hide_navigation` behält dieses Meta unverändert, während
+zusätzlich `_simple_clean_nav_gesperrt` gesetzt wird — beide Metas wirken
+unabhängig voneinander; (4) Regressionsstichprobe: die bestehende Aktion
+`hide_index` funktioniert unverändert; (5) eine nicht in der Whitelist
+enthaltene Aktion wird mit „Unbekannte Aktion.“ abgelehnt (Whitelist-Schutz
+weiterhin intakt). Live-UI-Test (tatsächliche Bulk-Auswahl im
+Seitenmanager, Frontend-Verhalten der gesperrten Seite im
+Inhaltsverzeichnis/in der Seitenleiste) mangels WP-Admin-Zugangsdaten
+nicht durchgeführt — offene Lücke, analog zu Phase 1 und AP-2.1.
 
 ---
 
@@ -1091,8 +1143,8 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 | AP-1.fix1 | Korrektur: fehlendes `[]` am Datei-Feldnamen | sonnet | ☑ | AP-1.1, AP-1.2 | Kritischer Fund aus AP-1.rev, per echtem HTTP-Test verifiziert behoben |
 | AP-1.rev | Review Phase 1 | opus | ☑ | AP-1.1, AP-1.2 | 1 kritischer Fund → AP-1.fix1; Kurz-Review nach Fix bestätigt Behebung |
 | AP-1.doc | Doku Phase 1 | sonnet | ☑ | AP-1.rev, AP-1.fix1 | |
-| AP-2.1 | Neue Seiten ans Ende anhängen | sonnet | ☐ | – | |
-| AP-2.2 | Bulk-Aktion „Für Navigation sperren" | sonnet | ☐ | AP-2.1 (gleiche Datei) | |
+| AP-2.1 | Neue Seiten ans Ende anhängen | sonnet | ☑ | – | Stub-Harness (4/4), Live-UI-Test offen mangels Admin-Login |
+| AP-2.2 | Bulk-Aktion „Für Navigation sperren" | sonnet | ☑ | AP-2.1 (gleiche Datei) | Stub-Harness (5/5), Live-UI-Test offen mangels Admin-Login |
 | AP-2.rev | Review Phase 2 | opus | ☐ | AP-2.1, AP-2.2 | |
 | AP-2.doc | Doku Phase 2 + Gesamt-Vorhaben | sonnet | ☐ | AP-2.rev | |
 
@@ -1108,6 +1160,8 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 | 2026-08-25 | AP-1.rev | Unabhängiges Review gegen alle Akzeptanzkriterien von AP-1.1/1.2, Sicherheits- und Scope-Check | 1 kritischer Fund (fehlendes `[]` am Feldnamen, kompletter Rückschritt gegenüber Vor-AP-1.1-Zustand, empirisch per `php -S`+curl bestätigt) → AP-1.fix1 angelegt | unabhängiger Explore-Subagent (read-only) |
 | 2026-08-25 | AP-1.fix1 | Echter HTTP-Multipart-POST (`php -S` + `curl -F "glossar_csv[]=@datei"`) für: eine Datei, zwei Dateien mit dateiübergreifendem Duplikat, eine Datei mit falscher Endung neben gültiger Datei | Bestanden (3/3), `php -l` fehlerfrei | Genuiner HTTP-Test (kein Stub-Fixture) |
 | 2026-08-25 | AP-1.rev Kurz-Review (nach AP-1.fix1) | Feldname, Guard-Logik in `simple_clean_handle_glossar_import_multi()`, `php -l`, Reichweiten-Check auf verbleibende Annahmen des alten Skalar-Formats | Bestanden, keine weiteren Befunde | unabhängiger Explore-Subagent (read-only) |
+| 2026-08-25 | AP-2.1 | `php -l`; Stub-Harness mit vier Fällen (Unterseite mit Geschwistern, oberste Ebene mit Geschwistern, erste Unterseite ohne Geschwister, Papierkorb-Geschwister wird mitgezählt) | Bestanden (4/4), Live-UI-Test mangels Admin-Zugang offen | Stub-Harness (Code-Ausführung) |
+| 2026-08-25 | AP-2.2 | `php -l`; Stub-Harness mit fünf Fällen (lock_nav setzt Meta bei mehreren Seiten, unlock_nav löscht es, Unabhängigkeit von hide_nav, Regressionsstichprobe hide_index, Whitelist blockt unbekannte Aktion) | Bestanden (5/5), Live-UI-Test mangels Admin-Zugang offen | Stub-Harness (Code-Ausführung) |
 
 ## 10. Dokumentation
 
