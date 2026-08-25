@@ -1238,11 +1238,35 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
 
   **Sammelaktionen (seit v1.5.76).** Auswahlkästchen je Zeile plus Leiste
   `.page-bulk-bar`; ein zusätzlicher Endpunkt `page_manager_bulk_action`
-  (Nonce `page_manager_nonce`, wie die vier bestehenden). Acht Aktionen als
-  **Whitelist** in `bulk_aktionen()`: `status_publish`, `status_draft`,
-  `set_parent`, `hide_index`, `show_index`, `hide_nav`, `show_nav`, `trash`.
+  (Nonce `page_manager_nonce`, wie die vier bestehenden). **Zwölf** Aktionen
+  als **Whitelist** in `bulk_aktionen()`: `status_publish`, `status_draft`,
+  `set_parent`, `hide_index`, `show_index`, `hide_nav`, `show_nav`,
+  `lock_teacher`, `unlock_teacher`, `lock_nav`, `unlock_nav`, `trash`.
   Der Wert aus `$_POST` wird nur gegen diese Liste geprüft und nie in einen
   Methodennamen übersetzt.
+
+  **`lock_nav`/`unlock_nav` (seit
+  `PLAN-Glossar-Mehrfachimport-und-Seitenmanager-Ergaenzungen.md`,
+  Phase 2) togglen `_simple_clean_nav_gesperrt`** — dieselbe Sperre, die in
+  `functions.php` als Einzelseiten-Checkbox „Für Navigation sperren"
+  existiert (macht eine Seite in Inhaltsverzeichnis/Seitenleiste nicht mehr
+  anklickbar, Unterbaum bleibt bedienbar, **kein Zugriffsschutz** — die
+  Seite bleibt über ihre Adresse erreichbar). **Nicht zu verwechseln** mit
+  `hide_nav`/`show_nav` zwei Zeilen darüber: Die togglen das ANDERE Meta
+  `_simple_clean_hide_navigation` (ob eine Seite selbst eine eigene
+  Sidebar anzeigt) und mit der ebenfalls vorhandenen, aber weiterhin ohne
+  eigene Bulk-Aktion gebliebenen fünften Checkbox
+  `_simple_clean_hide_from_sidebar` (nimmt eine Seite ganz aus dem
+  Seitenbaum).
+
+  **Neue Seiten landen immer am Ende ihrer Geschwister (seit demselben
+  Plan, Phase 2).** `ajax_create_page()` ermittelte den `menu_order` einer
+  neuen Seite vorher hartcodiert als `0`; seither wird vor dem
+  `wp_insert_post()`-Aufruf der höchste vorhandene `menu_order`-Wert unter
+  den Geschwistern des Ziel-`post_parent` per `$wpdb`-Abfrage ermittelt und
+  die neue Seite mit diesem Wert + 1 angelegt — einheitlich für Unterseiten
+  und Seiten auf oberster Ebene. Ohne Geschwister bleibt `menu_order` weiterhin
+  `0`.
 
   Rechte werden **je Einzelseite** geprüft (`edit_page`), beim Veröffentlichen
   zusätzlich `publish_pages`, beim Papierkorb `delete_page`. Fehler werden

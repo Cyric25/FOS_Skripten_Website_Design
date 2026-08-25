@@ -51,6 +51,8 @@ class Simple_Clean_Page_Manager {
             'show_index'     => 'Wieder ins Inhaltsverzeichnis aufnehmen',
             'hide_nav'       => 'Aus Seitenleiste ausnehmen',
             'show_nav'       => 'Wieder in Seitenleiste aufnehmen',
+            'lock_nav'       => 'Für Navigation sperren',
+            'unlock_nav'     => 'Wieder für Navigation freigeben',
             'lock_teacher'   => 'Nur für Lehrpersonen sichtbar',
             'unlock_teacher' => 'Wieder öffentlich sichtbar',
             'trash'          => 'In den Papierkorb',
@@ -193,6 +195,8 @@ class Simple_Clean_Page_Manager {
                         <option value="show_index">Wieder ins Inhaltsverzeichnis aufnehmen</option>
                         <option value="hide_nav">Aus Seitenleiste ausnehmen</option>
                         <option value="show_nav">Wieder in Seitenleiste aufnehmen</option>
+                        <option value="lock_nav">Für Navigation sperren</option>
+                        <option value="unlock_nav">Wieder für Navigation freigeben</option>
                     </optgroup>
                     <optgroup label="Zugriff">
                         <option value="lock_teacher">Nur für Lehrpersonen sichtbar</option>
@@ -554,12 +558,30 @@ class Simple_Clean_Page_Manager {
             }
         }
 
+        // Neue Seite immer ans Ende ihrer Geschwister anhaengen (gilt
+        // einheitlich fuer Unterseiten und Seiten auf oberster Ebene,
+        // $parent_id = 0 ist nur ein Sonderfall desselben Codepfads).
+        // Ohne dies sortiert get_pages() ueber menu_order+post_title und
+        // eine neue Seite mit menu_order 0 landet je nach Titel irgendwo
+        // unter ihren Geschwistern statt zuverlaessig am Ende.
+        // post_status inklusive 'trash', damit eine neue Seite nicht
+        // denselben menu_order-Wert wie eine wiederherstellbare
+        // Papierkorb-Seite erhaelt.
+        global $wpdb;
+        $max_order = $wpdb->get_var($wpdb->prepare(
+            "SELECT MAX(menu_order) FROM {$wpdb->posts}
+             WHERE post_type = 'page' AND post_parent = %d
+             AND post_status IN ('publish', 'draft', 'pending', 'private', 'trash')",
+            $parent_id
+        ));
+        $neuer_menu_order = ($max_order === null) ? 0 : ((int) $max_order + 1);
+
         // Create new page (top level or as child)
         $page_id = wp_insert_post([
             'post_title' => $title,
             'post_type' => 'page',
             'post_status' => 'draft',
-            'menu_order' => 0,
+            'menu_order' => $neuer_menu_order,
             'post_parent' => $parent_id
         ]);
 
@@ -824,6 +846,24 @@ class Simple_Clean_Page_Manager {
 
                 case 'show_nav':
                     delete_post_meta($id, '_simple_clean_hide_navigation');
+                    $geaendert++;
+                    break;
+
+                // Klicksperre fuer Inhaltsverzeichnis und Seitenleiste (kein
+                // Zugriffsschutz, die Seite bleibt ueber ihre Adresse
+                // erreichbar). NICHT zu verwechseln mit hide_nav/show_nav
+                // zwei Faelle darueber, die das ANDERE Meta
+                // _simple_clean_hide_navigation togglen (ob die Seite selbst
+                // eine eigene Sidebar anzeigt). Meta-Key und Verhalten wie in
+                // der Meta-Box "Navigation, Verzeichnis & Zugriff" in
+                // functions.php (viertes Haekchen "Fuer Navigation sperren").
+                case 'lock_nav':
+                    update_post_meta($id, '_simple_clean_nav_gesperrt', '1');
+                    $geaendert++;
+                    break;
+
+                case 'unlock_nav':
+                    delete_post_meta($id, '_simple_clean_nav_gesperrt');
                     $geaendert++;
                     break;
 
