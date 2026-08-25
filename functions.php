@@ -3914,7 +3914,7 @@ Molekül,"Ein Molekül besteht aus zwei oder mehr miteinander verbundenen Atomen
             <form method="post" enctype="multipart/form-data">
                 <?php wp_nonce_field('glossar_import', 'glossar_import_nonce'); ?>
                 <p>
-                    <input type="file" name="glossar_csv" accept=".csv" multiple required style="margin-right: 10px;">
+                    <input type="file" name="glossar_csv[]" accept=".csv" multiple required style="margin-right: 10px;">
                     <label>
                         <input type="checkbox" name="glossar_import_overwrite" value="1">
                         <?php _e('Bestehende Begriffe überschreiben (gleicher Slug)', 'simple-clean-theme'); ?>

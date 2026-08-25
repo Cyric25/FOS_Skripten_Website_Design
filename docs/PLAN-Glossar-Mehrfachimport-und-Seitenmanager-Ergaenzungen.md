@@ -483,9 +483,79 @@ offene Lücke vermerkt, siehe auch AP-1.1.
 
 ---
 
+### AP-1.fix1: Kritischer Fund aus AP-1.rev beheben — fehlendes `[]` am Datei-Feldnamen
+
+**Status:** ☑ erledigt
+**Umfang:** S
+**Modell:** sonnet
+**Abhängigkeiten:** AP-1.1, AP-1.2
+
+**Ziel & Kontext:**
+Das unabhängige Review (AP-1.rev) fand einen kritischen, empirisch
+bestätigten Fehler: Das Datei-Input in
+`simple_clean_glossar_settings_page()` trug nach AP-1.1 das Attribut
+`multiple`, aber der `name`-Attributwert blieb `glossar_csv` ohne die für
+PHP-Mehrfach-Uploads erforderliche `[]`-Notation
+(`name="glossar_csv[]"`). Ohne diese Notation liefert PHP
+`$_FILES['glossar_csv']['name']` bei EINER ausgewählten Datei als
+Skalar-String und bei MEHREREN Dateien überschreibt der Browser das Feld
+so, dass am Ende ebenfalls kein Array ankommt. Der Guard in
+`simple_clean_handle_glossar_import_multi()`
+(`!is_array($_FILES['glossar_csv']['name'])`) griff dadurch bei JEDER
+echten Formular-Absendung, auch bei genau einer Datei — der komplette
+CSV-Import war dadurch unbenutzbar, ein vollständiger Rückschritt
+gegenüber dem Vor-AP-1.1-Zustand. Der Fund war nur deshalb im
+Stub-Harness-Test (AP-1.1) nicht aufgefallen, weil dort direkt
+handgebaute, bereits array-förmige `$file`-Strukturen an die Funktionen
+übergeben wurden, statt den echten Weg über ein HTML-Formular und PHPs
+`$_FILES`-Befüllung zu durchlaufen.
+
+**Betroffene Dateien:**
+- `Theme/functions.php` (ändern)
+
+**Vorgehen:**
+1. In `simple_clean_glossar_settings_page()`, am Datei-Input: `name="glossar_csv"` durch `name="glossar_csv[]"` ersetzen (Attribut `multiple` bleibt erhalten).
+2. Keine weiteren Code-Änderungen nötig — die Rekonstruktions-Schleife in `simple_clean_handle_glossar_import_multi()` und die `$existing_posts`-Referenzweitergabe waren laut Review bereits korrekt und werden durch die Namensänderung erstmals tatsächlich erreicht.
+3. Verifikation ausdrücklich NICHT wieder nur mit handgebauten `$_FILES`-Fixtures durchführen, sondern über einen echten HTTP-Request (`php -S` + `curl -F "glossar_csv[]=@datei.csv"`), damit die reale PHP-`$_FILES`-Befüllung mitgetestet wird — genau der Teil, der den Fehler in AP-1.1 verdeckt hatte.
+
+**Akzeptanzkriterien:**
+- [ ] `php -l Theme/functions.php` läuft ohne Fehler.
+- [ ] Ein echter HTTP-Multipart-POST mit genau einer Datei unter dem Feldnamen `glossar_csv[]` liefert ein `$_FILES['glossar_csv']['name']`-Array mit einem Element (nicht mehr Skalar) und der Import gelingt (`success: true`, Begriffe importiert).
+- [ ] Derselbe Test mit zwei Dateien liefert ein Array mit zwei Elementen, beide Dateien werden verarbeitet, dateiübergreifende Duplikate werden weiterhin nur einmal angelegt.
+- [ ] Derselbe Test mit einer Datei mit ungültiger Endung neben einer gültigen Datei: die ungültige Datei liefert `success: false` für sich, die gültige Datei wird trotzdem importiert (Gesamtergebnis `success: true`).
+- [ ] Alle bereits in AP-1.1 formulierten Akzeptanzkriterien sind jetzt über einen ECHTEN HTTP-Request nachgewiesen, nicht nur über den Stub-Harness mit synthetischen Arrays.
+
+**Tests:**
+- Genuiner HTTP-Test: Ein kleiner PHP-Endpunkt (stubt dieselben WordPress-Funktionen wie der AP-1.1-Stub-Harness, lädt aber die vier betroffenen Funktionen wörtlich aus `functions.php` und ruft `simple_clean_handle_glossar_import_multi()` direkt auf Basis des echten `$_FILES` aus dem eingehenden Request auf) wird mit `php -S 127.0.0.1:<port> <endpunkt>.php` gestartet. Gegen ihn werden per `curl -F "glossar_csv[]=@a.csv" ...` echte multipart/form-data-Requests geschickt — für (a) eine Datei, (b) zwei Dateien mit einem dateiübergreifenden Duplikat, (c) eine Datei mit falscher Endung neben einer gültigen. Die JSON-Antwort wird gegen die Akzeptanzkriterien geprüft.
+- Nach bestandenem Test: erneuter kurzer Blick auf `simple_clean_handle_glossar_import()`s Fallback-Zweig (`$file === null` → liest direkt `$_FILES['glossar_csv']`): Dieser Zweig wird im Theme nirgends mehr ohne Argumente aufgerufen (einziger verbleibender Aufruf ist `simple_clean_handle_glossar_import_multi()`, immer mit `$virtuelle_datei`) — der Fallback bleibt als Absicherung bestehen, ist aber toter Code im aktuellen Aufrufgraphen; das ist bewusst so belassen (Rückwärtskompatibilität für künftige direkte Aufrufe) und kein neuer Fehler, da niemand ihn mit der neuen `[]`-Feldform aufruft.
+
+**Übergabenotiz:**
+Fix angewendet: `name="glossar_csv"` → `name="glossar_csv[]"` in
+`simple_clean_glossar_settings_page()` (Zeile mit dem `<input
+type="file">`). Keine weiteren Code-Änderungen nötig.
+
+Verifiziert über einen echten HTTP-Endpunkt (`php -S` + `curl -F`, nicht
+nur Stub-Arrays): (a) eine Datei per `curl -F "glossar_csv[]=@einzel.csv"`
+→ `$_FILES['glossar_csv']['name']` korrekt als einelementiges Array,
+Import gelingt (`imported: 2`); (b) zwei Dateien mit demselben Begriff
+(„Proton") in beiden → `imported_gesamt: 3`, `skipped_gesamt: 1`,
+Duplikat dateiübergreifend erkannt; (c) eine Datei mit `.txt`-Endung neben
+einer gültigen `.csv`-Datei → die `.txt`-Datei liefert `success: false`
+für sich, die gültige Datei wird trotzdem mit `imported: 2` verarbeitet,
+Gesamtergebnis `success: true`. Alle drei Fälle bestanden. `php -l`
+weiterhin fehlerfrei.
+
+Der Fallback-Zweig in `simple_clean_handle_glossar_import()` für
+`$file === null` bleibt unverändert bestehen; er wird im aktuellen
+Theme-Code nirgends mehr direkt (ohne Argumente) aufgerufen, ist also
+totes Absicherungscode — bewusst nicht entfernt (Rückwärtskompatibilität
+für künftige Aufrufer), aber als Hinweis für AP-1.doc festgehalten.
+
+---
+
 ### AP-1.rev: Unabhängiges Review Phase 1
 
-**Status:** ☐ offen
+**Status:** ☑ erledigt
 **Umfang:** M
 **Modell:** opus
 **Abhängigkeiten:** AP-1.1, AP-1.2 (inkl. Phasen-Integrationstest)
@@ -532,8 +602,46 @@ Datei verändern.
 - entfällt (Review-AP; das Ergebnis ist der Bericht).
 
 **Übergabenotiz:**
-(leer – wird vom ausführenden Review-Agenten nach Abschluss ausgefüllt:
-Review-Bericht mit Befunden je Schweregrad, Datei und Fundstelle)
+Review durch einen unabhängigen, ausschließlich lesenden Agenten
+durchgeführt (Explore-Subagent ohne Schreibrechte, keine Datei
+verändert). `php -l functions.php` zur Kontrolle erneut ausgeführt:
+fehlerfrei.
+
+**Kritischer Befund (1):** Das Datei-Input in
+`simple_clean_glossar_settings_page()` trug nach AP-1.1 zwar `multiple`,
+aber der Feldname blieb `glossar_csv` ohne `[]`. PHP befüllt
+`$_FILES['glossar_csv']['name']` dadurch bei jeder echten
+Formular-Absendung als Skalar, nie als Array — der Guard in
+`simple_clean_handle_glossar_import_multi()` griff dadurch IMMER, auch
+bei genau einer Datei. **Kompletter Rückschritt gegenüber dem
+Vor-AP-1.1-Zustand**, empirisch bestätigt (nicht nur plausibel vermutet)
+durch einen echten `php -S`-Testserver mit multipart/form-data-POSTs.
+Dies ist exakt das in Abschnitt 5 der PLAN.md vorab benannte Risiko
+(„`$_FILES`-Array-Struktur … wird falsch rekonstruiert“). Ursache, warum
+es im AP-1.1-Stub-Harness nicht auffiel: Dort wurden `$file`-Arrays
+direkt handgebaut und übergeben, statt den echten Weg über ein
+HTML-Formular und PHPs eigene `$_FILES`-Befüllung zu durchlaufen — der
+eigentliche Fehler lag genau in diesem ungetesteten Übergang.
+→ Korrektur-AP **AP-1.fix1** angelegt und abgeschlossen (siehe oben).
+
+**Verifiziert, kein Fehler:** `$existing_posts`-Referenzweitergabe über
+mehrere Dateien hinweg korrekt implementiert (Zeile ~1346, ~1370,
+~1198-1204). Rechteprüfung `current_user_can('manage_options')` auf
+jedem erreichbaren Codepfad vorhanden. Datei-Endungs-/Upload-Error-Prüfung
+läuft pro Datei einzeln (nicht nur für die erste). `glossar_bulk_scan`/
+`glossar_bulk_scan_batch`, `_simple_clean_hide_navigation`,
+`_simple_clean_hide_from_sidebar` und der manuelle `confirm()`-Button
+wurden nicht angetastet — kein Scope-Verstoß.
+
+**Geringfügiger, nicht blockierender Hinweis:** Die Hilfetexte auf der
+Einstellungsseite nennen an einer vorbestehenden (nicht von diesem Plan
+verursachten) Stelle „Komma“ als Trennzeichen, während der Parser fest
+Semikolon verwendet — vorbestehende Doku-Ungenauigkeit, nicht Teil des
+Scopes von AP-1.1/1.2, nur zur Vollständigkeit vermerkt.
+
+**Ergebnis:** Ein kritischer Befund, behoben in AP-1.fix1 (siehe dort für
+den vollständigen, über echte HTTP-Requests geführten Verifikationsnachweis).
+Kein weiterer Korrektur-Bedarf.
 
 ---
 
@@ -969,8 +1077,9 @@ Legende: ☐ offen · ◐ in Arbeit · ☑ erledigt · ✗ blockiert
 |---|---|---|---|---|---|
 | AP-1.1 | Mehrfachdatei-CSV-Import im Backend | opus | ☑ | – | Verifiziert per Stub-Harness (echter Code), Live-UI-Test offen mangels Admin-Login |
 | AP-1.2 | Automatischer Bulk-Scan nach Mehrfach-Import | sonnet | ☑ | AP-1.1 | JS-Syntax + PHP-Logik verifiziert, Live-UI-Test offen mangels Admin-Login |
-| AP-1.rev | Review Phase 1 | opus | ☐ | AP-1.1, AP-1.2 | |
-| AP-1.doc | Doku Phase 1 | sonnet | ☐ | AP-1.rev | |
+| AP-1.fix1 | Korrektur: fehlendes `[]` am Datei-Feldnamen | sonnet | ☑ | AP-1.1, AP-1.2 | Kritischer Fund aus AP-1.rev, per echtem HTTP-Test verifiziert behoben |
+| AP-1.rev | Review Phase 1 | opus | ☑ | AP-1.1, AP-1.2 | 1 kritischer Fund → AP-1.fix1; Kurz-Review nach Fix bestätigt Behebung |
+| AP-1.doc | Doku Phase 1 | sonnet | ☐ | AP-1.rev, AP-1.fix1 | |
 | AP-2.1 | Neue Seiten ans Ende anhängen | sonnet | ☐ | – | |
 | AP-2.2 | Bulk-Aktion „Für Navigation sperren" | sonnet | ☐ | AP-2.1 (gleiche Datei) | |
 | AP-2.rev | Review Phase 2 | opus | ☐ | AP-2.1, AP-2.2 | |
@@ -984,6 +1093,10 @@ Wird während der Ausführung gepflegt. Ein Eintrag pro abgeschlossenem AP und p
 |---|---|---|---|---|
 | 2026-08-25 | AP-1.1 | `php -l`; Stub-Harness mit vier Fällen (Einzeldatei-Regression, dateiübergreifendes Duplikat, eine ungültige Datei blockiert die andere nicht, reine Duplikat-Skips ergeben `sollScannen=false`) | Bestanden (4/4), Live-UI-Test mangels Admin-Zugang offen | Stub-Harness (Code-Ausführung) |
 | 2026-08-25 | AP-1.2 | `php -l`; `$auto_scan`-Formel isoliert für alle drei Fälle per `php -r`; `<script>`-Block per Node.js auf JS-Syntaxfehler geprüft; Diff-Kontrolle, dass der manuelle `confirm()`-Klick-Handler unverändert blieb | Bestanden, Live-UI-Test mangels Admin-Zugang offen | Code-/Syntaxprüfung |
+| 2026-08-25 | Phase 1 Integrationstest | End-to-End-Kette `simple_clean_handle_glossar_import_multi()`-Ergebnis → `$auto_scan` → `glossarAutoScan` für „Änderung vorhanden" und „nur Duplikate" nachvollzogen | Bestanden (beide Fälle liefern das erwartete Flag). Live-Browser-Integrationstest (echter Mehrfach-Upload im Admin-UI) mangels Admin-Zugang offen — als bekannte Testlücke in AP-1.doc zu vermerken | Code-Integrationsprüfung |
+| 2026-08-25 | AP-1.rev | Unabhängiges Review gegen alle Akzeptanzkriterien von AP-1.1/1.2, Sicherheits- und Scope-Check | 1 kritischer Fund (fehlendes `[]` am Feldnamen, kompletter Rückschritt gegenüber Vor-AP-1.1-Zustand, empirisch per `php -S`+curl bestätigt) → AP-1.fix1 angelegt | unabhängiger Explore-Subagent (read-only) |
+| 2026-08-25 | AP-1.fix1 | Echter HTTP-Multipart-POST (`php -S` + `curl -F "glossar_csv[]=@datei"`) für: eine Datei, zwei Dateien mit dateiübergreifendem Duplikat, eine Datei mit falscher Endung neben gültiger Datei | Bestanden (3/3), `php -l` fehlerfrei | Genuiner HTTP-Test (kein Stub-Fixture) |
+| 2026-08-25 | AP-1.rev Kurz-Review (nach AP-1.fix1) | Feldname, Guard-Logik in `simple_clean_handle_glossar_import_multi()`, `php -l`, Reichweiten-Check auf verbleibende Annahmen des alten Skalar-Formats | Bestanden, keine weiteren Befunde | unabhängiger Explore-Subagent (read-only) |
 
 ## 10. Dokumentation
 
