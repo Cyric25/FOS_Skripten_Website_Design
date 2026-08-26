@@ -210,7 +210,9 @@ function simple_clean_page_index_daten() {
     // werden: Die Titel dieser Seiten stünden sonst in der Ausgabe.
     $lehrer_gesperrt_ids = array();
     if (function_exists('simple_clean_ist_lehrperson') && simple_clean_ist_lehrperson()) {
-        $lehrer_gesperrt_ids = simple_clean_gesperrte_seiten();
+        $lehrer_gesperrt_ids = function_exists('simple_clean_gesperrte_seiten_mit_unterbaum')
+            ? simple_clean_gesperrte_seiten_mit_unterbaum()
+            : simple_clean_gesperrte_seiten();
     }
 
     $roh    = array();
