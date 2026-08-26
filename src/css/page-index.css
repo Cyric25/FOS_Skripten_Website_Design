@@ -274,6 +274,19 @@
 	display: none;
 }
 
+/* --------------------------------------------------------------------
+   Zustand des Lehrpersonen-Toggles (AP-2.2, Vertrag siehe
+   PLAN-Inhaltsverzeichnisse.md, Abschnitt 4)
+   Ohne die Klasse page-index--zeige-lehreransicht am Wrapper bleiben
+   --lehrer-only-Knoten unsichtbar. Keine explizite "display
+   wiederherstellen"-Regel noetig - ohne die :not()-Bedingung gilt
+   automatisch das normale Layout der jeweiligen Darstellung.
+   -------------------------------------------------------------------- */
+.page-index:not(.page-index--zeige-lehreransicht) .page-index__chapter--lehrer-only,
+.page-index:not(.page-index--zeige-lehreransicht) .page-index__page--lehrer-only {
+	display: none;
+}
+
 .page-index__no-results,
 .page-index__empty {
 	margin: 0;
@@ -367,4 +380,38 @@
 	.page-index__chapter-summary::after {
 		transition: none;
 	}
+}
+
+/* --------------------------------------------------------------------
+   LEHRPERSONEN-TOGGLE
+   Optisch an das Suchfeld angelehnt (gleiche Rahmenfarbe, gleicher
+   Eckenradius), aber als deutlich erkennbarer Button mit Akzentfarbe -
+   analog zu anderen Buttons im Projekt. Keine hartcodierten Hex-Werte
+   ohne var(...)-Einbettung.
+   -------------------------------------------------------------------- */
+.page-index__lehrer-toggle {
+	display: inline-block;
+	margin-bottom: var(--pidx-gap);
+	padding: 0.5rem 0.9rem;
+	font: inherit;
+	font-weight: 600;
+	color: var(--color-text-on-accent, #fff);
+	background-color: var(--pidx-accent);
+	border: 1px solid var(--pidx-card-border);
+	border-radius: var(--pidx-radius);
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.page-index__lehrer-toggle:hover {
+	background-color: var(--color-ui-surface-dark, #c93d12);
+}
+
+.page-index__lehrer-toggle:focus-visible {
+	outline: 2px solid var(--pidx-accent);
+	outline-offset: 2px;
+}
+
+.page-index__lehrer-toggle[aria-pressed="true"] {
+	background-color: var(--color-ui-surface-dark, #c93d12);
 }
