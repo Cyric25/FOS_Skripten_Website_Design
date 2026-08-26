@@ -82,6 +82,21 @@
 	}
 
 	function richteEin(wurzel) {
+		// Lehrpersonen-Toggle (AP-2.2, Vertrag siehe PLAN-Inhaltsverzeichnisse.md,
+		// Abschnitt 4). Unabhaengig vom Suchfeld-Fruehausstieg weiter unten
+		// platziert, da der Toggle auch funktionieren muss, wenn showSearch fuer
+		// den Block deaktiviert ist.
+		var lehrerToggle = wurzel.querySelector('.page-index__lehrer-toggle');
+		if (lehrerToggle) {
+			lehrerToggle.addEventListener('click', function () {
+				var aktiv = wurzel.classList.toggle('page-index--zeige-lehreransicht');
+				lehrerToggle.setAttribute('aria-pressed', aktiv ? 'true' : 'false');
+				lehrerToggle.textContent = aktiv
+					? 'Nur Schüleransicht zeigen'
+					: 'Lehrpersonen-Seiten anzeigen';
+			});
+		}
+
 		var feld = wurzel.querySelector('.page-index__search');
 		if (!feld) {
 			return;
