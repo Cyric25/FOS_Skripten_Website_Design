@@ -1413,6 +1413,96 @@ Verzeichnis-Häkchen um die Seitenleiste zu erweitern hätte jede Seite, die es
 heute schon trägt, still aus der Navigation genommen. **Beides ist kein
 Zugriffsschutz** — dafür gibt es „Nur für Lehrpersonen sichtbar".
 
+### Lehrpersonen-Toggle (Phase 2 von `PLAN-Inhaltsverzeichnisse.md`, seit 2026-08-26, v1.5.90)
+
+Angemeldete Lehrpersonen sehen im Block standardmäßig **dieselbe Ansicht wie
+ein nicht angemeldeter Besucher** — als „Nur für Lehrpersonen sichtbar"
+gesperrte Seiten sind ausgeblendet. Ein Button blendet sie bei Bedarf
+zusätzlich ein, ohne Neuladen der Seite.
+
+**Markup-Vertrag** (verbindlich festgelegt in `PLAN-Inhaltsverzeichnisse.md`,
+Abschnitt 4):
+
+| Element | Bedeutung |
+|---|---|
+| Klasse `page-index__chapter--lehrer-only` / `page-index__page--lehrer-only` | zusätzlich zur bestehenden `page-index__chapter`/`page-index__page`-Klasse am `<li>` eines gesperrten Knotens, nur für angemeldete Lehrpersonen ausgegeben |
+| Button `<button type="button" class="page-index__lehrer-toggle" aria-pressed="false">Lehrpersonen-Seiten anzeigen</button>` | erscheint unmittelbar vor der Liste (nach dem Such-Wrapper, falls vorhanden), nur wenn `simple_clean_ist_lehrperson()` wahr ist UND mindestens ein gesperrter Knoten im Baum steht (`simple_clean_render_page_index()`) |
+| CSS | `.page-index:not(.page-index--zeige-lehreransicht) .page-index__chapter--lehrer-only, .page-index:not(.page-index--zeige-lehreransicht) .page-index__page--lehrer-only { display: none; }` (`src/css/page-index.css`) — keine explizite „display wiederherstellen"-Regel nötig, ohne die `:not()`-Bedingung gilt automatisch das normale Layout der jeweiligen Darstellung |
+| JavaScript | Klick auf `.page-index__lehrer-toggle` togglet `page-index--zeige-lehreransicht` am `.page-index`-Wrapper, `aria-pressed` und den Button-Text (`richteEin()` in `src/js/page-index.js`, unabhängig vom Suchfeld-Frühausstieg platziert) |
+| Berechnung der gesperrten IDs | `simple_clean_page_index_daten()` in `includes/page-index.php` — `simple_clean_gesperrte_seiten_mit_unterbaum()` (mit `function_exists()`-Rückfall auf `simple_clean_gesperrte_seiten()`), damit auch NUR geerbt gesperrte Nachfahren die Klasse tragen (Korrektur aus AP-2.fix1, siehe unten) |
+
+**Der Toggle-Zustand wird bewusst NICHT gespeichert** — jeder Seitenaufruf
+beginnt wieder in der Schüleransicht. Anders als der `localStorage`-Vertrag
+der Klassenmodus-Inhaltsverzeichnisse im CDB-Plugin (Phase 1 desselben
+Plans, siehe `Plugins/CDB-Designer/CLAUDE.md`, Abschnitt „Klassenmodus:
+Klappbare Inhaltsverzeichnisse") ist Persistenz hier ausdrücklich kein Ziel.
+
+**Bewusste Ausnahme von der „Grundregel für den Renderer".** Der
+Kopfkommentar von `includes/page-index.php` hielt bislang fest, die Ausgabe
+hänge „allein von den Blockattributen ab — nicht davon, welche Seite gerade
+aufgerufen wird oder wer angemeldet ist". Seit diesem Vorhaben steht dort
+ergänzend:
+
+> AUSNAHME seit dem Vorhaben „Inhaltsverzeichnisse" (2026-08): Für angemeldete
+> Lehrpersonen kennzeichnet der Renderer zusätzlich gesperrte Knoten
+> (`_simple_clean_nur_lehrpersonen`) mit den Klassen
+> `page-index__chapter--lehrer-only` / `page-index__page--lehrer-only` und
+> gibt einen Button `page-index__lehrer-toggle` aus, damit sie sich ein- und
+> ausblenden lassen … Für nicht angemeldete Besucher gilt die Grundregel
+> unverändert: Sie erhalten gesperrte Knoten weiterhin gar nicht erst im HTML
+> … Diese Ausschlussgrenze ist die Sicherheitsgrenze dieses Vorhabens und darf
+> nicht aufgeweicht werden.
+
+Der bestehende Ausschluss-Zweig für nicht angemeldete Besucher in
+`simple_clean_page_index_daten()` (`!simple_clean_ist_lehrperson()`) wurde
+dabei nicht verändert — die Kennzeichnung für Lehrpersonen ist ein rein
+additiver, zweiter Zweig. Unabhängig geprüft in AP-2.rev (Byte-Vergleich
+gegen den Ausgangszustand) und im dedizierten Sicherheits-Testpaket AP-2.3
+(Inkognito-Vergleich, Direktaufruf, REST-Einzelabruf).
+
+### Bekannte, bewusst akzeptierte Einschränkungen
+
+Aus dem unabhängigen Review AP-2.rev (`PLAN-Inhaltsverzeichnisse.md`,
+Abschnitt 7 — ein Befund mit Schweregrad „mittel", behoben in AP-2.fix1
+(siehe unten), plus vier geringe, kein weiteres Korrektur-AP nötig):
+
+1. **G1** (`includes/page-index.php`, `simple_clean_render_page_index()`,
+   rund um Zeile 692) — der Toggle-Button erscheint seitenweit statt
+   blockbezogen; zeigt eine `rootPage`-Ansicht ganz ohne markierte Knoten im
+   sichtbaren Ausschnitt, ist er wirkungslos vorhanden.
+2. **G2** (`src/js/page-index.js:73-82`, `zaehleSichtbareSeiten()`) — zählt
+   versteckte `--lehrer-only`-Knoten mit; die Trefferanzeige der Suche
+   überzählt dadurch für angemeldete Lehrpersonen.
+3. **G3** (`src/js/page-index.js:95-96`) — die Button-Texte
+   („Lehrpersonen-Seiten anzeigen" / „Nur Schüleransicht zeigen") sind
+   deutsche JavaScript-Literale statt über PHP `esc_html__()` übersetzt — so
+   im Markup-Vertrag oben vorgegeben, keine Abweichung.
+4. **G4, vorbestehend, außerhalb des Scopes** (`includes/page-index.php`,
+   `simple_clean_render_page_index()`, rund um Zeile 644) — zeigt `rootPage`
+   auf eine für den aktuellen Betrachter ausgeschlossene Seite, fällt der
+   Block auf die oberste Ebene zurück statt eine leere Liste zu zeigen;
+   existierte bereits vor diesem Vorhaben.
+
+**Korrigiert durch AP-2.fix1 (kein offener Befund mehr):** AP-2.rev fand
+einen Befund mit Schweregrad „mittel" — die Lehrpersonen-Markierung lief
+ursprünglich über `simple_clean_gesperrte_seiten()` (nur direkt gesperrte
+Seiten), nicht über `simple_clean_gesperrte_seiten_mit_unterbaum()`. Dadurch
+erschienen nur *geerbt* gesperrte Nachfahren (z. B. eine ungesperrte
+Unterseite unter einer gesperrten Elternseite) fälschlich OHNE
+`--lehrer-only`-Klasse und damit standardmäßig sichtbar — kein
+Sicherheitsleck (Gäste erhielten sie ohnehin nie, da deren Ausschluss
+weiterhin über `simple_clean_gesperrte_seiten()` läuft), aber eine
+Zielverfehlung gegenüber „Lehrperson sieht standardmäßig dieselbe Ansicht wie
+ein Gast". AP-2.fix1 hat die eine betroffene Zeile in
+`simple_clean_page_index_daten()` auf `simple_clean_gesperrte_seiten_mit_unterbaum()`
+umgestellt (mit `function_exists()`-Rückfall) — bereits oben in der
+Vertrags-Tabelle als aktueller Stand dokumentiert.
+
+Details je Befund und die vollständigen Übergabenotizen der Phase-2-APs:
+`PLAN-Inhaltsverzeichnisse.md`, Abschnitt 7. Datei-Referenzen:
+`reference_file_map.md`, Zeilen zu `includes/page-index.php`,
+`src/css/page-index.css` und `src/js/page-index.js`.
+
 ## Seiten nur für Lehrpersonen (seit v1.5.78)
 
 Einzelne Seiten lassen sich sperren: Für nicht angemeldete Besucher
@@ -1459,6 +1549,15 @@ ein entfernter Knoten nimmt seine Nachfahren mit. Dort genügt
 
 **In flachen Listen nicht** — Menü, Suche, REST, Sitemap. Eine Unterseite steht
 dort für sich; deshalb `simple_clean_gesperrte_seiten_mit_unterbaum()`.
+
+**Ausnahme seit `PLAN-Inhaltsverzeichnisse.md`, Phase 2 (2026-08-26):** Der
+Block `fos/inhaltsverzeichnis` zeigt einer angemeldeten Lehrperson gesperrte
+Seiten nicht mehr automatisch — standardmäßig sieht sie dieselbe Ansicht wie
+ein nicht angemeldeter Besucher, ein Button blendet gesperrte Seiten (samt
+Unterbaum) erst nach Klick zusätzlich ein. Der serverseitige Ausschluss für
+nicht angemeldete Besucher (oben) ist davon unberührt. Details: Abschnitt
+„Inhaltsverzeichnis-Block (`fos/inhaltsverzeichnis`)", Unterabschnitt
+„Lehrpersonen-Toggle".
 
 ### Reihenfolge auf `template_redirect` — die zählt
 
