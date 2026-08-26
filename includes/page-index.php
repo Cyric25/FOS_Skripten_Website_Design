@@ -31,6 +31,17 @@
  * der aktuellen Seite. Das hält den Renderer einfach und sein Verhalten
  * vorhersagbar.
  *
+ * AUSNAHME seit dem Vorhaben „Inhaltsverzeichnisse" (2026-08): Für angemeldete
+ * Lehrpersonen kennzeichnet der Renderer zusätzlich gesperrte Knoten
+ * (_simple_clean_nur_lehrpersonen) mit den Klassen
+ * page-index__chapter--lehrer-only / page-index__page--lehrer-only und gibt
+ * einen Button page-index__lehrer-toggle aus, damit sie sich ein- und
+ * ausblenden lassen — siehe PLAN-Inhaltsverzeichnisse.md. Für nicht
+ * angemeldete Besucher gilt die Grundregel unverändert: Sie erhalten gesperrte
+ * Knoten weiterhin gar nicht erst im HTML (Ausschluss in
+ * simple_clean_page_index_daten(), unten). Diese Ausschlussgrenze ist die
+ * Sicherheitsgrenze dieses Vorhabens und darf nicht aufgeweicht werden.
+ *
  * @package FOS_Online_Schulbuch
  * @since 1.5.71
  */
@@ -127,8 +138,14 @@ function simple_clean_page_index_sanitize_attrs($attrs) {
  * Aufbau des Rückgabewerts:
  *   array(
  *     'nodes'    => array( ID => array('id','parent','title','slug','uri','depth') ),
- *     'children' => array( ElternID => array(KindID, …) )   // bereits sortiert
+ *     'children' => array( ElternID => array(KindID, …) ),  // bereits sortiert
+ *     'lehrer_gesperrt' => array( ID => true )              // siehe unten
  *   )
+ *
+ * 'lehrer_gesperrt' ist AUSSCHLIESSLICH für angemeldete Lehrpersonen gefüllt
+ * und listet die Knoten, die für nicht angemeldete Besucher gar nicht erst im
+ * Baum stehen. Für alle anderen ist der Schlüssel ein leeres Array — die
+ * betreffenden Seiten fehlen dann bereits in 'nodes'.
  *
  * @return array
  */
@@ -174,6 +191,26 @@ function simple_clean_page_index_daten() {
     // oben gilt nur für die Dauer eines Aufrufs und ist deshalb unbedenklich.
     if (function_exists('simple_clean_ist_lehrperson') && !simple_clean_ist_lehrperson()) {
         $ausgeschlossen = $ausgeschlossen + simple_clean_gesperrte_seiten();
+    }
+
+    // ZWEITER, REIN ADDITIVER ZWEIG (Vorhaben „Inhaltsverzeichnisse", 2026-08).
+    //
+    // Bewusst ein EIGENES if und kein else zum Zweig darüber: Der Ausschluss
+    // für nicht angemeldete Besucher ist die Sicherheitsgrenze dieses
+    // Vorhabens und bleibt deshalb Zeichen für Zeichen unangetastet. Ein
+    // umgebautes if/else hätte ihn mitverändert, und ein späteres Vertauschen
+    // der Bedingungen fiele im Diff kaum auf.
+    //
+    // Für angemeldete Lehrpersonen bleiben die gesperrten Seiten im Baum (wie
+    // schon vor diesem Vorhaben) — hier wird lediglich zusätzlich vermerkt,
+    // WELCHE es sind, damit simple_clean_page_index_liste() sie kennzeichnen
+    // kann. Zu $ausgeschlossen kommt hier nichts hinzu.
+    //
+    // Für alle anderen bleibt die Liste leer. Sie darf gar nicht gefüllt
+    // werden: Die Titel dieser Seiten stünden sonst in der Ausgabe.
+    $lehrer_gesperrt_ids = array();
+    if (function_exists('simple_clean_ist_lehrperson') && simple_clean_ist_lehrperson()) {
+        $lehrer_gesperrt_ids = simple_clean_gesperrte_seiten();
     }
 
     $roh    = array();
@@ -266,8 +303,9 @@ function simple_clean_page_index_daten() {
     }
 
     $daten = array(
-        'nodes'    => $nodes,
-        'children' => $kinder_gefiltert,
+        'nodes'           => $nodes,
+        'children'        => $kinder_gefiltert,
+        'lehrer_gesperrt' => $lehrer_gesperrt_ids,
     );
 
     return $daten;
@@ -448,6 +486,16 @@ function simple_clean_seitenleiste_versteckte_seiten() {
  * simple_clean_nav_gesperrte_seiten() und werden durchgereicht — eine Abfrage
  * je Knoten wäre bei rund 260 Seiten der Anfang eines Lastproblems.
  *
+ * NUR-FÜR-LEHRPERSONEN-KNOTEN WERDEN GEKENNZEICHNET, NICHT GEFILTERT.
+ * Steht ein Knoten in $lehrer_gesperrt, bekommt sein <li> zusätzlich die
+ * Klasse page-index__chapter--lehrer-only bzw. page-index__page--lehrer-only.
+ * Mehr passiert hier nicht — das Verstecken übernimmt CSS, das Einblenden ein
+ * Button (siehe Kopfkommentar der Datei). Die Liste ist ausschließlich für
+ * angemeldete Lehrpersonen gefüllt; für alle anderen fehlen diese Knoten
+ * bereits in $daten['nodes'], sodass hier nichts zu kennzeichnen ist. Das
+ * Kennzeichnen ist damit rein additiv: Es entfernt nichts und gibt nichts aus,
+ * was ohne diesen Parameter nicht ebenfalls ausgegeben würde.
+ *
  * @param array $ids          IDs der auszugebenden Knoten.
  * @param array $daten        Rückgabewert von simple_clean_page_index_daten().
  * @param array $attrs        Bereinigte Blockattribute.
@@ -458,9 +506,17 @@ function simple_clean_seitenleiste_versteckte_seiten() {
  *                            gesperrt" und entspricht damit dem Verhalten vor
  *                            AP-3 — ein vergessenes Durchreichen fiele so
  *                            harmlos aus statt in einen Fehler.
+ * @param array $lehrer_gesperrt Nachschlagekarte ID => true der Knoten, die nur
+ *                            für Lehrpersonen sichtbar sind. Nur für
+ *                            angemeldete Lehrpersonen gefüllt (siehe
+ *                            simple_clean_page_index_daten()); für alle
+ *                            anderen leer, weil diese Knoten dort gar nicht
+ *                            erst im Baum stehen. Der Standardwert array()
+ *                            bedeutet "nichts zu kennzeichnen" — dieselbe
+ *                            harmlose Voreinstellung wie bei $nav_gesperrt.
  * @return string HTML oder leere Zeichenkette.
  */
-function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht, $nav_gesperrt = array()) {
+function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht, $nav_gesperrt = array(), $lehrer_gesperrt = array()) {
     if (empty($ids) || $ebene >= $attrs['maxDepth']) {
         return '';
     }
@@ -507,13 +563,23 @@ function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht, 
         }
 
         $kind_ids   = isset($daten['children'][$id]) ? $daten['children'][$id] : array();
-        $unterliste = simple_clean_page_index_liste($kind_ids, $daten, $attrs, $ebene + 1, $besucht, $nav_gesperrt);
+        $unterliste = simple_clean_page_index_liste($kind_ids, $daten, $attrs, $ebene + 1, $besucht, $nav_gesperrt, $lehrer_gesperrt);
 
         // Drei Bedingungen, alle drei nötig: Aufklappen eingeschaltet, Ebene 0,
         // und es gibt überhaupt etwas aufzuklappen.
         $klappbar = $attrs['collapsible'] && $ist_kapitel && '' !== $unterliste;
 
-        $html .= '<li class="' . esc_attr($eintrag_klasse) . '">';
+        // Zusatzklasse für Knoten, die nur Lehrpersonen sehen. Sie kommt zur
+        // bestehenden Klasse HINZU, ersetzt sie nicht — alle vorhandenen
+        // Gestaltungs- und Filterregeln (auch der Suchfilter) greifen weiter.
+        $eintrag_klasse_knoten = $eintrag_klasse;
+        if (isset($lehrer_gesperrt[$id])) {
+            $eintrag_klasse_knoten .= $ist_kapitel
+                ? ' page-index__chapter--lehrer-only'
+                : ' page-index__page--lehrer-only';
+        }
+
+        $html .= '<li class="' . esc_attr($eintrag_klasse_knoten) . '">';
 
         if ($klappbar) {
             // Die Klasse page-index__sub bleibt am <details>: src/js/page-index.js
@@ -589,7 +655,7 @@ function simple_clean_render_page_index($attributes = array(), $content = '', $b
     // davon, wie viele Seiten der Baum hat.
     $nav_gesperrt = simple_clean_nav_gesperrte_seiten();
 
-    $liste = simple_clean_page_index_liste($start_ids, $daten, $attrs, 0, $besucht, $nav_gesperrt);
+    $liste = simple_clean_page_index_liste($start_ids, $daten, $attrs, 0, $besucht, $nav_gesperrt, $daten['lehrer_gesperrt']);
 
     $inhalt = '';
 
@@ -602,6 +668,27 @@ function simple_clean_render_page_index($attributes = array(), $content = '', $b
             . ' placeholder="' . esc_attr__('Seite suchen …', 'fos-online-schulbuch') . '"'
             . ' aria-label="' . esc_attr__('Inhaltsverzeichnis durchsuchen', 'fos-online-schulbuch') . '">';
         $inhalt .= '</div>';
+    }
+
+    // Umschalter für die Lehrpersonen-Ansicht — unmittelbar vor der Liste und
+    // damit nach dem Such-Wrapper, falls es einen gibt (Markup-Vertrag,
+    // PLAN-Inhaltsverzeichnisse.md, Abschnitt 4).
+    //
+    // Zwei Bedingungen, beide nötig: Es muss eine angemeldete Lehrperson davor
+    // sitzen UND es muss überhaupt etwas ein-/auszublenden geben. Für nicht
+    // angemeldete Besucher ist die zweite Bedingung ohnehin nie erfüllt —
+    // lehrer_gesperrt bleibt für sie leer (siehe
+    // simple_clean_page_index_daten()). Die erste Bedingung steht trotzdem
+    // davor, damit die Absicht im Code steht und nicht nur zwei Funktionen
+    // weiter oben.
+    //
+    // Der Zustand wird bewusst NICHT gespeichert: Jeder Seitenaufruf beginnt
+    // wieder in der Schüleransicht.
+    if (function_exists('simple_clean_ist_lehrperson')
+        && simple_clean_ist_lehrperson()
+        && !empty($daten['lehrer_gesperrt'])) {
+        $inhalt .= '<button type="button" class="page-index__lehrer-toggle" aria-pressed="false">'
+            . esc_html__('Lehrpersonen-Seiten anzeigen', 'fos-online-schulbuch') . '</button>';
     }
 
     $inhalt .= ('' !== $liste)
