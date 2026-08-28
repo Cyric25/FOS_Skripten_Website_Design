@@ -661,6 +661,17 @@ function simple_clean_render_page_index($attributes = array(), $content = '', $b
 
     $inhalt = '';
 
+    // Erweiterungspunkt: externe Komponenten (z. B. CDB-Designer) können
+    // hier zusätzliches Markup ganz oben in die Liste einhängen (z. B.
+    // einen Klassenmodus-spezifischen Einstieg). Das Theme kennt den
+    // Zweck des Markups nicht – es wendet den Filter nur an. Ohne
+    // eingehängten Filter bleibt der Wert unverändert '' und ändert am
+    // Rendering nichts.
+    $zusatz_eintraege = apply_filters('simple_clean_page_index_zusatzeintraege', '');
+    if (is_string($zusatz_eintraege) && '' !== $zusatz_eintraege) {
+        $inhalt .= $zusatz_eintraege;
+    }
+
     if ($attrs['showSearch'] && '' !== $liste) {
         // Kein name-Attribut und kein <form>: gefiltert wird rein im Browser
         // (Phase 4). Ohne JavaScript bleibt das Feld wirkungslos, die Liste
