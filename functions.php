@@ -1429,29 +1429,22 @@ function simple_clean_glossar_assets() {
     // aber trotzdem alle Begriffe samt Definitionen als glossarData an den
     // Browser gehen - bei ueber tausend Eintraegen eine erhebliche Datenmenge
     // ganz ohne Nutzen, denn ohne verlinkte Begriffe gibt es nichts
-    // anzuklicken.
-    //
-    // Massgeblich ist deshalb auch hier _glossar_scan_version: Ist es
-    // gesetzt, gilt die Kandidatenliste - eine leere Liste bedeutet dann
-    // "auf dieser Seite kommt kein Begriff vor" und nicht "noch nicht
-    // geprueft". Siehe den ausfuehrlichen Kommentar im Autolinker.
+    // anzuklicken. Beide Stellen rufen deshalb dieselbe
+    // simple_clean_ensure_glossar_scanned() auf: Ist die Seite noch nie
+    // gescannt worden, holt genau diese Funktion den Scan nach und speichert
+    // ihn, statt (wie frueher) hier wie dort unabhaengig auf ALLE
+    // Glossarbegriffe zurueckzufallen.
     $terms_for_page = array();
     if (is_singular() && !is_singular('glossar')) {
-        $post_id      = get_the_ID();
-        $candidates   = get_post_meta($post_id, '_glossar_term_candidates', true);
-        $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
+        $post_id    = get_the_ID();
+        $candidates = simple_clean_ensure_glossar_scanned($post_id);
 
-        if (!empty($scan_version) && is_array($candidates)) {
-            // Gescannt: Kandidatenliste gilt. Ist sie leer, bleibt
-            // $terms_for_page leer und weiter unten wird weder das Skript
-            // noch glossarData ausgeliefert.
-            $terms_for_page = empty($candidates)
-                ? array()
-                : simple_clean_get_glossar_terms_by_ids($candidates);
-        } else {
-            // Nie gescannt (oder Meta beschaedigt): Fallback wie im Autolinker.
-            $terms_for_page = simple_clean_get_glossar_terms();
-        }
+        // Leere Kandidatenliste bedeutet "auf dieser Seite kommt kein Begriff
+        // vor" - $terms_for_page bleibt dann leer und weiter unten wird
+        // weder das Skript noch glossarData ausgeliefert.
+        $terms_for_page = empty($candidates)
+            ? array()
+            : simple_clean_get_glossar_terms_by_ids($candidates);
     }
 
     // Enqueue glossar JavaScript (only for modals, NOT for auto-linking)
@@ -1707,6 +1700,53 @@ function simple_clean_update_glossar_candidates($post_id, $post) {
 }
 add_action('save_post', 'simple_clean_update_glossar_candidates', 20, 2);
 
+/**
+ * Stellt sicher, dass ein Post gescannt ist, und liefert die
+ * Kandidaten-Liste (Glossar-Term-IDs).
+ *
+ * Fehlt _glossar_scan_version (z. B. weil der Post ohne angemeldeten
+ * Benutzer angelegt wurde - WP-CLI, Importskript, REST ohne
+ * Benutzerkontext - und darum nie den save_post-Hook durchlaufen hat),
+ * wird der Scan HIER EINMALIG nachgeholt und dauerhaft gespeichert.
+ *
+ * Ersetzt den frueheren Rueckfall, der bei JEDEM Aufruf einer nie
+ * gescannten Seite ALLE Glossarbegriffe zu einem einzigen
+ * Alternations-Regex zusammensetzte: Bei ueber tausend Begriffen wurde
+ * das Pattern so gross, dass preg_replace_callback() in
+ * simple_clean_process_glossar_links_optimized() mit "regular expression
+ * is too large" scheiterte, null zurueckgab und dadurch (vor der
+ * Null-Pruefung dort) ganze Textabschnitte der Seite verschluckte -
+ * gemessen: eine Seite fiel von 6246 auf 2347 Zeichen und brauchte 30s
+ * statt 0,6s. Details: Theme/CLAUDE.md, Abschnitt "Glossar-System".
+ *
+ * Kein current_user_can()-Gate wie beim save_post-Hook: Diese Funktion
+ * laeuft im Frontend-Renderpfad, oft fuer nicht angemeldete Besucher, und
+ * das Scannen ist keine sicherheitsrelevante Aktion.
+ *
+ * @param int $post_id Post ID
+ * @return array Kandidaten-IDs (Glossar-Term-IDs)
+ */
+function simple_clean_ensure_glossar_scanned($post_id) {
+    if (empty($post_id)) {
+        return [];
+    }
+
+    $candidates   = get_post_meta($post_id, '_glossar_term_candidates', true);
+    $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
+
+    if (!empty($scan_version) && is_array($candidates)) {
+        return $candidates;
+    }
+
+    $candidates = simple_clean_scan_glossar_candidates($post_id);
+
+    update_post_meta($post_id, '_glossar_term_candidates', $candidates);
+    update_post_meta($post_id, '_glossar_scan_version', 1);
+    update_post_meta($post_id, '_glossar_last_scanned', current_time('mysql'));
+
+    return $candidates;
+}
+
 // ===================================================================
 // GLOSSAR PER-PAGE OPTIMIZATION (Phase 2: Rendering Optimization)
 // ===================================================================
@@ -1877,7 +1917,7 @@ function simple_clean_process_glossar_links_optimized($content, $candidates = nu
         $processed_part = $part;
 
         // Use preg_replace_callback with mini-pattern
-        $processed_part = preg_replace_callback(
+        $replaced_part = preg_replace_callback(
             $pattern_data['pattern'],
             function($matches) use ($pattern_data, &$linked_terms, &$terms_found, $first_only, $case_sensitive) {
                 $matched_text = $matches[1];
@@ -1919,6 +1959,17 @@ function simple_clean_process_glossar_links_optimized($content, $candidates = nu
             $processed_part
         );
 
+        // preg_replace_callback() liefert bei einem PCRE-Fehler null zurueck
+        // (z. B. "regular expression is too large" bei einem sehr grossen
+        // Alternations-Pattern). Ohne diese Pruefung wuerde $result .= null
+        // den kompletten Textabschnitt stillschweigend durch einen leeren
+        // String ersetzen - siehe Theme/CLAUDE.md, Abschnitt
+        // "Glossar-System", Unterabschnitt zum Datenverlust-Fund. Im
+        // Fehlerfall bleibt der Abschnitt unverlinkt, aber vollstaendig.
+        if ($replaced_part !== null) {
+            $processed_part = $replaced_part;
+        }
+
         $result .= $processed_part;
     }
 
@@ -1958,43 +2009,33 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
 
     $post_id = $post->ID;
 
-    // Kandidaten aus Post-Meta laden
-    $candidates = get_post_meta($post_id, '_glossar_term_candidates', true);
-
     // Wurde diese Seite schon einmal gescannt?
     //
     // ACHTUNG - hier steckt der Unterschied, auf den es ankommt: Ein LEERES
     // Kandidaten-Array ist ein GÜLTIGES Scan-Ergebnis und bedeutet "auf dieser
     // Seite kommt kein einziger Glossarbegriff vor". Eine Prüfung mit empty()
     // allein kann das nicht von "noch nie gescannt" unterscheiden - beides
-    // sieht gleich aus. Genau daran hing ein teurer Fehler:
-    //
-    // Seiten mit wenig oder gar keinem Fließtext (z. B. eine Seite, deren
-    // Inhalt praktisch nur aus einem Block-Kommentar besteht) liefern beim
-    // Scan korrekt ein leeres Array. Mit der alten Bedingung fielen sie
-    // trotzdem in den Fallback: ALLE Glossarbegriffe wurden geladen, über
-    // simple_clean_get_glossar_term_variants() in Wortvarianten expandiert,
-    // zu einem einzigen großen Alternations-Regex zusammengesetzt und über
-    // das gesamte gerenderte HTML geschickt. Bei mehreren hundert Begriffen
-    // kostet das je Seitenaufruf ein Vielfaches der eigentlichen Ausgabe.
+    // sieht gleich aus.
     //
     // Das Unterscheidungsmerkmal ist das Meta _glossar_scan_version. Es wird
-    // gesetzt von simple_clean_update_glossar_candidates() (Hook save_post)
-    // und von simple_clean_glossar_bulk_scan_batch_ajax() (Bulk-Scan auf der
-    // Glossar-Einstellungsseite). Ist es vorhanden, sind die Kandidaten
-    // maßgeblich - auch wenn die Liste leer ist.
+    // gesetzt von simple_clean_update_glossar_candidates() (Hook save_post),
+    // von simple_clean_glossar_bulk_scan_batch_ajax() (Bulk-Scan auf der
+    // Glossar-Einstellungsseite) und - seit dem Fix des Datenverlust-Funds,
+    // siehe simple_clean_ensure_glossar_scanned() - vom Renderpfad selbst,
+    // sobald eine nie gescannte Seite zum ersten Mal aufgerufen wird.
     //
     // Diese Bedingung bitte NICHT zu einem empty() "vereinfachen".
     // get_post_meta() liefert '' zurück, wenn das Meta nicht existiert.
     // Geschrieben wird immer der Wert 1, ein leerer Wert bedeutet also
     // zuverlässig "nie gescannt".
-    $scan_version = get_post_meta($post_id, '_glossar_scan_version', true);
-    $is_scanned   = !empty($scan_version);
+    $candidates_raw = get_post_meta($post_id, '_glossar_term_candidates', true);
+    $scan_version   = get_post_meta($post_id, '_glossar_scan_version', true);
+    $is_scanned     = !empty($scan_version) && is_array($candidates_raw);
 
     // Kennzahlen fuer die Diagnoseausgabe (?sc_perf=1). Sie beantworten die
     // Frage, die sich bei einer langsamen Seite zuerst stellt: Wie viel Zeit
-    // geht in die Glossar-Verlinkung, mit wie vielen Begriffen, und wurde der
-    // teure Fallback ueber ALLE Begriffe ausgeloest?
+    // geht in die Glossar-Verlinkung, mit wie vielen Begriffen, und musste
+    // diese Seite gerade eben zum ersten Mal gescannt werden?
     if (!isset($GLOBALS['sc_glossar_stats'])) {
         $GLOBALS['sc_glossar_stats'] = array(
             'aufrufe'    => 0,
@@ -2005,36 +2046,30 @@ function simple_clean_glossar_auto_link_content_optimized($content) {
         );
     }
     $GLOBALS['sc_glossar_stats']['aufrufe']++;
-    $GLOBALS['sc_glossar_stats']['kandidaten'] = is_array($candidates) ? count($candidates) : -1;
+    $GLOBALS['sc_glossar_stats']['kandidaten'] = $is_scanned ? count($candidates_raw) : -1;
 
-    if ($is_scanned && is_array($candidates)) {
-        // Gescannt: Die Kandidatenliste gilt.
-        if (empty($candidates)) {
-            // Gescannt und nichts gefunden -> hier gibt es nichts zu verlinken.
-            // Früher Ausstieg, ohne den Content überhaupt anzufassen.
-            return $content;
-        }
-    } else {
-        // Nie gescannt (oder Meta beschädigt): Fallback über alle Begriffe.
-        // Langsam, aber besser als gar keine Verlinkung. Ein Bulk-Scan über
-        // die Glossar-Einstellungsseite beseitigt diesen Zustand dauerhaft.
+    if (!$is_scanned) {
+        // Nie gescannt (oder Meta beschädigt): Scan JETZT EINMALIG nachholen
+        // und dauerhaft speichern - siehe simple_clean_ensure_glossar_scanned()
+        // sowie Theme/CLAUDE.md, Abschnitt "Glossar-System". Kein teurer
+        // Rückfall über ALLE Begriffe mehr.
         $GLOBALS['sc_glossar_stats']['fallback']++;
 
         if (defined('GLOSSAR_DEBUG') && GLOSSAR_DEBUG) {
             error_log(sprintf(
-                'Glossar: Post %d wurde nie gescannt (kein _glossar_scan_version) - verwende alle Begriffe als Fallback. Abhilfe: Bulk-Scan auf der Glossar-Einstellungsseite ausführen.',
+                'Glossar: Post %d wurde nie gescannt (kein _glossar_scan_version) - hole den Scan jetzt einmalig nach.',
                 $post_id
             ));
         }
+    }
 
-        // Fallback: Verwende alle Glossar-Begriffe
-        $all_terms = simple_clean_get_glossar_terms();
-        if (empty($all_terms)) {
-            return $content; // Keine Begriffe vorhanden
-        }
+    $candidates = simple_clean_ensure_glossar_scanned($post_id);
 
-        // Extrahiere nur die IDs für die Verarbeitung
-        $candidates = array_column($all_terms, 'id');
+    if (empty($candidates)) {
+        // Gescannt (ggf. gerade eben) und nichts gefunden -> hier gibt es
+        // nichts zu verlinken. Früher Ausstieg, ohne den Content überhaupt
+        // anzufassen.
+        return $content;
     }
 
     // Optimierte Verarbeitung mit nur relevanten Begriffen

@@ -1150,6 +1150,61 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   **Folge, die man kennen muss:** Seiten, die nie gescannt wurden, sind
   langsam. Nach einem Import direkt in die Datenbank (also ohne `save_post`)
   gehört der Bulk-Scan auf der Glossar-Einstellungsseite ausgeführt.
+
+  **Datenverlust-Fund und Behebung (2026-08-29).** Live gemessen auf einer
+  programmatisch ohne angemeldeten Benutzer angelegten Seite (1155
+  veröffentlichte Glossarbegriffe): Der Rückfall lud ALLE Begriffe, expandierte
+  sie über `simple_clean_get_glossar_term_variants()` in Wortvarianten und
+  baute daraus in `simple_clean_build_glossar_pattern_for_terms()` ein rund
+  800 kB großes Alternations-Pattern. `preg_replace_callback()` in
+  `simple_clean_process_glossar_links_optimized()` scheiterte damit an
+  „Compilation failed: regular expression is too large" und lieferte `null`
+  zurück — der Aufrufer hängte diesen `null`-Wert **ungeprüft** an das Ergebnis
+  an (`$result .= $processed_part`), wodurch der komplette Textabschnitt
+  ersatzlos verschwand. Konkret: Inhaltslänge nach `the_content` fiel von 6246
+  auf 2347 Zeichen, jede Beschriftung (`<h1></h1>`, `<label></label>`, …) war
+  leer, die Seite brauchte 30 s und endete in HTTP 500 („Maximum execution
+  time exceeded"). Nach einem einmaligen Scan derselben Seite lud sie in
+  0,6 s vollständig. Erstbeschrieben als Nebenbefund in
+  `Plugins/CDB-Designer/CLAUDE.md`, Abschnitt „Nebenbefund am Theme: nie
+  gescannte Seiten verlieren ihren Text".
+
+  Behoben an zwei Stellen, beide notwendig:
+
+  1. **Datenverlust-Sicherung** (`simple_clean_process_glossar_links_optimized()`):
+     Der Rückgabewert von `preg_replace_callback()` wird jetzt vor der
+     Übernahme auf `null` geprüft. Schlägt die Kompilierung fehl, bleibt der
+     betroffene Textabschnitt unverändert (unverlinkt, aber vollständig)
+     statt zu verschwinden. Das greift unabhängig von der Ursache — auch bei
+     einem künftigen, genuin sehr großen *echten* Kandidaten-Set.
+  2. **Root Cause behoben** (`simple_clean_ensure_glossar_scanned()`, neue
+     Funktion): Ersetzt den Rückfall über ALLE Begriffe vollständig. Fehlt
+     `_glossar_scan_version`, holt diese Funktion den Scan (dieselbe schnelle
+     `mb_stripos()`-Suche wie `simple_clean_scan_glossar_candidates()`) SOFORT
+     nach und persistiert ihn (`_glossar_term_candidates`,
+     `_glossar_scan_version`, `_glossar_last_scanned`) — genau wie der
+     `save_post`-Hook, nur ohne dessen `current_user_can()`-Gate, da das
+     Scannen selbst keine sicherheitsrelevante Aktion ist und der Aufrufer
+     hier typischerweise ein nicht angemeldeter Frontend-Besucher ist. Jede
+     nie gescannte Seite kostet dadurch nur noch EINMAL den (schnellen)
+     Scan statt bei jedem Aufruf den teuren Alternations-Rückfall.
+     Aufgerufen von **beiden** Stellen, die bislang unabhängig auf „alle
+     Begriffe" zurückfielen: `simple_clean_glossar_auto_link_content_optimized()`
+     (der Autolinker selbst) und `simple_clean_glossar_assets()` (liefert
+     `glossarData` fürs Frontend-JS) — die beiden Stellen bleiben damit
+     weiterhin zwangsläufig konsistent (siehe Kommentar dort), jetzt aber
+     ohne die teure/gefährliche gemeinsame Grundlage.
+
+  Der `?sc_perf=1`-Zähler `fallback` (siehe Abschnitt „Diagnose: Wo geht die
+  Zeit hin?" unten) zählt seitdem nicht mehr „Rückfall über ALLE Begriffe",
+  sondern „Seite musste in diesem Aufruf zum ersten Mal gescannt werden" —
+  ein einmaliges, günstiges Ereignis statt eines wiederkehrenden teuren.
+
+  Regressionstest ohne WordPress: `php tools/test-glossar-scan-fallback.php`
+  — extrahiert die betroffenen Funktionen aus der echten `functions.php` und
+  prüft sowohl die Scan-Nachholung (inkl. „kein zweiter Scan bei erneutem
+  Aufruf") als auch die Datenverlust-Sicherung anhand eines echten,
+  reproduzierten PCRE-Kompilierungsfehlers.
 - **Einstellungen:** Optionen `glossar_modal_type` (tooltip|sidebar),
   `glossar_auto_link`, `glossar_first_only`, `glossar_case_sensitive`,
   `glossar_auto_rebuild`; Admin-Seite `simple_clean_glossar_settings_page()`
@@ -1689,7 +1744,7 @@ Im Seitenquelltext stehen dann zwei Zeilen:
 | `time` | Sekunden seit `$timestart` |
 | `peak` | Spitzenspeicher in Bytes |
 | `kandidaten` | Einträge in `_glossar_term_candidates` (`-1` = kein Array) |
-| `fallback` | wie oft auf **alle** Glossarbegriffe zurückgefallen wurde |
+| `fallback` | wie oft die Seite in diesem Aufruf zum ersten Mal gescannt werden musste (seit dem Fix des Datenverlust-Funds oben kein Rückfall auf ALLE Begriffe mehr, sondern ein einmaliger, persistierter Nachhol-Scan) |
 | `begriffe` | Begriffe, mit denen tatsächlich gearbeitet wurde |
 | `zeit` | Sekunden allein in `simple_clean_process_glossar_links_optimized()` |
 
