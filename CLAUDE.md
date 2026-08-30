@@ -558,6 +558,18 @@ verwendet ausschließlich `var(--x, #fallback)` mit den in der Root-`CLAUDE.md`
 Nur so bleibt neuer Code automatisch darkmode-fähig, ohne dass der
 `:root[data-theme="dark"]`-Block nachgezogen werden muss.
 
+**Stolperstein `<button>` (Fund 2026-08-30, behoben in v1.5.94):** Die
+Konvention oben reicht bei Schaltflächen NICHT aus, wenn man die Farbe gar
+nicht erst setzt. Ein `<button>` erbt `color` nicht vom `body` — das
+Browser-Stylesheet weist ihm `color: buttontext` (schwarz) zu. `.menu-toggle`
+(der Hamburger in `header.php`) hatte als einzige Schaltfläche in
+`style.css` keine eigene `color`-Angabe und blieb deshalb im Darkmode
+dunkel auf dunklem Header — auf dem Handy praktisch unsichtbar. Behoben
+durch `color: var(--color-text-primary, #333)` samt Hover/Focus-Zustand,
+wie ihn `.theme-toggle-btn`, `.sidebar-toggle-close` und `.page-toggle`
+von Anfang an hatten. **Merksatz:** Jede neue Schaltfläche mit
+`background: none` braucht zusätzlich eine explizite `color`-Angabe.
+
 **Hintergrund/Historie:** `PLAN-CSS-Variablen-Darkmode.md` (Root-Verzeichnis)
 legte in einer Vorstufe die heutigen CSS-Variablen und ihre
 Customizer-Kopplung an, ohne selbst einen Umschalter zu bauen.

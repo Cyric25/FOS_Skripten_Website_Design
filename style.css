@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.93
+Version: 1.5.94
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -195,12 +195,30 @@ body {
 }
 
 /* Mobile Menu Toggle */
+/* `color` MUSS hier explizit stehen: ein <button> erbt die Textfarbe NICHT
+   vom body, das Browser-Stylesheet setzt `color: buttontext` (schwarz).
+   Ohne diese Zeile blieb der Hamburger im Darkmode dunkel auf dunklem
+   Header und war auf dem Handy praktisch unsichtbar (Fund 2026-08-30).
+   Gleiches Muster wie .theme-toggle-btn, .sidebar-toggle-close und
+   .page-toggle, die ihre Farbe von Anfang an selbst setzen. */
 .menu-toggle {
     display: none;
     background: none;
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
+    color: var(--color-text-primary, #333);
+    transition: color 0.3s ease;
+}
+
+.menu-toggle:hover,
+.menu-toggle:focus-visible {
+    color: var(--color-ui-surface, #e24614);
+}
+
+.menu-toggle:focus-visible {
+    outline: 2px solid var(--color-ui-surface, #e24614);
+    outline-offset: 2px;
 }
 
 /* Main Content */
