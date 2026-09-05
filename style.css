@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.94
+Version: 1.5.95
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -1068,28 +1068,64 @@ video {
         position: fixed;
     }
 
-    /* Mobile: Bottom-left button, horizontal layout.
+    /* Mobile: quadratische Kachel unten links.
        Hebt die Desktop-Werte auf: dort ist der Streifen durchgehend
-       (top/bottom 0, eckig), hier wieder eine kompakte runde Pille. */
+       (top/bottom 0, eckig), hier eine kompakte Kachel.
+
+       ABGESTIMMT AUF DEN PDF-KNOPF des Plugins CDB-Designer
+       (#cbd-pdf-export-fab, gebaut in assets/js/floating-pdf-button.js).
+       Beide sitzen auf dem Handy gleichzeitig am unteren Rand — der
+       Navigationsknopf links, der PDF-Knopf rechts. Standen sie auf
+       unterschiedlicher Höhe und hatten unterschiedliche Form, wirkte das
+       Paar unabsichtlich schief (gemeldet 2026-08-30 vom Handy).
+
+       Die vier Werte, die ÜBEREINSTIMMEN MÜSSEN, stehen bewusst hier UND
+       dort. Wer einen davon ändert, muss die andere Stelle nachziehen:
+         Größe          52px × 52px
+         Eckenradius    12px
+         Abstand unten  20px
+         Abstand Rand   20px (hier links, dort rechts)
+       Eine gemeinsame CSS-Variable ist nicht möglich: der PDF-Knopf wird
+       per jQuery .css() inline gestylt, und Theme und Plugin sind getrennt
+       versionierte Pakete. Siehe Theme/CLAUDE.md, Abschnitt „Plastischer
+       Look“, und Plugins/CDB-Designer/CLAUDE.md, Abschnitt „Plastischer Look
+       von PDF-Button und PDF-Werkzeugleiste“. */
     .sidebar-toggle-btn {
         top: auto;
         bottom: 20px;
         left: 20px;
-        border-radius: 50px;
-        padding: 0.75rem 1.25rem;
+        width: 52px;
+        height: 52px;
+        padding: 0;
+        border-radius: 12px;
         flex-direction: row;
+        justify-content: center;
+        gap: 0;
         writing-mode: horizontal-tb;
         letter-spacing: normal;
+        /* Wie beim PDF-Knopf: hebt das Zeichen von den helleren Stellen des
+           Verlaufs ab. */
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     }
 
     /* Auf dem kleinen Bildschirm sind die drei Striche das eigentliche
-       Erkennungszeichen — am Computer sind sie ausgeblendet. */
+       Erkennungszeichen — am Computer sind sie ausgeblendet.
+       margin-bottom hebt den Wert der Grundregel auf, der von der
+       senkrechten Desktop-Anordnung stammt und die Kachel sonst
+       aus der Mitte schieben würde. */
     .sidebar-toggle-btn .toggle-icon {
         display: inline-block;
+        font-size: 1.375rem;
+        margin-bottom: 0;
     }
 
+    /* Der Schriftzug „Navigation“ passt nicht in eine 52px-Kachel und
+       würde sie breiter machen als den PDF-Knopf. Das Zeichen ☰ trägt die
+       Bedeutung allein; für Screenreader bleibt das aria-label des Knopfes
+       in sidebar.php maßgeblich, deshalb display:none statt einer
+       Sichtbar-nur-für-Screenreader-Klasse. */
     .sidebar-toggle-btn .toggle-text {
-        font-size: 1rem;
+        display: none;
     }
 
     /* Show button when sidebar is not active on mobile */
@@ -1136,16 +1172,12 @@ video {
    zusätzlich zu seinem `top: 100px` ein `bottom: 15px` — er wurde dadurch
    über die gesamte Fensterhöhe gezogen statt eine kompakte Pille zu bleiben. */
 @media (max-width: 480px) {
-    .sidebar-toggle-btn {
-        bottom: 15px;
-        left: 15px;
-        padding: 0.6rem 1rem;
-    }
-
-    .sidebar-toggle-btn .toggle-text {
-        font-size: 0.9rem;
-    }
-
+    /* Der Navigationsknopf wird hier bewusst NICHT mehr verkleinert.
+       Früher standen hier bottom/left 15px und ein kleineres padding; das
+       hätte ihn auf schmalen Geräten gegenüber dem PDF-Knopf verschoben,
+       der über alle Breiten dieselben 52px und 20px Abstand behält.
+       Gleiche Größe auf jeder Breite ist genau der Punkt der Abstimmung
+       oben im 992px-Block. */
     .page-link {
         font-size: 0.9rem;
     }

@@ -405,7 +405,43 @@ denselben Look (siehe `Plugins/CDB-Designer/CLAUDE.md`).
 (`top: 0; bottom: 0`, `border-radius: 0`), `z-index: 1001` — **über** der
 Kopfleiste (1000), sonst verschwände der obere Teil hinter ihr. Die drei
 Striche (`.toggle-icon`) sind am Desktop ausgeblendet und nur unter 992px
-sichtbar; dort ist der Streifen wieder eine kompakte runde Pille unten links.
+sichtbar; dort ist der Streifen eine kompakte quadratische Kachel unten
+links (bis v1.5.94 eine breite Pille, siehe nächster Absatz).
+
+**Gemeinsame Geometrie mit dem PDF-Knopf des Plugins (seit v1.5.95):** Unter
+992px sitzen zwei schwebende Knöpfe gleichzeitig am unteren Rand — der
+Navigationsknopf des Themes links, der PDF-Knopf des CDB-Designers
+(`#cbd-pdf-export-fab`) rechts. Sie standen auf unterschiedlicher Höhe
+(20px bzw. 15px gegen 30px) und hatten unterschiedliche Form (Pille gegen
+Kachel); das Paar wirkte auf dem Handy unabsichtlich schief. Seit v1.5.95
+teilen sie vier Werte:
+
+| Wert | |
+|---|---|
+| Größe | 52px × 52px |
+| Eckenradius | 12px |
+| Abstand unten | 20px |
+| Abstand zum seitlichen Rand | 20px |
+
+**Diese vier Werte stehen doppelt** — in `style.css` im Block
+`@media (max-width: 992px)` und in
+`Plugins/CDB-Designer/assets/js/floating-pdf-button.js`. Wer einen davon
+ändert, muss die andere Stelle nachziehen; an beiden Stellen steht ein
+Kommentar mit demselben Hinweis. Eine gemeinsame CSS-Variable ist nicht
+möglich: der PDF-Knopf wird per jQuery `.css()` **inline** gestylt (inline
+schlägt jede Stylesheet-Regel ohne `!important`), und Theme und Plugin sind
+getrennt versionierte Pakete — eines kann ohne das andere installiert sein.
+
+Folge für den Schriftzug: „Navigation“ (`.toggle-text`) ist unter 992px
+**ausgeblendet** — er passt nicht in eine 52px-Kachel und machte den Knopf
+sonst breiter als den PDF-Knopf. Das Zeichen ☰ trägt die Bedeutung allein;
+der Knopf hat in `sidebar.php` ein `aria-label`, Screenreader verlieren also
+nichts. Am Desktop bleibt der Schriftzug sichtbar.
+
+Ebenfalls entfallen: die frühere Verkleinerung unter 480px (`bottom`/`left`
+15px, kleineres `padding`). Sie hätte den Navigationsknopf auf schmalen
+Geräten gegenüber dem PDF-Knopf verschoben, der über alle Breiten dieselbe
+Größe behält.
 
 **Schriftschärfe — Falle:** `.sidebar-toggle-btn` hatte `transform:
 translateX(0)` und `opacity: 0.95`. Beides erzeugt dauerhaft eine eigene
