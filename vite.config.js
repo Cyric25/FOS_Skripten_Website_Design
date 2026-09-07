@@ -19,7 +19,8 @@ export default defineConfig({
         'page-manager-style': resolve(__dirname, 'src/css/page-manager.css'),
         'page-index-editor': resolve(__dirname, 'src/js/page-index-editor.js'),
         'page-index': resolve(__dirname, 'src/js/page-index.js'),
-        'page-index-style': resolve(__dirname, 'src/css/page-index.css')
+        'page-index-style': resolve(__dirname, 'src/css/page-index.css'),
+        'kapitellink-format': resolve(__dirname, 'src/js/kapitellink-format.js')
       },
       output: {
         // Output format

@@ -201,6 +201,45 @@ function simple_clean_kapitellink_kapitel($anfrage) {
 }
 
 /**
+ * Hängt das Editor-Script für das Werkzeug „Kapitellink" ein (AP-3.4).
+ *
+ * PLATZIERUNG: Der AP-Text lässt die Wahl zwischen dieser Datei und
+ * `includes/page-index.php` (neben `simple_clean_page_index_editor_assets()`).
+ * Sie steht hier, weil das Script ausschließlich die beiden REST-Routen
+ * dieser Datei bedient und mit dem Verzeichnis-Block selbst nichts zu tun hat
+ * — der Block wird vom Werkzeug nur als Datenquelle gelesen, nicht bearbeitet.
+ * So bleibt „Kapitellinks" in einer Datei beisammen und `page-index.php`
+ * kümmert sich weiterhin allein um den Block.
+ *
+ * Struktur wie `simple_clean_page_index_editor_assets()`: Existenzprüfung der
+ * gebauten Datei, `filemtime()` als Version (Cache-Busting), im Fußbereich.
+ *
+ * @return void
+ */
+function simple_clean_kapitellink_editor_assets() {
+    $js_datei = get_template_directory() . '/dist/js/kapitellink-format.js';
+
+    if (!file_exists($js_datei)) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'simple-clean-kapitellink-format',
+        get_template_directory_uri() . '/dist/js/kapitellink-format.js',
+        array(
+            'wp-rich-text',
+            'wp-element',
+            'wp-components',
+            'wp-block-editor',
+            'wp-api-fetch',
+        ),
+        filemtime($js_datei),
+        true
+    );
+}
+add_action('enqueue_block_editor_assets', 'simple_clean_kapitellink_editor_assets');
+
+/**
  * Sucht rekursiv den ersten Inhaltsverzeichnis-Block in einem Blockbaum.
  *
  * Rekursiv, weil der Block auch in einem Container-Block des CDB-Designers
