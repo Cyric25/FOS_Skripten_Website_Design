@@ -581,7 +581,30 @@ function simple_clean_page_index_liste($ids, $daten, $attrs, $ebene, &$besucht, 
                 : ' page-index__page--lehrer-only';
         }
 
-        $html .= '<li class="' . esc_attr($eintrag_klasse_knoten) . '">';
+        // Sprungmarke für Kapitellinks (PLAN-Summary-PDF-und-Content-Links.md,
+        // AP-3.1). Schema laut Architekturentscheidung A6:
+        // page-index-kapitel-<post_id>. Die Post-ID statt des Slugs, weil sie
+        // sich bei Titel- und Adressänderungen nicht mitändert — ein einmal
+        // gesetzter Kapitellink bleibt dadurch gültig.
+        //
+        // Nur an Kapiteln (Ebene 0 relativ zu rootPage). Unterseiten bekommen
+        // bewusst keine ID: Ziel des Vorhabens ist der Sprung zur KAPITELKARTE,
+        // und je Ebene eigene IDs zu vergeben würde die Zahl möglicher
+        // Dubletten unnötig vergrößern.
+        //
+        // BEKANNTE, AKZEPTIERTE EINSCHRÄNKUNG: Stehen mehrere
+        // fos/inhaltsverzeichnis-Blöcke mit überlappenden Kapiteln auf
+        // DERSELBEN Seite, entstehen doppelte IDs. document.getElementById()
+        // nimmt dann das erste Vorkommen. Das ist im AP ausdrücklich als
+        // akzeptiert festgehalten und kein Blocker — mehrere Blöcke auf einer
+        // Seite sind der Ausnahmefall, und der Sprung landet auch dann im
+        // richtigen Kapitel, nur ggf. in der falschen Blockinstanz.
+        $id_attr = '';
+        if ($ist_kapitel) {
+            $id_attr = ' id="' . esc_attr('page-index-kapitel-' . $node['id']) . '"';
+        }
+
+        $html .= '<li class="' . esc_attr($eintrag_klasse_knoten) . '"' . $id_attr . '>';
 
         if ($klappbar) {
             // Die Klasse page-index__sub bleibt am <details>: src/js/page-index.js
