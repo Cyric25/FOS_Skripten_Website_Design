@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.95
+Version: 1.5.96
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -271,6 +271,42 @@ body {
 
 .entry-content p {
     margin-bottom: var(--space-md);
+}
+
+/* Links im Fließtext folgen den Customizer-Themefarben statt dem
+   Browser-Standardblau (PLAN-Summary-PDF-und-Content-Links.md, AP-2.1).
+   Farbwahl laut Architekturentscheidung A1: die bestehende Variable
+   --color-special-text, dieselbe wie bei Glossarbegriffen — keine neue
+   Customizer-Farbe. Der Darkmode kommt dadurch gratis mit, weil
+   :root[data-theme="dark"] dieselbe Variable umdefiniert.
+
+   ACHTUNG, :where() ist hier tragend und keine Spielerei: Es setzt die
+   Spezifität dieser Regel auf (0,0,1) — Elementebene. Die naheliegende
+   Schreibweise `.entry-content a` hätte (0,1,1) und damit MEHR Gewicht als
+   jede einklassige Komponentenregel im selben Inhaltsbereich. Gemessen am
+   2026-09-07 auf dem Testserver (Seite „Chemie", 74 Links): Damit kippten
+   alle .page-index__page-link des Blocks fos/inhaltsverzeichnis von
+   rgb(51,51,51)/ohne Unterstreichung auf rgb(113,35,10)/unterstrichen —
+   ein sichtbarer Rückschritt im Inhaltsverzeichnis. Mit :where() gewinnt
+   jede Komponentenklasse (.page-index__page-link, .page-index__chapter-link,
+   .cbd-block-reference-inline, .wp-block-button__link …) weiterhin, und nur
+   der klassenlose Redakteurslink wird eingefärbt. Wer die Regel wieder auf
+   `.entry-content a` verkürzt, holt den Rückschritt zurück. */
+:where(.entry-content) a {
+    color: var(--color-special-text, #71230a);
+    text-decoration: underline;
+    text-decoration-color: var(--color-ui-surface, #e24614);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+/* Auch :hover/:focus-visible stecken in :where(), sonst zählten sie als
+   Pseudoklasse mit und die Regel käme auf (0,1,1) — sie schlüge damit
+   .page-index__page-link (0,1,0) beim Überfahren doch wieder. So bleibt sie
+   auf (0,0,1), gleichauf mit der Grundregel darüber, und gewinnt gegen diese
+   allein durch die spätere Position. */
+:where(.entry-content) a:where(:hover, :focus-visible) {
+    color: var(--color-ui-surface-dark, #c93d12);
 }
 
 /* ===========================
