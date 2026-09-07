@@ -197,13 +197,96 @@
 		});
 	}
 
+	// ------------------------------------------------------------------
+	// Kapitellinks: Sprung zur Kapitelkarte
+	// (PLAN-Summary-PDF-und-Content-Links.md, AP-3.2)
+	//
+	// Gegenstueck zu den Anker-IDs aus AP-3.1, die
+	// simple_clean_page_index_liste() an jede Kapitelkarte haengt
+	// (id="page-index-kapitel-<post_id>", Architekturentscheidung A6).
+	// Vorbilder im Projekt: handleAutoScroll() in src/js/glossar.js und
+	// handleHashNavigation() im block-reference-Block des CDB-Plugins.
+	//
+	// Bewusst KEINE Persistenz (kein localStorage, keine zusaetzlichen
+	// URL-Parameter) - ausdrueckliches Nicht-Ziel des Plans.
+	// ------------------------------------------------------------------
+
+	var HIGHLIGHT_MS = 2000;
+	// Muss zum Schema aus AP-3.1 passen. Streng verankert, damit ein
+	// beliebiger fremder Hash (#kommentar-12) hier gar nicht erst zu einer
+	// Suche fuehrt.
+	var HASH_MUSTER = /^#page-index-kapitel-\d+$/;
+	var highlightZeitgeber = null;
+
+	function behandleHashNavigation() {
+		var hash = window.location.hash;
+		if (!hash || !HASH_MUSTER.test(hash)) {
+			return;
+		}
+
+		// Kein querySelector(hash): Bei einem unerwarteten Hash waere das ein
+		// Selektor und koennte werfen. getElementById nimmt einen reinen
+		// String und liefert schlicht null.
+		var ziel = document.getElementById(hash.slice(1));
+		if (!ziel) {
+			return;
+		}
+
+		// Aufklappebenen OBERHALB des Ziels oeffnen, sonst laege die
+		// Kapitelkarte in einem display:none-Teilbaum und scrollIntoView
+		// haette nichts zu scrollen. Die eigene <details>-Ebene des Kapitels
+		// (Liste seiner Unterseiten) wird bewusst NICHT aufgeklappt - Ziel des
+		// Sprungs ist die Karte, ihr Aufklappzustand bleibt die Entscheidung
+		// des Blockattributs openByDefault bzw. des Lesers.
+		var vorfahr = ziel.parentNode;
+		while (vorfahr && vorfahr !== document.body) {
+			if (vorfahr.tagName === 'DETAILS') {
+				vorfahr.open = true;
+			}
+			vorfahr = vorfahr.parentNode;
+		}
+
+		ziel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+		// Ein zweiter Sprung waehrend einer noch laufenden Hervorhebung darf
+		// die Klasse nicht vorzeitig vom NEUEN Ziel entfernen - deshalb erst
+		// alles Alte aufraeumen und den Zeitgeber neu setzen.
+		if (highlightZeitgeber) {
+			window.clearTimeout(highlightZeitgeber);
+			highlightZeitgeber = null;
+		}
+		var alteHervorhebung = document.querySelectorAll('.page-index__chapter--highlight');
+		for (var h = 0; h < alteHervorhebung.length; h++) {
+			alteHervorhebung[h].classList.remove('page-index__chapter--highlight');
+		}
+
+		// Erzwungener Reflow: Ohne ihn fasst der Browser Entfernen und
+		// Hinzufuegen derselben Klasse innerhalb eines Frames zusammen, und
+		// die Animation liefe beim zweiten Sprung auf dieselbe Karte nicht
+		// erneut an.
+		void ziel.offsetWidth;
+
+		ziel.classList.add('page-index__chapter--highlight');
+		highlightZeitgeber = window.setTimeout(function () {
+			ziel.classList.remove('page-index__chapter--highlight');
+			highlightZeitgeber = null;
+		}, HIGHLIGHT_MS);
+	}
+
 	function start() {
 		// Mehrere Verzeichnisse auf einer Seite sind moeglich.
 		var alle = document.querySelectorAll('.page-index');
 		for (var i = 0; i < alle.length; i++) {
 			richteEin(alle[i]);
 		}
+
+		behandleHashNavigation();
 	}
+
+	// Auch ohne Neuladen reagieren: Ein Kapitellink, der auf die GERADE
+	// geoeffnete Seite zeigt, aendert nur den Hash und loest kein load-Ereignis
+	// aus. Ohne diesen Zuhoerer bliebe so ein Klick wirkungslos.
+	window.addEventListener('hashchange', behandleHashNavigation);
 
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', start);
