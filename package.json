@@ -1,6 +1,6 @@
 {
   "name": "fos-online-schulbuch",
-  "version": "1.5.95",
+  "version": "1.5.96",
   "description": "WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation",
   "type": "module",
   "scripts": {
