@@ -81,6 +81,56 @@
 	}
 
 	// ------------------------------------------------------------------
+	// Fehlerbehandlung
+	// ------------------------------------------------------------------
+	//
+	// PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md, AP-2.1: Die beiden
+	// catch()-Bloecke um die Seiten- und Kapitelliste (unten) nahmen bisher
+	// KEIN Funktionsargument entgegen - der tatsaechliche Fehlergrund ging
+	// verloren, die Meldung "... konnte nicht geladen werden." war dadurch
+	// nicht diagnostizierbar. Laut Diagnose vom 2026-09-08 ist der
+	// wahrscheinlichste reale Auslöser eine abgelaufene Editor-Sitzung
+	// (HTTP 403 rest_cookie_invalid_nonce) - dafuer gibt es eine eigene,
+	// verstaendliche Meldung; jeder andere Fehler zeigt seinen Fehlercode.
+
+	/**
+	 * Erkennt, ob ein wp.apiFetch()-Fehler auf eine abgelaufene Sitzung
+	 * oder eine fehlende Berechtigung zurueckgeht (HTTP 401/403), statt auf
+	 * einen echten Programm- oder Netzwerkfehler. wp.apiFetch() lehnt bei
+	 * einem REST-Fehler typischerweise mit einem Objekt ab, das ein
+	 * WP_Error-Feld "code" traegt (z. B. rest_cookie_invalid_nonce,
+	 * rest_forbidden) und den HTTP-Status unter data.status - bei einem
+	 * rohen Netzwerk-/Fetch-Fehler kann stattdessen nur "status" vorliegen.
+	 * Beide Formen werden hier abgedeckt.
+	 */
+	function istSitzungsFehler(fehler) {
+		if (!fehler) {
+			return false;
+		}
+		if (fehler.code === 'rest_cookie_invalid_nonce' || fehler.code === 'rest_forbidden') {
+			return true;
+		}
+		var status = (fehler.data && fehler.data.status) || fehler.status;
+		return status === 401 || status === 403;
+	}
+
+	/**
+	 * Baut aus einem Fehler und einem Basistext (z. B. "Die Seitenliste
+	 * konnte nicht geladen werden") die anzuzeigende Meldung. Bei einer
+	 * Sitzungs-/Berechtigungsfrage eine eigene, gezielt hilfreiche Meldung;
+	 * sonst der Basistext samt Fehlercode, damit der Grund nachvollziehbar
+	 * bleibt, ohne dass die Oberflaeche zu einer technischen Fehlerseite
+	 * wird.
+	 */
+	function formatiereFehlermeldung(fehler, basisText) {
+		if (istSitzungsFehler(fehler)) {
+			return 'Die Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut versuchen.';
+		}
+		var grund = (fehler && (fehler.code || fehler.message)) || 'unbekannt';
+		return basisText + ' (Fehlercode: ' + grund + ').';
+	}
+
+	// ------------------------------------------------------------------
 	// Oberflaeche
 	// ------------------------------------------------------------------
 
@@ -135,9 +185,10 @@
 				if (!liste || !liste.length) {
 					setFehler('Keine Seite mit einem Inhaltsverzeichnis-Block gefunden.');
 				}
-			}).catch(function () {
+			}).catch(function (fehler) {
 				setLaedt(false);
-				setFehler('Die Seitenliste konnte nicht geladen werden.');
+				console.error(fehler);
+				setFehler(formatiereFehlermeldung(fehler, 'Die Seitenliste konnte nicht geladen werden'));
 			});
 		}, [offen]);
 
@@ -157,9 +208,10 @@
 				if (!liste || !liste.length) {
 					setFehler('Diese Seite zeigt keine Kapitel an.');
 				}
-			}).catch(function () {
+			}).catch(function (fehler) {
 				setLaedt(false);
-				setFehler('Die Kapitelliste konnte nicht geladen werden.');
+				console.error(fehler);
+				setFehler(formatiereFehlermeldung(fehler, 'Die Kapitelliste konnte nicht geladen werden'));
 			});
 		}, [offen, gewaehlteSeite]);
 
