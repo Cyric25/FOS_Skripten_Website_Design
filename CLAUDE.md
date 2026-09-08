@@ -1606,6 +1606,296 @@ Details je Befund und die vollständigen Übergabenotizen der Phase-2-APs:
 `reference_file_map.md`, Zeilen zu `includes/page-index.php`,
 `src/css/page-index.css` und `src/js/page-index.js`.
 
+### Kapitellinks (`PLAN-Summary-PDF-und-Content-Links.md`, Phase 3, seit v1.5.97)
+
+Ein Redakteur kann im Editor markierten Text (oder die freie
+Einfügeposition) in einen Link verwandeln, der beim Klick zur Seite mit dem
+Inhaltsverzeichnis-Block springt und dort automatisch zur gewählten
+Kapitelkarte scrollt und sie kurz hervorhebt. Vier Bausteine greifen
+ineinander:
+
+**1. Anker-ID-Schema (AP-3.1, `includes/page-index.php`,
+`simple_clean_page_index_liste()`).** Jedes Kapitel-`<li>` — nur Ebene 0
+relativ zu `rootPage`, also genau die Knoten, die auch die Kapitelkarten
+sind — trägt zusätzlich `id="page-index-kapitel-<post_id>"`
+(Architekturentscheidung A6: Post-ID statt Slug, weil sie Titel- und
+Adressänderungen übersteht und kollisionsfrei ist):
+
+```php
+$id_attr = '';
+if ($ist_kapitel) {
+    $id_attr = ' id="' . esc_attr('page-index-kapitel-' . $node['id']) . '"';
+}
+$html .= '<li class="' . esc_attr($eintrag_klasse_knoten) . '"' . $id_attr . '>';
+```
+
+Rein additiv — Klassen, `<details>`-Struktur und die
+`--lehrer-only`-Kennzeichnung sind unverändert. Die ID sitzt bewusst am
+`<li>` (der eigentlichen Kapitel**karte** mit Rahmen/Hintergrund), nicht am
+`<details>` darin: Das `<li>` existiert immer, das `<details>` nur bei
+`collapsible === true` UND vorhandenen Unterseiten — Kapitel ohne
+Unterseiten hätten am `<details>` gar keine Sprungmarke bekommen.
+Unterseiten bekommen bewusst keine ID (Ziel ist die Kapitelkarte, nicht
+jede Ebene). Ein als „nur für Lehrpersonen" gesperrtes Kapitel bekommt
+seine ID nur, wenn der Betrachter angemeldet ist — für Gäste steht der
+Knoten gar nicht im Baum, der Sprung bleibt für sie folgenlos, die Sperre
+bleibt gewahrt.
+
+**Bekannte, akzeptierte Einschränkung:** Mehrere `fos/inhaltsverzeichnis`-
+Blöcke mit überlappenden Kapiteln auf **derselben** Seite erzeugen doppelte
+IDs. `document.getElementById()` (Punkt 2) nimmt dann das erste Vorkommen
+im Dokument — kein Blocker, der Sprung landet im richtigen Kapitel, nur
+ggf. in der falschen Blockinstanz. Dieselbe Wahl trifft die Blocksuche in
+Punkt 3 („der erste Block gewinnt").
+
+**2. Hash-Scroll-Mechanismus (AP-3.2, `src/js/page-index.js`,
+`behandleHashNavigation()`, plus `src/css/page-index.css`).** Beim Laden
+der Seite (`start()`) und bei jedem `hashchange`-Ereignis (ein Kapitellink
+auf die bereits geöffnete Seite ändert nur den Hash, ohne ein
+`load`-Ereignis auszulösen):
+
+1. `window.location.hash` gegen `/^#page-index-kapitel-\d+$/` prüfen — ein
+   schemafremder Hash (`#kommentar-12`) führt gar nicht erst zu einer Suche.
+2. Ziel per `document.getElementById(hash.slice(1))` suchen — bewusst
+   NICHT `querySelector(hash)`: Das würde den Hash als Selektor auswerten
+   und bei einem unerwarteten Wert eine Ausnahme werfen, während
+   `getElementById` einen reinen String nimmt und schlicht `null` liefert.
+3. Alle `<details>`-**Vorfahren** des Ziels öffnen — nicht das `<details>`
+   der Kapitelkarte selbst (dessen Aufklappzustand bleibt Sache von
+   `openByDefault` bzw. des Lesers; im heutigen Markup ohnehin nie
+   erreicht, da Kapitel immer Ebene 0 sind und nie selbst in einem
+   `<details>` liegen).
+4. `ziel.scrollIntoView({behavior: 'smooth', block: 'start'})`.
+5. Laufenden Hervorhebungs-Timer löschen, alle vorhandenen
+   `--highlight`-Klassen im Dokument entfernen, per erzwungenem Reflow
+   (`void ziel.offsetWidth`) sicherstellen, dass die Animation auch bei
+   einem zweiten Sprung auf dieselbe Karte neu anläuft (sonst fasst der
+   Browser Entfernen und Hinzufügen derselben Klasse innerhalb eines
+   Frames zusammen und die Animation bliebe aus), dann
+   `page-index__chapter--highlight` setzen und nach 2000 ms per
+   `setTimeout` wieder entfernen.
+
+Fehlt der Hash, passt er nicht zum Schema oder existiert kein passendes
+Element: Die Funktion bricht still ab, kein Fehler.
+
+**CSS-Feinheit — Endwert `var(--pidx-card-bg)` statt `transparent`
+(Abweichung vom ursprünglichen Plan-Text):**
+
+```css
+.page-index__chapter--highlight {
+    animation: page-index-highlight-pulse 2s ease-out;
+}
+@keyframes page-index-highlight-pulse {
+    0% {
+        background-color: var(--color-ui-surface-light, #f5ede9);
+        border-color: var(--pidx-accent);
+    }
+    100% {
+        background-color: var(--pidx-card-bg);
+        border-color: var(--pidx-card-border);
+    }
+}
+```
+
+Die Kapitelkarte hat eine eigene Flächenfarbe
+(`.page-index__chapter { background-color: var(--pidx-card-bg) }`). Ein
+Auslaufen nach `transparent`, wie ursprünglich im Plan-Text vorgeschlagen,
+ließe am Ende die Seitenfarbe durchscheinen und spränge beim Entfernen der
+Klasse sichtbar auf die Kartenfarbe zurück — ein Blitzer statt eines
+Ausklingens. Zusätzlich läuft der Rahmen über `--pidx-accent` mit, weil der
+Flächenunterschied bei hellem Kartenhintergrund allein sehr zart ist. Beide
+Werte kommen aus dem bestehenden `--pidx-*`-Vokabular, folgen damit dem
+Customizer und ziehen im Darkmode automatisch mit (Pflicht-Konvention:
+nur `var(--x, #fallback)`, nie ein freistehender Hexwert). Dazu ein
+`@media (prefers-reduced-motion: reduce)`-Zweig, der die Hervorhebung als
+ruhigen Zustand statt als Verlauf zeigt (Fläche/Rahmen sofort auf dem
+Endwert, `animation: none`) — das Weichscrollen selbst regelt der Browser
+bei dieser Einstellung von sich aus.
+
+**3. REST-Endpunkte für die zweistufige Zielauswahl (AP-3.3,
+`includes/kapitellink-api.php`, neu).** Zwei `GET`-Routen im Namespace
+`simple-clean/v1` (dieselbe Konvention wie der bestehende
+Glossar-Endpunkt), registriert auf `rest_api_init`:
+
+| Route | Antwort | Zweck |
+|---|---|---|
+| `/inhaltsverzeichnis-seiten` | `[{id, title}]` | alle veröffentlichten Seiten mit einem `fos/inhaltsverzeichnis`-Block, ermittelt per `has_block()` (findet ihn auch verschachtelt, z. B. in einem Container-Block des CDB-Designers) |
+| `/inhaltsverzeichnis-kapitel?seite=<id>` | `[{id, title}]` | die Kapitel dieses Blocks auf der gewählten Seite; leeres Array, wenn kein Block gefunden wird oder die Seite keine Kapitel zeigt (bewusst kein Fehlerstatus — für das Auswahlfeld im Editor ist „nichts zu wählen" die brauchbarere Antwort) |
+
+Beide Routen teilen sich **einen** `permission_callback`
+(`current_user_can('edit_posts')`), damit sie nicht auseinanderlaufen
+können. Ausschließlich WordPress-APIs (`get_pages()`, `has_block()`,
+`get_post()`, `parse_blocks()`, dazu die vorhandenen
+`simple_clean_page_index_sanitize_attrs()` und
+`simple_clean_page_index_daten()`) — **keine rohe `$wpdb`-Abfrage** in
+dieser Datei (siehe „Falle: rohe SQL-Abfragen greifen die Filter nicht ab"
+oben). **Präzisierung aus dem Review (Befund G3):**
+`simple_clean_page_index_daten()` selbst arbeitet mit rohem `$wpdb`
+(`includes/page-index.php`, Z. 163–176); die Kapitel-Route erreicht rohes
+SQL also *mittelbar*. Unbedenklich, weil genau diese Funktion ihre eigene
+Sichtbarkeitsprüfung mitbringt (siehe Sicherheitsabschnitt unten) — die
+Aussage „keine rohen `$wpdb`-Abfragen" im Kopfkommentar der Datei gilt nur
+für die neue Datei selbst, nicht für den gesamten Weg. Kein Zwischenspeicher
+(kein Transient, keine Option) — wie beim übrigen
+Inhaltsverzeichnis-Code.
+
+`simple_clean_kapitellink_finde_block()` durchsucht `parse_blocks()`-Bäume
+**rekursiv** (der Block kann in einem Container-Block stecken); „der erste"
+Treffer in Dokumentreihenfolge gewinnt bei mehreren Verzeichnisblöcken auf
+einer Seite — dieselbe Wahl trifft `getElementById()` bei doppelten
+Anker-IDs (Punkt 1). Die Konstante `SIMPLE_CLEAN_PAGE_INDEX_BLOCK`
+(`'fos/inhaltsverzeichnis'`) hält den Blocknamen an einer Stelle fest.
+
+**Abweichung vom Plan-Text — `$daten['children'][$rootPage]` statt
+`depth === 0`, mit Begründung.** Der ursprüngliche Plan-Text schlug vor,
+„alle Knoten mit `depth === 0`" als Kapitel zurückzugeben. Das wäre falsch
+gewesen: Das Feld `depth` in `simple_clean_page_index_daten()` zählt die
+Tiefe **ab der Wurzel der gesamten Website**, nicht ab `rootPage`. Bei
+einem Block mit `rootPage != 0` (auf dem Testserver der Regelfall, z. B.
+`rootPage = 17` auf `/chemie/`) hätte der Plan-Vorschlag die obersten
+Seiten der ganzen Website geliefert statt der Kapitel dieses Blocks.
+Verwendet wird deshalb `$daten['children'][$wurzel]` — dieselbe Quelle, aus
+der `simple_clean_render_page_index()` seine `$start_ids` zieht, inklusive
+desselben Rückfalls auf Ebene 0, wenn `rootPage` auf einen im Baum nicht
+(mehr) vorhandenen Knoten zeigt. Damit stimmt die Auswahlliste im Editor
+zwangsläufig mit dem überein, was auf der Seite tatsächlich steht. Live
+verifiziert: Ein Block mit `rootPage = 5613` lieferte über die neue Route
+2 Kapitel — mit dem `depth === 0`-Vorschlag wären es die obersten Seiten
+der Website gewesen.
+
+**Sicherheit — Ergebnis der Review-Prüfung (Risiko R3, kein Leck):** Beide
+Routen erben die Lehrpersonen-Sichtbarkeit **transitiv** von der
+projektweit einzigen Definition `simple_clean_ist_lehrperson()`
+(`includes/sichtbarkeit.php`), auf zwei unterschiedlichen, aber beide
+tragfähigen Wegen:
+- Route `/inhaltsverzeichnis-kapitel` über `simple_clean_page_index_daten()`,
+  die selbst `simple_clean_ist_lehrperson()` befragt.
+- Route `/inhaltsverzeichnis-seiten` über `get_pages()` → `WP_Query` →
+  `pre_get_posts` → `simple_clean_query_ausschluss()`
+  (`includes/sichtbarkeit.php`), das dank
+  `simple_clean_gesperrte_ids_liste()` für Lehrpersonen leer bleibt und
+  sonst greift.
+
+Live mit einer gesperrten Testseite und vier Rollen nachgewiesen
+(AP-3.rev): Anonym und Rollen ohne `edit_posts` erhalten HTTP 401/403 ohne
+Datenkörper — kein gesperrter Titel sickert durch. Wird
+`simple_clean_ist_lehrperson()` künftig verschärft (das Theme warnt weiter
+oben, dass sie heute nur „angemeldet" bedeutet), ziehen **beide** Routen
+automatisch mit, ohne dass diese Datei angefasst werden müsste.
+
+**4. Editor-Werkzeug „Kapitellink einfügen" (AP-3.4,
+`src/js/kapitellink-format.js`, neu; Enqueue in
+`simple_clean_kapitellink_editor_assets()` in
+`includes/kapitellink-api.php` — dort, nicht in `page-index.php`, weil das
+Script ausschließlich die beiden Routen dieser Datei bedient und den Block
+selbst nur als Datenquelle liest).** Markierten Text (oder die
+Einfügeposition ohne Auswahl) über einen neuen Knopf „Kapitellink" in der
+Inline-Werkzeugleiste (unter „Mehr", Dashicon `admin-links`) in einen Link
+verwandeln. Ein `Popover` (`@wordpress/components`) führt zweistufig: erst
+`SelectControl` „Seite" (Optionen aus
+`/simple-clean/v1/inhaltsverzeichnis-seiten`), nach Auswahl ein zweites
+`SelectControl` „Kapitel" (Optionen aus
+`/simple-clean/v1/inhaltsverzeichnis-kapitel?seite=<id>`). „Einfügen" holt
+den Permalink über `/wp/v2/pages/<id>` (Feld `link` — **nicht** selbst
+zusammengebaut, siehe die Warnung im Kopfkommentar von `page-index.php`
+gegen eigene Adress-Konstruktion) und baut
+`href = Permalink + '#page-index-kapitel-' + Kapitel-ID`.
+
+**Abweichung vom Plan-Text — `className: 'fos-kapitellink-werkzeug'` statt
+`null`, angewendet wird `core/link`, nicht das eigene Format.** Der
+Plan-Text schlug ein RichText-Format mit `tagName: 'a'` und
+`className: null` vor, das per `applyFormat()` direkt angewendet wird.
+Grund für die Abweichung: Ein Format mit `tagName: 'a'` UND
+`className: null` beansprucht in Gutenberg das **nackte** `<a>`-Element
+für sich — genau das, was der Kern-Formattyp `core/link` bereits tut.
+`getFormatTypeForBareElement()` nimmt den **ersten** passenden Typ; zwei
+Bewerber um dasselbe Element sind eine unnötige Fehlerquelle, und der
+eingefügte Link ließe sich dann nicht mehr mit der gewohnten
+Link-Oberfläche bearbeiten oder entfernen. Der registrierte Formattyp
+`fos/kapitellink` ist deshalb reiner **Träger des Werkzeugknopfes** und
+trägt die Klasse `fos-kapitellink-werkzeug`, die nie in einem Inhalt
+vorkommt, weil das Format nie angewendet wird — angewendet wird
+stattdessen `core/link` mit der berechneten URL. Das Ergebnis ist ein
+gewöhnlicher `<a href>`-Link **ohne Klasse und ohne Inline-Style**, mit
+der Standard-Link-Oberfläche weiter bearbeitbar, und folgt damit derselben
+Linkfarbregel wie jeder andere Content-Link (`:where(.entry-content) a`,
+siehe Abschnitt „Color Scheme" oben, Absatz „Content-Links folgen den
+Themefarben"). Nachgemessen aus der Datenbank: beide erzeugten Test-Links
+ohne `class`/`style`, berechnete `color` = `--color-special-text`,
+unterstrichen — identisch zu jedem anderen Inhalts-Link.
+
+Weitere Entscheidungen: Der Auswahlbereich wird beim Öffnen des Popovers in
+`gemerkterWert` festgehalten (sobald der Fokus in die Auswahlfelder
+wandert, ist auf den laufend hereingereichten `props.value` kein Verlass
+mehr — ohne diese Sicherung ist der Fehler sporadisch und schwer zu
+finden). Ohne Textauswahl wird der Kapiteltitel als neuer, bereits
+verlinkter Text eingefügt. Die Seitenliste wird erst beim Öffnen des
+Popovers geholt, nicht beim Laden des Editors — sonst liefe bei jeder
+Bearbeitung eine Anfrage, die die meisten nie brauchen. Fehlerfälle
+(Liste/Permalink nicht ladbar, keine passende Seite, Seite ohne Kapitel)
+zeigen eine sichtbare Meldung im Popover statt eines stillen Abbruchs. Ein
+„Kapitellink bearbeiten" mit vorbelegter Auswahl gibt es bewusst nicht —
+der eingefügte Link ist danach ein ganz normaler Link, änderbar über den
+Standard-Link-Dialog oder durch erneutes Aufrufen des Werkzeugs.
+
+**Bekannte Einschränkungen aus dem unabhängigen Review** (AP-3.rev,
+`PLAN-Summary-PDF-und-Content-Links.md`, Abschnitt 7 — kein kritischer
+Befund, Merge freigegeben, kein `AP-3.fix1` nötig):
+
+- **M1 (mittel) — `edit_posts` ist für ein reines Seiten-Werkzeug die
+  eigentlich falsche Berechtigung.** Beide REST-Routen und
+  `simple_clean_kapitellink_editor_assets()` prüfen `edit_posts`; das
+  Werkzeug bearbeitet aber ausschließlich **Seiten**. Die auf dieser
+  Installation tatsächlich genutzten Rollen `administrator` und
+  `block_redakteur` haben beide `edit_posts`, ein hypothetischer `editor`
+  ohne diese Capability (aber mit `edit_pages`) sähe den Knopf
+  „Kapitellink" dennoch — die Editor-Enqueue-Funktion hat keine eigene
+  Berechtigungsprüfung und hängt sich pauschal an
+  `enqueue_block_editor_assets` — bekäme beim Klick aber nur „Die
+  Seitenliste konnte nicht geladen werden."; die eigentliche Ursache (403)
+  ist von der Oberfläche aus nicht erkennbar. Der Befund geht auf eine
+  wörtliche Vorgabe im Plan-Text zurück, kein Implementierungsfehler. Kein
+  Blocker für den Merge (kein `editor`-Konto auf dieser Installation).
+  **Kandidat für ein Folgevorhaben:** Beide Prüfungen auf `edit_pages`
+  statt `edit_posts` umstellen.
+- **G1 (gering) — die beiden Routen bilden ihre Titel unterschiedlich.**
+  `/inhaltsverzeichnis-seiten` nutzt `get_the_title()` (durchläuft
+  `the_title`-Filter, u. a. `wptexturize`), `/inhaltsverzeichnis-kapitel`
+  reicht den rohen `post_title` aus `simple_clean_page_index_daten()`
+  durch. Bei Sonderzeichen (`&`, Anführungszeichen, Auslassungspunkte)
+  können die beiden Auswahlfelder deshalb leicht unterschiedlich
+  beschriftet sein. Kein Sicherheitsproblem — React und
+  `wp.richText.create()` behandeln den Wert als Text, nicht als Markup.
+- **G2 (gering) — ein Kapitellink auf ein gesperrtes Kapitel bleibt für die
+  Lehrperson sichtbar wirkungslos.** Die Kapitelliste bietet Redakteuren
+  auch gesperrte Kapitel an (ein Redakteur soll auch auf ein
+  Lösungskapitel verlinken können). Ruft eine Lehrperson den Link auf, ohne
+  vorher den Lehrpersonen-Toggle einzuschalten, steht das Ziel zwar im DOM,
+  ist aber `display: none` — der Sprung bleibt sichtbar folgenlos
+  (`scrollY` bleibt 0). Kein Sicherheitsproblem (Gäste erhalten den Knoten
+  ohnehin nicht). Im echten Seitenbestand bisher nicht aufgefallen, weil
+  alle gesperrten Seiten tiefe Unterseiten sind, kein Kapitel auf Ebene 0.
+- **G3 (gering) — Kopfkommentar-Formulierung „keine rohen `$wpdb`-Abfragen"
+  zu kurz gegriffen.** Siehe die Präzisierung oben im REST-Abschnitt.
+- **G4 (gering) — ein Verzeichnisblock in einem synchronisierten Muster
+  (`core/block`) wird von beiden Routen übersehen.** `has_block()`
+  durchsucht den serialisierten Inhalt nicht innerhalb eines
+  `core/block`-Verweises, `parse_blocks()` liefert dafür leere
+  `innerBlocks`. Theoretisch — im aktuellen Seitenbestand nicht
+  eingetreten.
+
+**Ankerschema, kein Bruch:** Alle vier Bausteine verwenden exakt dasselbe
+Muster `page-index-kapitel-<post_id>` — geprüft per `grep` über `includes/`
+und `src/` (AP-3.rev) und live durch Abgleich der von
+`/inhaltsverzeichnis-kapitel` gelieferten IDs gegen die tatsächlich
+gerenderten `id`-Attribute (deckungsgleich).
+
+Details, Messwerte und die vollständigen Übergabenotizen der Phase-3-APs:
+`PLAN-Summary-PDF-und-Content-Links.md`, Abschnitt 7. Datei-Referenzen:
+`reference_file_map.md`, Zeilen zu `includes/kapitellink-api.php`,
+`src/js/kapitellink-format.js`, `includes/page-index.php`,
+`src/js/page-index.js` und `src/css/page-index.css`.
+
 ## Seiten nur für Lehrpersonen (seit v1.5.78)
 
 Einzelne Seiten lassen sich sperren: Für nicht angemeldete Besucher
