@@ -1906,6 +1906,76 @@ zeigen eine sichtbare Meldung im Popover statt eines stillen Abbruchs. Ein
 der eingefügte Link ist danach ein ganz normaler Link, änderbar über den
 Standard-Link-Dialog oder durch erneutes Aufrufen des Werkzeugs.
 
+**Nachtrag: Fehlerdiagnose und Kapitel-Filter**
+(`PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md`, Phase 2, seit v1.5.100).
+Nach dem ersten Live-Einsatz durch den Betreiber meldete er zwei Punkte am
+Kapitellink-Werkzeug — eine vorab durchgeführte Diagnose klärte, dass ein
+gemeldeter Filtervorschlag auf der falschen Auswahlebene angesetzt hätte,
+zwei Nachbesserungen wurden umgesetzt:
+
+- **Diagnostizierbare Fehlermeldungen (AP-2.1, `src/js/kapitellink-format.js`).**
+  Die beiden `catch`-Blöcke um die Seitenliste (`holeSeiten()`) und die
+  Kapitelliste (`holeKapitel()`) nahmen zuvor kein Funktionsargument
+  entgegen — der tatsächliche Fehlergrund ging verloren, die Oberfläche
+  zeigte in jedem Fehlerfall dieselbe nicht diagnostizierbare
+  Pauschalmeldung. Zwei neue Hilfsfunktionen: `istSitzungsFehler(fehler)`
+  erkennt `fehler.code === 'rest_cookie_invalid_nonce'` oder
+  `'rest_forbidden'`, ersatzweise HTTP 401/403 über `fehler.data.status`
+  (regulärer `wp.apiFetch()`-REST-Fehler) oder `fehler.status` (roher
+  Netzwerk-/Fetch-Fehler ohne `data`-Feld); `formatiereFehlermeldung(fehler,
+  basisText)` liefert bei einer erkannten Sitzungs-/Berechtigungsfrage die
+  feste Meldung „Die Sitzung ist abgelaufen. Bitte die Seite neu laden und
+  erneut versuchen.", sonst `basisText + ' (Fehlercode: ' + (fehler.code ||
+  fehler.message || 'unbekannt') + ').'`. Beide `catch`-Blöcke rufen
+  zusätzlich `console.error(fehler)` auf, damit das vollständige
+  Fehlerobjekt für die Fehlersuche über die Browser-Konsole erhalten
+  bleibt. Der Erfolgsfall mit leerer Liste (z. B. „Diese Seite zeigt keine
+  Kapitel an.") ist kein Fehlerfall und blieb unverändert.
+
+- **Kapitel-Filter auf navigationsgesperrte Kapitel (AP-2.2,
+  `includes/kapitellink-api.php`, `simple_clean_kapitellink_kapitel()`).**
+  Ein Kapitellink ist nur für Kapitel sinnvoll, die über die normale
+  Navigation NICHT erreichbar sind, weil sie „Für Navigation sperren" aktiv
+  haben (Meta `_simple_clean_nav_gesperrt`) — genau dann rendert
+  `page-index.php` die Kapitelkarte als `<span>` statt `<a>`. Für alle
+  anderen Kapitel kann der Redakteur einfach einen gewöhnlichen Link
+  setzen. Die Funktion ruft dafür **einmalig**, außerhalb der Schleife über
+  die Kapitel, die bestehende `simple_clean_nav_gesperrte_seiten()`
+  (`includes/page-index.php`) auf und nimmt nur Kapitel auf, deren ID per
+  `isset()` in deren Ergebnis (`ID => true`) vorkommt — kein
+  Datenbankzugriff je Kapitel.
+
+  **Warum NICHT auf der Seiten-Liste gefiltert wird
+  (`simple_clean_kapitellink_seiten()`, unverändert) — wichtig für
+  künftige Bearbeiter.** Die Sperre sitzt nicht auf den Übersichtsseiten
+  (erster Auswahlschritt des Werkzeugs), sondern eine Ebene tiefer, auf den
+  einzelnen Kapiteln (zweiter Auswahlschritt). Ein Filter auf der
+  Seiten-Liste hätte auf dem geprüften Datenbestand 0 Treffer geliefert:
+  Bei keiner der sechs Seiten mit `fos/inhaltsverzeichnis`-Block war die
+  Sperre je auf der Seite selbst gesetzt, sondern ausschließlich auf ihren
+  Kindern. Ein Filter dort hätte das Werkzeug also insgesamt unbenutzbar
+  gemacht, nicht nur in Randfällen (Architekturentscheidung B5,
+  `PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md`, Abschnitt 4). Wer das
+  später „vereinfachen" möchte, indem der Filter auf beide Auswahlschritte
+  ausgeweitet wird, tappt in dieselbe Falle, die die ursprüngliche Anfrage
+  des Betreibers auslöste.
+
+  **Betriebshinweis (Befund G4 aus AP-2.rev).** Damit eine Seite im
+  Kapitellink-Werkzeug überhaupt nutzbare Kapitel anbietet, müssen die
+  betreffenden Unterseiten „Für Navigation sperren" aktiviert haben
+  (Seitenmanager bzw. Meta-Box „Navigation, Verzeichnis & Zugriff"). Ist
+  bei keinem Kapitel einer Seite die Sperre gesetzt, liefert die
+  Kapitel-Route eine leere Liste und das Werkzeug zeigt „Diese Seite zeigt
+  keine Kapitel an." — das ist kein Fehler, sondern das erwartete Verhalten
+  des Filters. Auf dem Testserver betraf das (Stand 2026-09-08) zusätzlich
+  zur bereits vorher leeren Seite 5614 auch Seite 5613 „Organische Chemie
+  und Biochemie Neu": beide Kapitel dieser Seite existieren, sind aber
+  keines davon navigationsgesperrt.
+
+Details, Messwerte und die vollständigen Übergabenotizen:
+`PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md`, Abschnitt 7 (AP-2.1,
+AP-2.2, AP-2.rev).
+
 **Bekannte Einschränkungen aus dem unabhängigen Review** (AP-3.rev,
 `PLAN-Summary-PDF-und-Content-Links.md`, Abschnitt 7 — kein kritischer
 Befund, Merge freigegeben, kein `AP-3.fix1` nötig):
@@ -1951,6 +2021,49 @@ Befund, Merge freigegeben, kein `AP-3.fix1` nötig):
   `core/block`-Verweises, `parse_blocks()` liefert dafür leere
   `innerBlocks`. Theoretisch — im aktuellen Seitenbestand nicht
   eingetreten.
+
+**Bekannte Einschränkungen — Nachtrag Phase 2** (aus dem unabhängigen
+Review AP-2.rev, `PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md` —
+kein kritischer, kein mittlerer Befund, Merge freigegeben, kein
+`AP-2.fix1` nötig; die folgenden zwei Punkte sind offene Kandidaten für
+einen möglichen Folgeplan, kein Blocker):
+
+- **G1 (gering) — ein dritter, noch ungesicherter `catch`-Block.** Der
+  `catch` um `holePermalink()` in `einfuegen()`
+  (`src/js/kapitellink-format.js`) nimmt weiterhin kein Fehlerargument
+  entgegen und ruft kein `console.error()` auf; die Meldung „Die Adresse
+  der Zielseite konnte nicht ermittelt werden." bleibt undiagnostizierbar.
+  Bewusst außerhalb des Scopes von AP-2.1 gelassen (der Plan-Text nannte
+  dort ausdrücklich nur die beiden Listen-`catch`-Blöcke). Trifft real
+  z. B. zu, wenn die Sitzung erst zwischen dem Öffnen des Popovers und dem
+  Klick auf „Einfügen" abläuft. Die beiden Hilfsfunktionen
+  `istSitzungsFehler()`/`formatiereFehlermeldung()` existieren bereits —
+  eine Behebung wäre eine kleine, gezielte Änderung.
+- **G2 (gering) — „Sitzung abgelaufen" ist bei einer reinen
+  Berechtigungsfrage irreführend.** Jeder 401/403 führt zur Meldung „Die
+  Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut
+  versuchen." — auch ein `rest_forbidden` OHNE abgelaufene Sitzung. Das
+  ist plan-konform (der AP-2.1-Text schreibt genau diese Meldung für „eine
+  Sitzungs-/Berechtigungsfrage" vor) und auf dieser Installation
+  folgenlos, weil beide genutzten Rollen (`administrator`,
+  `block_redakteur`) `edit_posts` besitzen. Hängt inhaltlich mit dem
+  bereits oben dokumentierten Befund **M1** aus dem Vorgängerplan zusammen
+  (Kapitellink-Routen und -Enqueue prüfen `edit_posts` statt des
+  eigentlich passenderen `edit_pages`): Eine Rolle mit `edit_pages`, aber
+  ohne `edit_posts`, sähe den Werkzeugknopf, bekäme beim Öffnen aber einen
+  403 — und „Seite neu laden" wäre die falsche Handlungsanweisung, weil
+  keine Sitzung abgelaufen ist, sondern die Berechtigung fehlt.
+  `console.error` zeigt in jedem Fall den echten Fehlercode, Support kann
+  also unterscheiden. **Kandidat für einen Folgeplan:** Wortlaut auf „Die
+  Sitzung ist abgelaufen oder die Berechtigung fehlt…" erweitern oder 401
+  und 403 getrennt behandeln — sinnvollerweise zusammen mit M1
+  (`edit_pages` statt `edit_posts`).
+
+Beide Punkte sind reine Beobachtungen ohne Sicherheitsrelevanz (kein
+Datenleck, keine falsche Berechtigungsprüfung) und blockieren den Merge
+nicht. Details und Nachweise:
+`PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md`, AP-2.rev, Befunde
+G1/G2.
 
 **Ankerschema, kein Bruch:** Alle vier Bausteine verwenden exakt dasselbe
 Muster `page-index-kapitel-<post_id>` — geprüft per `grep` über `includes/`
