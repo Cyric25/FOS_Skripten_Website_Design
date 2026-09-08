@@ -559,6 +559,74 @@ Ergänzungsvariablen oben: Wert an beiden Stellen ändern —
 `style.css` `:root` **und** `simple_clean_customizer_css()` in
 `functions.php` —, sonst driften sie auseinander.
 
+**Content-Links folgen den Themefarben (seit v1.5.96, AP-2.1 aus
+`PLAN-Summary-PDF-und-Content-Links.md`, Vorhaben „Linkfarben allgemein").**
+Ein vom Redakteur im Editor eingefügter Link (`core/link`, ohne eigene
+Klasse) lief vorher auf Browser-Standardblau — `.entry-content` hatte keine
+`a`-Regel. `style.css` trägt seither im `.entry-content`-Bereich:
+
+```css
+:where(.entry-content) a {
+    color: var(--color-special-text, #71230a);
+    text-decoration: underline;
+    text-decoration-color: var(--color-ui-surface, #e24614);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+:where(.entry-content) a:where(:hover, :focus-visible) {
+    color: var(--color-ui-surface-dark, #c93d12);
+}
+```
+
+Dunkelmodus kommt ohne Zusatzregel mit, da `--color-special-text` im
+`:root[data-theme="dark"]`-Block bereits einen eigenen Wert trägt.
+
+**Abweichung vom ursprünglichen Plan-Text — `:where(.entry-content) a`
+statt `.entry-content a`, und der Grund ist tragend, keine Stilfrage.**
+`.entry-content a` hat Spezifität (0,1,1) und schlägt damit jede
+einklassige Komponentenregel im selben Inhaltsbereich — gemessen kippten
+damit alle 74 `.page-index__page-link` des Blocks `fos/inhaltsverzeichnis`
+von `rgb(51,51,51)`/ohne Unterstreichung auf themefarben/unterstrichen.
+`:where()` senkt die Spezifität auf (0,0,1); Komponentenklassen
+(`.page-index__page-link`, `.page-index__chapter-link`, `.admin-link`,
+`.page-link` u. a.) gewinnen dadurch weiterhin, nur der klassenlose
+Redakteurslink wird eingefärbt. **Wer die Regel auf `.entry-content a`
+„vereinfacht", holt genau diesen Rückschritt zurück.**
+
+**Zwei Präzisierungen aus dem unabhängigen Review (AP-2.rev), die die
+Beschreibung oben ursprünglich zu knapp fasste:**
+- Die Faustregel „Komponentenklasse gewinnt gegen `:where(.entry-content) a`"
+  gilt **nicht uneingeschränkt** — sie setzt voraus, dass die
+  Komponentenregel selbst außerhalb von `:where()` steht (reguläre
+  Spezifität ≥ 0,1,0). WordPress' eigenes Blockstylesheet deklariert
+  `.wp-block-button__link { text-decoration: none }` selbst als
+  `:where(.wp-block-button__link)` (Spezifität 0,0,0) — dort gewinnt in
+  Wahrheit nicht die Komponentenklasse gegen die Theme-Regel, sondern
+  zusätzlich ausgegebene Global-Styles-Regeln mit 0,1,0. Betroffen ist
+  aktuell nur dieser eine Kernblock-Fall (gemessen, Knopf bleibt
+  unverändert weiß/ohne Unterstreichung); die Warnung gilt aber für jede
+  künftige `:where()`-Komponentenregel, egal welchen Ursprungs.
+- `:where()` senkt nur das **Gewicht**, es schränkt die **Trefferm**enge
+  nicht ein: Ein `<a class="irgendeine-ungestylte-klasse">` in
+  `.entry-content` wird ebenso themefarben wie ein klassenloser Link — das
+  ist beabsichtigt (ein Link, den keine andere Regel gestaltet, soll dem
+  Theme folgen), ist aber **kein Wächter** wie das `a:not([class])` in
+  `Plugins/CDB-Designer/assets/css/cbd-frontend-clean.css` (siehe unten).
+
+**Container-Block-Inhalte des CDB-Designers folgen unabhängig einer eigenen
+Regel** (`Plugins/CDB-Designer/CLAUDE.md`, Abschnitt „Links in
+Container-Block-Inhalten") — Container-Blöcke liegen zwar meist innerhalb
+von `.entry-content`, die dortige Regel nutzt aber bewusst `a:not([class])`
+statt `a`, um `.cbd-block-reference-link`, `.cbd-block-reference-inline` und
+`.wp-block-button__link` nicht zu überfahren. Beide Regeln greifen
+unabhängig und liefern für den klassenlosen Link dasselbe Ergebnis — mit
+**einer** bekannten, kosmetischen Ausnahme: `text-decoration-thickness`
+fällt innerhalb eines Container-Blocks `auto` statt `1px` aus, weil die
+Plugin-Regel die Kurzschreibweise `text-decoration: underline` benutzt, die
+`-thickness`/`-style` zurücksetzt, und dabei mit höherer Spezifität
+(0,2,1 gegen 0,0,1) gewinnt. Bei Fließtextgröße praktisch nicht
+wahrnehmbar; bewusst nicht behoben (Befund B-2 aus AP-2.rev).
+
 ## Darkmode (seit v1.5.83, `PLAN-Darkmode-Umschaltung.md`, Phase 1 abgeschlossen)
 
 Manueller, rein nutzergesteuerter Umschalter zwischen Hell- und Dunkelmodus.
