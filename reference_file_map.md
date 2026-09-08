@@ -1,6 +1,8 @@
 # Datei-Map: Theme „FOS Online Schulbuch"
 
-_Stand: 2026-09-08 · Theme-Version 1.5.96_
+_Stand: 2026-09-08 · Theme-Version 1.5.97 (nach Merge Phase 2 „Linkfarben
+allgemein" aus `PLAN-Summary-PDF-und-Content-Links.md` und dem
+anschließenden `npm run build`)_
 
 Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 `CLAUDE.md`, insbesondere in der Funktionsübersicht der `functions.php`.
