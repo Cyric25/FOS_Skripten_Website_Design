@@ -4244,6 +4244,20 @@ if (is_admin()) {
 require_once get_template_directory() . '/includes/page-index.php';
 
 // ===================================================================
+// KAPITELLINKS
+// ===================================================================
+
+// REST-Endpunkte für die zweistufige Zielauswahl (Seite → Kapitel) und das
+// Editor-Werkzeug „Kapitellink". Ebenfalls außerhalb des is_admin()-Blocks:
+// REST-Anfragen laufen nicht im Admin-Kontext, is_admin() ist dort false —
+// im is_admin()-Block registrierte Routen gäbe es schlicht nicht.
+//
+// MUSS NACH page-index.php stehen: Die Datei nutzt
+// simple_clean_page_index_sanitize_attrs() und simple_clean_page_index_daten()
+// von dort.
+require_once get_template_directory() . '/includes/kapitellink-api.php';
+
+// ===================================================================
 // SEITEN NUR FÜR LEHRPERSONEN
 // ===================================================================
 

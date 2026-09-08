@@ -88,6 +88,53 @@
 	border-color: var(--pidx-accent);
 }
 
+/* Kurze Hervorhebung nach einem Kapitellink-Sprung
+   (PLAN-Summary-PDF-und-Content-Links.md, AP-3.2). Die Klasse setzt und
+   entfernt src/js/page-index.js; sie bleibt genau 2000 ms stehen, gleich
+   lang wie die Animation hier.
+
+   ZWEI bewusste Abweichungen vom Vorschlag im Plan-Text:
+
+   1. Der Endwert ist var(--pidx-card-bg), nicht transparent. Die Kapitelkarte
+      hat oben eine eigene Flaechenfarbe; ein Auslaufen nach transparent liesse
+      am Ende die Seitenfarbe durchscheinen und beim Entfernen der Klasse
+      sichtbar auf die Kartenfarbe zurueckspringen - ein Blitzer statt eines
+      Ausklingens.
+   2. Zusaetzlich zur Flaeche laeuft der Rahmen ueber --pidx-accent mit. Bei
+      hellem Kartenhintergrund ist der Farbunterschied der Flaeche allein sehr
+      zart; der Rahmen macht den Sprung auch dort zweifelsfrei erkennbar.
+
+   Beide Farben kommen aus dem bestehenden --pidx-*-Vokabular, folgen damit
+   dem Customizer und ziehen im Darkmode automatisch mit (Pflicht-Konvention
+   des Themes: nur var(--x, #fallback), nie ein freistehender Hexwert). */
+.page-index__chapter--highlight {
+	animation: page-index-highlight-pulse 2s ease-out;
+}
+
+@keyframes page-index-highlight-pulse {
+	0% {
+		background-color: var(--color-ui-surface-light, #f5ede9);
+		border-color: var(--pidx-accent);
+	}
+
+	100% {
+		background-color: var(--pidx-card-bg);
+		border-color: var(--pidx-card-border);
+	}
+}
+
+/* Wer Bewegung im Betriebssystem abbestellt hat, bekommt die Hervorhebung
+   als ruhigen Zustand statt als Verlauf - die Karte ist trotzdem markiert.
+   Das Weichscrollen selbst regelt der Browser bei dieser Einstellung von
+   sich aus, scrollIntoView({behavior:'smooth'}) muss dafuer nichts tun. */
+@media (prefers-reduced-motion: reduce) {
+	.page-index__chapter--highlight {
+		animation: none;
+		background-color: var(--color-ui-surface-light, #f5ede9);
+		border-color: var(--pidx-accent);
+	}
+}
+
 /* --------------------------------------------------------------------
    Kapiteltitel
    Landet bei einem Kapitel MIT Unterseiten im <summary> (siehe unten),
