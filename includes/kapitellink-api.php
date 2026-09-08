@@ -149,8 +149,21 @@ function simple_clean_kapitellink_seiten() {
  * $start_ids zieht. Damit stimmt die Auswahlliste im Editor zwangsläufig mit
  * dem überein, was auf der Seite tatsächlich steht.
  *
+ * NAV-SPERR-FILTER (seit AP-2.2, PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md,
+ * Architekturentscheidung B5): Zurückgegeben werden ausschließlich Kapitel,
+ * die simple_clean_nav_gesperrte_seiten() als navigationsgesperrt führt — nur
+ * für die ist ein Kapitellink überhaupt sinnvoll, weil sie über die normale
+ * Navigation (page-index.php rendert dort ein <span> statt <a>) nicht
+ * erreichbar sind. Nicht gesperrte Kapitel bleiben aus der Liste, der
+ * Redakteur setzt für sie einen gewöhnlichen WordPress-Link. Der Filter
+ * sitzt bewusst NUR hier und NICHT auf simple_clean_kapitellink_seiten()
+ * (Seiten-Liste) — die Sperre sitzt eine Ebene tiefer, ein Filter auf der
+ * Seiten-Liste hätte 0 Treffer geliefert.
+ *
  * @param WP_REST_Request $anfrage Anfrage mit dem Parameter `seite`.
- * @return WP_REST_Response Liste aus {id, title}; leer, wenn kein Block da ist.
+ * @return WP_REST_Response Liste aus {id, title}; leer, wenn kein Block da ist
+ *                           oder kein Kapitel dieser Seite navigationsgesperrt
+ *                           ist.
  */
 function simple_clean_kapitellink_kapitel($anfrage) {
     $seiten_id = absint($anfrage->get_param('seite'));
@@ -186,9 +199,30 @@ function simple_clean_kapitellink_kapitel($anfrage) {
 
     $kapitel_ids = isset($daten['children'][$wurzel]) ? $daten['children'][$wurzel] : array();
 
+    // NAV-SPERR-FILTER (AP-2.2, Nachtragsplan): Ein Kapitellink ist für
+    // Kapitel gedacht, die über die normale Navigation NICHT erreichbar sind
+    // — genau dafür rendert simple_clean_page_index_liste() (page-index.php,
+    // rund um Zeile 547-565) statt eines <a> nur ein <span>, wenn das Meta
+    // _simple_clean_nav_gesperrt gesetzt ist. Nicht gesperrte Kapitel bekommt
+    // der Redakteur ohnehin über einen gewöhnlichen WordPress-Link, ein
+    // Kapitellink wäre dort überflüssig.
+    //
+    // Bewusst NUR hier, auf der Kapitel-Liste — NICHT auf
+    // simple_clean_kapitellink_seiten() (Seiten-Liste, erster Auswahlschritt):
+    // Die Sperre sitzt eine Ebene tiefer, auf den Kapiteln selbst, nicht auf
+    // den Übersichtsseiten. Ein Filter dort hätte 0 Treffer geliefert und das
+    // Werkzeug unbenutzbar gemacht (Architekturentscheidung B5 im
+    // Nachtragsplan, vom Nutzer bestätigt).
+    //
+    // EIN Aufruf für die gesamte Liste, keine Einzelabfrage je Kapitel — die
+    // Funktion hält ihr Ergebnis ohnehin schon statisch, aber der Aufruf
+    // steht bewusst außerhalb der foreach-Schleife, damit das auch im Code
+    // sichtbar bleibt.
+    $nav_gesperrt = simple_clean_nav_gesperrte_seiten();
+
     $kapitel = array();
     foreach ($kapitel_ids as $id) {
-        if (!isset($daten['nodes'][$id])) {
+        if (!isset($daten['nodes'][$id]) || !isset($nav_gesperrt[$id])) {
             continue;
         }
         $kapitel[] = array(
