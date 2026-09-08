@@ -606,7 +606,7 @@ Beschreibung oben ursprünglich zu knapp fasste:**
   aktuell nur dieser eine Kernblock-Fall (gemessen, Knopf bleibt
   unverändert weiß/ohne Unterstreichung); die Warnung gilt aber für jede
   künftige `:where()`-Komponentenregel, egal welchen Ursprungs.
-- `:where()` senkt nur das **Gewicht**, es schränkt die **Trefferm**enge
+- `:where()` senkt nur das **Gewicht**, es schränkt die **Treffermenge**
   nicht ein: Ein `<a class="irgendeine-ungestylte-klasse">` in
   `.entry-content` wird ebenso themefarben wie ein klassenloser Link — das
   ist beabsichtigt (ein Link, den keine andere Regel gestaltet, soll dem
