@@ -1,12 +1,13 @@
 # Datei-Map: Theme „FOS Online Schulbuch"
 
-_Stand: 2026-09-08 · Theme-Version 1.5.97 (nach Merge von Phase 2
+_Stand: 2026-09-08 · Theme-Version 1.5.98 (nach Merge von Phase 2
 „Linkfarben allgemein" UND Phase 3 „Kapitellinks" aus
-`PLAN-Summary-PDF-und-Content-Links.md` — beide Phasen zweigten unabhängig
-von `main` 1.5.95 ab und landeten über je eigene Build-Läufe zufällig beim
-selben Versionswert 1.5.97; `style.css`/`package.json` fielen deshalb beim
-Merge konfliktfrei zusammen, einzig diese Kopfzeile musste von Hand
-zusammengeführt werden)_
+`PLAN-Summary-PDF-und-Content-Links.md` und dem anschließenden
+`npm run build` — beide Phasen zweigten unabhängig von `main` 1.5.95 ab und
+landeten über je eigene Build-Läufe zufällig beim selben Versionswert
+1.5.97; `style.css`/`package.json` fielen deshalb beim Merge konfliktfrei
+zusammen, einzig diese Kopfzeile musste von Hand zusammengeführt werden;
+der Build danach zählte regulär auf 1.5.98 weiter)_
 
 Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 `CLAUDE.md`, insbesondere in der Funktionsübersicht der `functions.php`.
