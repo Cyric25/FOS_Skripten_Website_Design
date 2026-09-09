@@ -95,6 +95,7 @@
 
     function openLightbox( src, triggerEl ) {
         currentTrigger = triggerEl || null;
+        clbImg.classList.toggle( 'fos-darkmode-invert', !! ( triggerEl && triggerEl.classList && triggerEl.classList.contains( 'fos-darkmode-invert' ) ) );
 
         // Reset previous size + transform
         clbImg.style.removeProperty( 'width' );
