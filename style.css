@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.105
+Version: 1.5.108
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -1311,4 +1311,16 @@ video {
 .theme-toggle-icon {
     display: block;
     pointer-events: none;
+}
+
+/* ==========================================================================
+   Bilder ohne Hintergrund im Darkmode (PLAN-Darkmode-Bildinvertierung.md, AP-1.2)
+   Die Markerklasse .fos-darkmode-invert wird ausschliesslich per JavaScript
+   (darkmode-image-invert.js) gesetzt, wenn ein Bild in .entry-content per
+   Canvas-Analyse als transparent UND ueberwiegend dunkel erkannt wurde.
+   Reine Invertierung ohne Hue-Erhalt - bewusste Entscheidung, siehe CLAUDE.md
+   Abschnitt "Darkmode".
+   ========================================================================== */
+:root[data-theme="dark"] img.fos-darkmode-invert {
+    filter: invert(1);
 }

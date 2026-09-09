@@ -20,7 +20,8 @@ export default defineConfig({
         'page-index-editor': resolve(__dirname, 'src/js/page-index-editor.js'),
         'page-index': resolve(__dirname, 'src/js/page-index.js'),
         'page-index-style': resolve(__dirname, 'src/css/page-index.css'),
-        'kapitellink-format': resolve(__dirname, 'src/js/kapitellink-format.js')
+        'kapitellink-format': resolve(__dirname, 'src/js/kapitellink-format.js'),
+        'darkmode-image-invert': resolve(__dirname, 'src/js/darkmode-image-invert.js')
       },
       output: {
         // Output format

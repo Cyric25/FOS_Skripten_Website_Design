@@ -116,6 +116,18 @@ function simple_clean_theme_assets() {
             true
         );
     }
+
+    // Enqueue Darkmode-Bildinvertierung (from Vite build)
+    $darkmode_invert_js = get_template_directory() . '/dist/js/darkmode-image-invert.js';
+    if (file_exists($darkmode_invert_js)) {
+        wp_enqueue_script(
+            'simple-clean-darkmode-image-invert',
+            get_template_directory_uri() . '/dist/js/darkmode-image-invert.js',
+            array(),
+            filemtime($darkmode_invert_js),
+            true
+        );
+    }
 }
 add_action('wp_enqueue_scripts', 'simple_clean_theme_assets');
 

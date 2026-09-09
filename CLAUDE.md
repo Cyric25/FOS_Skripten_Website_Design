@@ -674,6 +674,70 @@ wie ihn `.theme-toggle-btn`, `.sidebar-toggle-close` und `.page-toggle`
 von Anfang an hatten. **Merksatz:** Jede neue Schaltfläche mit
 `background: none` braucht zusätzlich eine explizite `color`-Angabe.
 
+**Automatische Invertierung hintergrundloser Bilder (seit
+`PLAN-Darkmode-Bildinvertierung.md`, 2026-09, abgeschlossen):**
+Selbstgezeichnete Strukturbilder (z. B. Formelzeichnungen) haben oft einen
+transparenten Hintergrund und dunkle Linien — im Darkmode auf dem dunklen
+Seitenhintergrund unsichtbar. Ein neues Script erkennt solche Bilder
+automatisch und invertiert nur sie, ohne dass Redakteure sie manuell
+kennzeichnen müssen.
+
+*Mechanismus:* `src/js/darkmode-image-invert.js` durchläuft nach `window.load`
+(verzögert per `requestIdleCallback`, Rückfall `setTimeout` — nicht
+render-blockierend) alle `<img>` in `.entry-content` (bewusst NICHT
+site-weit). Für jedes Bild wird `analyzeImage(img)` aufgerufen: Das Bild
+zeichnet sich auf einen unsichtbaren, auf max. 200px Kantenlänge
+herunterskalierten `<canvas>` (Performance), `getImageData()` liefert die
+Pixel. Zwei Bedingungen müssen BEIDE zutreffen, sonst bleibt das Bild
+unangetastet:
+1. Mindestens 5 % der Pixel sind nennenswert transparent (Alpha < 250) —
+   Näherung für „hat keinen deckenden Hintergrund".
+2. Die mittlere Luminanz (Rec.-709-Gewichtung) der undurchsichtigen Pixel
+   liegt unter 100 (0–255-Skala) — Näherung für „ist überwiegend dunkel".
+
+Treffen beide zu, bekommt das `<img>` die Klasse `fos-darkmode-invert`
+(`img.dataset.fosDarkmodeChecked` verhindert Doppelanalyse). Die eigentliche
+Invertierung passiert ausschließlich per CSS in `style.css`:
+`:root[data-theme="dark"] img.fos-darkmode-invert { filter: invert(1); }` —
+reine Invertierung ohne `hue-rotate`, bewusst konsistent mit dem
+Tafelbild-Feature im CDB-Designer-Plugin (siehe dort, Abschnitt
+„Tafelmodus im Darkmode"), das denselben Trade-off (Farbtöne kippen in ihr
+Komplement) bereits nutzt. Damit läuft das Umschalten zwischen Hell- und
+Dunkelmodus ohne erneute Bildanalyse — nur die CSS-Regel greift oder nicht.
+`try/catch` um die Canvas-Analyse fängt `SecurityError` bei
+fremdgehosteten Bildern ohne CORS-Freigabe ab (Rückfall: keine
+Invertierung, kein Konsolenfehler). Enqueue in
+`simple_clean_theme_assets()` (`functions.php`) folgt exakt dem Muster von
+`'simple-clean-script'`.
+
+*Finale Schwellenwerte (nach Live-Kalibrierung, unverändert gegenüber dem
+ersten Entwurf):* `TRANSPARENT_ALPHA_THRESHOLD = 250`,
+`MIN_TRANSPARENT_RATIO = 0.05`, `DARK_LUMINANCE_THRESHOLD = 100`,
+`MAX_SAMPLE_DIMENSION = 200`. Auf der realen Content-Seite „Die wichtigsten
+Organischen Grundlagen" (30 Bilder) erkennt die Funktion reproduzierbar
+genau 2 Bilder (`Alkane.png`, `Alkene-1.png` — echte Strukturformeln mit
+transparentem Hintergrund) als invertierungswürdig, 0 falsch-positive unter
+den restlichen 28.
+
+*Lightbox-Sonderfall:* Die Custom-Lightbox in `src/js/main.js` zeigt die
+vergrößerte Ansicht NICHT über einen Klon des Original-`<img>`, sondern über
+ein einziges, wiederverwendetes `<img id="clb-img">`, dessen `src` bei jedem
+Öffnen neu gesetzt wird (`openLightbox(src, triggerEl)`). Die Markerklasse
+würde deshalb ohne Zusatzcode nicht auf `#clb-img` landen. Seit diesem
+Vorhaben überträgt `openLightbox()` sie per
+`clbImg.classList.toggle('fos-darkmode-invert', !!(triggerEl &&
+triggerEl.classList && triggerEl.classList.contains('fos-darkmode-invert')))`
+— `toggle()` statt `add()`, damit die Klasse beim nächsten Öffnen eines
+NICHT-invertierten Bildes auch wieder verschwindet (kein „Kleben" zwischen
+zwei Bildern in derselben Sitzung).
+
+*Bekannte, bewusst akzeptierte Einschränkung (aus dem unabhängigen Review
+`AP-1.rev`, geringer Befund, kein Korrekturbedarf):* `scanImages()` läuft nur
+einmalig nach `window.load`. Bilder, die erst nachträglich per AJAX in
+`.entry-content` eingefügt werden (z. B. dynamisch nachgeladene
+Container-Block-Inhalte), werden nicht erfasst. Kein Bestandteil dieses
+Vorhabens; Kandidat für ein mögliches Folgevorhaben.
+
 **Hintergrund/Historie:** `PLAN-CSS-Variablen-Darkmode.md` (Root-Verzeichnis)
 legte in einer Vorstufe die heutigen CSS-Variablen und ihre
 Customizer-Kopplung an, ohne selbst einen Umschalter zu bauen.
