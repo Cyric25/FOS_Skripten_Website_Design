@@ -246,7 +246,16 @@
 			vorfahr = vorfahr.parentNode;
 		}
 
-		ziel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		// Manuelle Berechnung statt scrollIntoView({block:'start'}): Das legt
+		// die Karte auf 0% der Bildschirmhoehe, wo die sticky Kopfleiste
+		// (style.css, .site-header, position: sticky; top: 0; z-index: 1000)
+		// sie teilweise verdeckt. Ziel ist stattdessen ca. 20% von oben
+		// (Architekturentscheidung C5, PLAN-Summary-Punktesystem-Buttons-und-
+		// Kapitellink-Feinschliff.md, AP-2.1) - scroll-margin-top in Prozent
+		// bezieht sich auf den Scroll-Container, nicht zuverlaessig auf die
+		// Fensterhoehe, deshalb hier bewusst ueber window.scrollTo() gerechnet.
+		var y = ziel.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.2;
+		window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
 
 		// Ein zweiter Sprung waehrend einer noch laufenden Hervorhebung darf
 		// die Klasse nicht vorzeitig vom NEUEN Ziel entfernen - deshalb erst
@@ -280,7 +289,20 @@
 			richteEin(alle[i]);
 		}
 
-		behandleHashNavigation();
+		// Verzoegerung NUR hier, nicht bei hashchange (siehe dortiger
+		// Aufruf unten): Beim initialen Seitenaufruf fuehrt der Browser
+		// selbst eine native "Scroll-zu-Fragment"-Bewegung durch, die
+		// waehrend des Ladens erneut ausgeloest werden kann (Layout-
+		// Verschiebungen durch nachladende Bilder oberhalb des Ziels) und
+		// dabei unsere eigene, weiter oben in behandleHashNavigation()
+		// berechnete 20%-Position ueberschreibt - gemessen: Ohne die
+		// Verzoegerung landet die Karte beim initialen Aufruf zurueck auf
+		// 0% statt 20%. Vorbild: handleAutoScroll() in src/js/glossar.js,
+		// dort ebenfalls 500ms. Bei einem hashchange (Klick auf einen
+		// Kapitellink zur bereits offenen Seite) tritt die native
+		// Fragment-Bewegung nicht auf, dort bleibt der direkte, unverzoegerte
+		// Aufruf richtig (im Test exakt 20% ohne Verzoegerung erreicht).
+		window.setTimeout(behandleHashNavigation, 500);
 	}
 
 	// Auch ohne Neuladen reagieren: Ein Kapitellink, der auf die GERADE
