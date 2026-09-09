@@ -1733,7 +1733,11 @@ auf die bereits geöffnete Seite ändert nur den Hash, ohne ein
    `openByDefault` bzw. des Lesers; im heutigen Markup ohnehin nie
    erreicht, da Kapitel immer Ebene 0 sind und nie selbst in einem
    `<details>` liegen).
-4. `ziel.scrollIntoView({behavior: 'smooth', block: 'start'})`.
+4. `ziel.scrollIntoView({behavior: 'smooth', block: 'start'})`. **Seit
+   AP-2.1 (`PLAN-Summary-Punktesystem-Buttons-und-Kapitellink-
+   Feinschliff.md`) nicht mehr so** — ersetzt durch eine manuelle
+   `window.scrollTo()`-Berechnung auf ca. 20 % der Bildschirmhöhe, Details
+   im Nachtrag „20-%-Scroll-Positionierung und neuer Tab" weiter unten.
 5. Laufenden Hervorhebungs-Timer löschen, alle vorhandenen
    `--highlight`-Klassen im Dokument entfernen, per erzwungenem Reflow
    (`void ziel.offsetWidth`) sicherstellen, dass die Animation auch bei
@@ -2064,6 +2068,127 @@ Datenleck, keine falsche Berechtigungsprüfung) und blockieren den Merge
 nicht. Details und Nachweise:
 `PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md`, AP-2.rev, Befunde
 G1/G2.
+
+**Nachtrag: 20-%-Scroll-Positionierung und neuer Tab**
+(`PLAN-Summary-Punktesystem-Buttons-und-Kapitellink-Feinschliff.md`, Phase 2,
+seit v1.5.105). Auf Betreiberwunsch zwei weitere Feinschliffe am
+Kapitellink-Sprungziel, unabhängig review-geprüft (AP-2.rev — kein
+kritischer Befund, Phase merge-fähig, kein `AP-2.fix1` nötig):
+
+- **Sprungziel jetzt bei ca. 20 % der Bildschirmhöhe statt 0 % (AP-2.1,
+  `src/js/page-index.js`, `behandleHashNavigation()`).** Schritt 4 im
+  Ablauf oben (`ziel.scrollIntoView({behavior:'smooth', block:'start'})`)
+  legte die Kapitelkarte auf 0 % der Bildschirmhöhe — dort verschwand sie
+  teilweise unter der sticky Kopfleiste (`.site-header`,
+  `position: sticky; top: 0; z-index: 1000`, 70 px hoch = 11,7 % von
+  599 px Fensterhöhe im Testfall). Ersetzt durch eine manuelle Berechnung
+  (Architekturentscheidung C5 des Plans — `scroll-margin-top` in Prozent
+  wird von keinem Browser unterstützt, live gemessen:
+  `CSS.supports('scroll-margin-top', '20%') === false`):
+
+  ```js
+  var y = ziel.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.2;
+  window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  ```
+
+  `Math.max(0, y)` verhindert einen negativen Scroll-Wert bei Kapiteln nahe
+  dem Seitenanfang; bei einem Kapitel nahe dem Seitenende klemmt der
+  Browser den Sollwert ohnehin automatisch auf die maximale
+  Scroll-Position (live verifiziert, kein Sonderfall im Code nötig).
+
+  **Zusätzlich nötig — 500-ms-Verzögerung nur beim initialen
+  Seitenaufruf, mit gegenüber der ursprünglichen Übergabenotiz korrigierter
+  Ursachenbeschreibung (Review-Befund G1).** Ohne Verzögerung landete die
+  Karte beim ersten Aufruf einer Seite mit Hash in der URL trotz der neuen
+  Berechnung wieder auf 0 % statt 20 %. Die ursprüngliche Übergabenotiz von
+  AP-2.1 führte das auf „nachladende Bilder oberhalb des Ziels" zurück —
+  das unabhängige Review (AP-2.rev) hat diese Beschreibung präzisiert: Die
+  tatsächlich tragende Ursache ist, dass der Browser nach
+  `DOMContentLoaded` selbst einen nativen, wegen
+  `html { scroll-behavior: smooth }` (`src/css/glossar.css:339`) weichen
+  Fragment-Sprung auf das `#`-Ziel auslöst — und dieser native Sprung
+  konkurriert mit dem eigenen, kurz zuvor synchron berechneten
+  `scrollTo()`-Aufruf um die zuletzt wirksame Scroll-Position. Welche
+  Bewegung zuletzt „gewinnt", entscheidet reine Zeitfolge, nicht ein
+  erneutes Layout-Verschieben durch nachladende Bilder — auf der geprüften
+  Testseite trägt das einzige Bild oberhalb des Verzeichnisses ohnehin
+  feste `width`/`height`-Maße. Behoben durch
+  `window.setTimeout(behandleHashNavigation, 500)` **nur** im
+  `start()`-Pfad (Vorbild `handleAutoScroll()` in `src/js/glossar.js:97`)
+  — beim `hashchange`-Pfad (Klick auf einen Kapitellink zur bereits
+  offenen Seite) tritt der native Sprung nicht auf, dort bleibt der Aufruf
+  unverzögert.
+
+- **Kapitellinks öffnen jetzt in einem neuen Tab (AP-2.2,
+  `src/js/kapitellink-format.js`, Architekturentscheidung C6).** Das beim
+  Einfügen angewendete `linkFormat`-Objekt
+  (`{ type: 'core/link', attributes: { url, target, rel } }`) trägt seit
+  dieser Ergänzung zusätzlich `target: '_blank', rel: 'noopener'` —
+  dieselben Werte, die WordPress' eigener „In neuem Tab öffnen"-Schalter im
+  Standard-Link-Werkzeug setzt (`createLinkFormat()` in
+  `format-library.js`, vom Review am echten, installierten WordPress-Core
+  nachgewiesen). Beide Attribute sind reguläre `core/link`-Attribute,
+  werden von `wp_kses_post()` nicht entfernt (`$allowedposttags['a']`
+  erlaubt beide) und bleiben über die Standard-Link-Oberfläche weiter
+  bearbeitbar — kein Filter, kein clientseitiges Nachrüsten nötig. Rein
+  additive Änderung am Neueinfüge-Pfad: bereits vorher eingefügte
+  Kapitellinks bleiben unverändert ohne `target`/`rel`.
+
+  **Zusammenspiel mit der 500-ms-Verzögerung, vom Review nachgemessen
+  (korrigiert gegenüber der ursprünglichen AP-2.2-Übergabenotiz, Befund
+  G5).** Ein `target="_blank"`-Link öffnet die Zielseite in einem neuen,
+  zunächst häufig im Hintergrund liegenden Tab (`document.hidden ===
+  true`). Die AP-2.2-Übergabenotiz hatte dazu ursprünglich vermerkt, ein
+  nicht gefronteter Tab liefere `scrollY: 0` selbst nach einem manuellen
+  Scroll-Aufruf — das war eine Eigenart der in dieser Sitzung verwendeten
+  Automatisierungsumgebung, keine zutreffende Aussage über reales
+  Browser-Verhalten, und wurde vom Review widerlegt: Ein Kapitel-Ziel in
+  einem echten, nie gefronteten Hintergrund-Tab (`document.hidden ===
+  true`) erreichte trotzdem zuverlässig **pct ≈ 19,97** — der
+  500-ms-Timer und der weiche Scroll laufen also auch dann korrekt, wenn
+  die Zielseite (wie bei einem echten neuen Tab typisch) zunächst im
+  Hintergrund lädt.
+
+**Bekannte Einschränkung — Kandidat für ein Folgevorhaben (Review-Befund
+M1 + G2/G3/G4/G9, kein Merge-Blocker).** Die 500-ms-Verzögerung oben ist
+eine reine Heuristik ohne Abschlussbedingung: Sie geht davon aus, dass der
+native Fragment-Sprung des Browsers innerhalb von 500 ms abgeschlossen ist,
+prüft das aber nicht (kein `load`-Nachschlag, kein Abgleich der erreichten
+Position, kein Abbruch bei eigenem Scrollen des Lesers während der
+Wartezeit). Auf dem Testserver funktioniert das durchgängig, weil oberhalb
+des geprüften Inhaltsverzeichnisses nur ein einziges, fest bemaßtes Bild
+liegt (kein Layoutsprung beim Nachladen) — auf einer Produktivseite mit
+unbemaßten, `loading="lazy"`- oder spät ersetzten Bildern bzw. spät
+geladenen Schriften oberhalb des Verzeichnisses ist ein Layoutsprung nach
+500 ms plausibel und bisher **ungetestet**; im schlechtesten Fall landet
+die Karte dann wieder auf 0 % — also auf dem Zustand vor AP-2.1, keine
+Verschlechterung gegenüber dem vorherigen Stand.
+
+Das Review hat dafür live eine robustere, im aktuellen Plan nicht geprüfte
+Alternative gemessen (Architekturentscheidung C5 hatte nur
+`scroll-margin-top` verworfen, das keine Prozentwerte akzeptiert — nicht
+`scroll-padding-top`, das sie akzeptiert und gegen die Fensterhöhe
+auflöst): Eine einzelne CSS-Zeile `scroll-padding-top: 20vh` (oder `20%`)
+neben dem bestehenden `html { scroll-behavior: smooth }` in
+`src/css/glossar.css` lieferte beim nativen Fragment-Sprung bereits
+**19,96 %** (`CSS.supports('scroll-padding-top', '20%') === true`) — ohne
+JavaScript-Timer, ohne die zweistufige Sprungbewegung (erst Richtung 0 %,
+dann nach 500 ms die Korrektur auf 20 %, Befund G3), ohne das Risiko, einen
+währenddessen selbst scrollenden Leser wegzureißen (Befund G4). Ein
+möglicher Folgeplan sollte diese eine CSS-Zeile auf einer Produktivseite
+mit unbemaßten Bildern verifizieren und, falls sie sich bestätigt, den
+`setTimeout`-Mechanismus ersatzlos entfernen. Unberührt davon bleibt der
+vorbestehende, nicht durch dieses Vorhaben verursachte Befund G9: Ein
+explizites `behavior: 'smooth'` im `scrollTo()`-Aufruf schlägt
+`prefers-reduced-motion: reduce` — derselbe Punkt bestand bereits beim
+vorherigen `scrollIntoView({behavior:'smooth', …})` und wäre bei einer
+künftigen Umstellung auf `scroll-padding-top` (das die native,
+CSS-gesteuerte Bewegung nutzt und `prefers-reduced-motion` damit
+automatisch respektieren würde) mit erledigt.
+
+Details, Messwerte und die vollständigen Übergabenotizen:
+`PLAN-Summary-Punktesystem-Buttons-und-Kapitellink-Feinschliff.md`,
+Abschnitt 7 (AP-2.1, AP-2.2, AP-2.rev, AP-2.doc).
 
 **Ankerschema, kein Bruch:** Alle vier Bausteine verwenden exakt dasselbe
 Muster `page-index-kapitel-<post_id>` — geprüft per `grep` über `includes/`

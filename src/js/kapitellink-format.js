@@ -250,7 +250,24 @@
 				// Oberflaeche weiterbearbeitet und entfernt werden kann - und
 				// er traegt keine eigene Klasse, folgt also der Linkfarbregel
 				// aus AP-2.1 wie jeder andere Inhalts-Link.
-				var linkFormat = { type: 'core/link', attributes: { url: url } };
+				//
+				// target/rel (PLAN-Summary-Punktesystem-Buttons-und-
+				// Kapitellink-Feinschliff.md, AP-2.2): Kapitellinks oeffnen
+				// in einem neuen Tab, damit der lesende Schueler seine
+				// Position auf der Ausgangsseite nicht verliert. Beide
+				// Attribute sind reguläre core/link-Attribute (identisch zum
+				// eingebauten "In neuem Tab oeffnen"-Schalter des
+				// Standard-Link-Werkzeugs), werden von wp_kses_post() nicht
+				// entfernt und bleiben ueber die Standard-Link-Oberflaeche
+				// weiter bearbeitbar - kein eigener Filter, kein
+				// clientseitiges Nachruesten noetig. Betrifft ueber diese
+				// eine Stelle beide Anwendungsfaelle unten (mit und ohne
+				// vorherige Textauswahl), da beide dieselbe linkFormat-
+				// Variable verwenden.
+				var linkFormat = {
+					type: 'core/link',
+					attributes: { url: url, target: '_blank', rel: 'noopener' }
+				};
 
 				var neuerWert;
 				if (wert.start === wert.end) {
