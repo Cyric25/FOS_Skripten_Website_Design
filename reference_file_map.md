@@ -1,16 +1,17 @@
 # Datei-Map: Theme „FOS Online Schulbuch"
 
-_Stand: 2026-09-09 · Theme-Version 1.5.104 (Branch
-`phase-2-kapitellink-feinschliff`, `PLAN-Summary-Punktesystem-Buttons-und-
-Kapitellink-Feinschliff.md`, AP-2.1 „Kapitellink-Sprungziel auf ca. 20 %
-Bildschirmhöhe" in `src/js/page-index.js` — Version 1.5.103 — und AP-2.2
-„Kapitellinks öffnen in einem neuen Tab" in `src/js/kapitellink-format.js`
-— Version 1.5.104 —, beide mit jeweils eigenem `npm run build`. Noch NICHT
-gemergt nach `main`, siehe AP-2.doc dieses Plans. Vorheriger Stand 1.5.101
-(Merge von Phase 2 „Kapitellink-Werkzeug: Fehlerdiagnose + Kapitel-Filter"
-aus `PLAN-Nachtraege-Summary-PDF-und-Kapitellinks.md` — AP-2.1
-diagnostizierbare Fehlermeldungen in `src/js/kapitellink-format.js`, AP-2.2
-Nav-Sperr-Filter in `includes/kapitellink-api.php`)_
+_Stand: 2026-09-09 · Theme-Version 1.5.105 (nach Merge von Phase 2
+„Kapitellink-Feinschliff" aus
+`PLAN-Summary-Punktesystem-Buttons-und-Kapitellink-Feinschliff.md` —
+AP-2.1 „Kapitellink-Sprungziel auf ca. 20 % Bildschirmhöhe" in
+`src/js/page-index.js` und AP-2.2 „Kapitellinks öffnen in einem neuen Tab"
+in `src/js/kapitellink-format.js`, unabhängig review-geprüft durch AP-2.rev
+(kein kritischer Befund, kein `AP-2.fix1` nötig) — und dem anschließenden
+`npm run build` (Merge-Commit `8df515a`, Build-Commit `4cbfd50`).
+Ausgangsstand war 1.5.101 (siehe Vorgänger-Historie); die APs dieses
+Feinschliffs bauten in eigenen Läufen bereits auf 1.5.103 und 1.5.104 hoch,
+der abschließende Dokumentations-Build (AP-2.doc) zählte auf 1.5.105
+weiter)_
 
 Navigationshilfe auf Dateiebene. Details zu den Subsystemen stehen in
 `CLAUDE.md`, insbesondere in der Funktionsübersicht der `functions.php`.
