@@ -21,7 +21,9 @@ export default defineConfig({
         'page-index': resolve(__dirname, 'src/js/page-index.js'),
         'page-index-style': resolve(__dirname, 'src/css/page-index.css'),
         'kapitellink-format': resolve(__dirname, 'src/js/kapitellink-format.js'),
-        'darkmode-image-invert': resolve(__dirname, 'src/js/darkmode-image-invert.js')
+        'darkmode-image-invert': resolve(__dirname, 'src/js/darkmode-image-invert.js'),
+        'meldungen': resolve(__dirname, 'src/js/meldungen.js'),
+        'meldungen-style': resolve(__dirname, 'src/css/meldungen.css')
       },
       output: {
         // Output format

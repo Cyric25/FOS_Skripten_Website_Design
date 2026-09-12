@@ -1,0 +1,250 @@
+/**
+ * Fehlermeldungen melden — Fenster und Formular
+ *
+ * Pflicht-Konvention dieses Themes: ausschließlich var(--x, #fallback) mit den
+ * zentralen Farbvariablen, nie ein freistehender Hexwert. Nur so zieht der
+ * Dunkelmodus automatisch mit, ohne dass der :root[data-theme="dark"]-Block
+ * nachgezogen werden muss.
+ */
+
+/* ----------------------------------------------------------- Das Fenster */
+
+.fos-meldung-fenster {
+    position: fixed;
+    inset: 0;
+    z-index: 100001; /* über Kopfleiste (1000) und Navigations-Streifen (1001) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.fos-meldung-fenster[hidden] {
+    display: none;
+}
+
+.fos-meldung-hintergrund {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.fos-meldung-kasten {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    border-radius: 8px;
+    background-color: var(--color-background, #ffffff);
+    color: var(--color-text-primary, #333333);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.fos-meldung-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.fos-meldung-kopf h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--color-special-text, #71230a);
+}
+
+.fos-meldung-schliessen {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    /* Merksatz aus der Theme-Doku: Jede Schaltfläche mit background:none
+       braucht eine eigene color-Angabe — sonst bleibt sie im Dunkelmodus
+       schwarz auf dunklem Grund. */
+    color: var(--color-text-primary, #333333);
+}
+
+.fos-meldung-schliessen:hover,
+.fos-meldung-schliessen:focus-visible {
+    background-color: var(--color-ui-surface-light, #f5ede9);
+    color: var(--color-ui-surface-dark, #c93d12);
+}
+
+.fos-meldung-einleitung {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    color: var(--color-text-muted, #666666);
+}
+
+body.fos-meldung-offen {
+    overflow: hidden;
+}
+
+/* ---------------------------------------------------------- Das Formular */
+
+.fos-meldung-seite {
+    max-width: 620px;
+}
+
+.fos-meldung-feld {
+    margin: 0 0 16px;
+}
+
+.fos-meldung-feld label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.fos-meldung-pflicht {
+    color: var(--color-danger, #cc3333);
+}
+
+.fos-meldung-freiwillig {
+    font-weight: 400;
+    color: var(--color-text-muted, #666666);
+}
+
+.fos-meldung-formular input[type="text"],
+.fos-meldung-formular select,
+.fos-meldung-formular textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border, #dddddd);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1rem;
+    background-color: var(--color-background, #ffffff);
+    color: var(--color-text-primary, #333333);
+}
+
+.fos-meldung-formular input[type="text"]:focus,
+.fos-meldung-formular select:focus,
+.fos-meldung-formular textarea:focus {
+    outline: none;
+    border-color: var(--color-ui-surface, #e24614);
+    box-shadow: 0 0 0 1px var(--color-ui-surface, #e24614);
+}
+
+.fos-meldung-formular textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+/* Markierte Textstelle */
+
+.fos-meldung-auswahl {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border-left: 4px solid var(--color-ui-surface, #e24614);
+    border-radius: 0 4px 4px 0;
+    background-color: var(--color-ui-surface-light, #f5ede9);
+    font-size: 0.9rem;
+}
+
+.fos-meldung-auswahl[hidden] {
+    display: none;
+}
+
+.fos-meldung-auswahl-titel {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.fos-meldung-auswahl-text {
+    margin: 0 0 6px;
+    font-style: italic;
+    max-height: 6em;
+    overflow-y: auto;
+}
+
+.fos-meldung-auswahl-weg {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+    color: var(--color-text-muted, #666666);
+}
+
+.fos-meldung-auswahl-weg:hover,
+.fos-meldung-auswahl-weg:focus-visible {
+    color: var(--color-ui-surface-dark, #c93d12);
+}
+
+/* Honigtopf: für Menschen unsichtbar, für Bots ein Feld wie jedes andere.
+   Bewusst nicht display:none — manche Bots überspringen genau das. */
+.fos-meldung-honigtopf {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Absenden */
+
+.fos-meldung-aktionen {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0;
+}
+
+.fos-meldung-senden {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: var(--color-ui-surface, #e24614);
+    color: var(--color-text-on-accent, #ffffff);
+}
+
+.fos-meldung-senden:hover:not(:disabled),
+.fos-meldung-senden:focus-visible:not(:disabled) {
+    background-color: var(--color-ui-surface-dark, #c93d12);
+}
+
+.fos-meldung-senden:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.fos-meldung-status {
+    font-size: 0.9rem;
+    color: var(--color-text-muted, #666666);
+}
+
+.fos-meldung-status--erfolg {
+    color: var(--color-success, #2ecc40);
+    font-weight: 500;
+}
+
+.fos-meldung-status--fehler {
+    color: var(--color-danger, #cc3333);
+    font-weight: 500;
+}
+
+@media screen and (max-width: 600px) {
+    .fos-meldung-fenster {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .fos-meldung-kasten {
+        max-width: 100%;
+        max-height: 95vh;
+        border-radius: 8px 8px 0 0;
+    }
+}

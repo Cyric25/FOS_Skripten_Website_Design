@@ -1385,6 +1385,11 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   prüft sowohl die Scan-Nachholung (inkl. „kein zweiter Scan bei erneutem
   Aufruf") als auch die Datenverlust-Sicherung anhand eines echten,
   reproduzierten PCRE-Kompilierungsfehlers.
+- **Usage-Tracking läuft nur für `post` und `page` (seit v1.5.112).** Die
+  Funktion hängt auf `save_post` und lief zuvor für jeden Inhaltstyp. Ein Typ
+  ohne `_glossar_term_candidates` — jeder neue also — fiel damit auf „alle
+  Begriffe" zurück. Aufgefallen beim Inhaltstyp der Fehlermeldungen (siehe
+  Abschnitt „Fehlermeldungen"), behoben allgemein statt für diesen einen Typ.
 - **Usage-Tracking überspringt Revisionen (Fix v1.5.109) — nicht
   entfernen.** `simple_clean_track_glossar_usage()` hängt auf `save_post`
   (Priorität 20) und lief dadurch auch auf der **Revision**, die WordPress
@@ -1654,6 +1659,8 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   ergänzt. Wer `handle` entfernt, muss sie nachrüsten.
 - `clipboard-uploader.php`: Bilder aus der Zwischenablage in die Mediathek
   (Capability `upload_files`).
+- `meldungen-admin.php`: Listen- und Einzelansicht der Fehlermeldungen — siehe
+  eigenen Abschnitt „Fehlermeldungen" unten.
 
 **Der Menü-Slug `page-manager` ist eine öffentliche Schnittstelle.** Das
 Plugin CDB-Designer hängt dort per `add_submenu_page()` den Eintrag „Seiten
@@ -1668,6 +1675,87 @@ verschwindet der Eintrag aus diesem Menü und landet im Rückfall unter
   Root-CLAUDE.md „Color Scheme").
 - Menü-Auto-Zuweisung: `simple_clean_auto_assign_menu()` (sucht Menü
   „Skripten Übersicht").
+
+## Fehlermeldungen (seit v1.5.112)
+
+Jede Besucherin und jeder Besucher kann einen Fehler auf einer Seite melden —
+**ausdrücklich auch Schülerinnen und Schüler im Klassenmodus**, die sich nie
+anmelden. Sie finden die meisten Fehler, weil sie den Text wirklich lesen.
+Code in `includes/meldungen.php` (Formular, Inhaltstyp, Annahme) und
+`includes/admin/meldungen-admin.php` (Sichten und Abarbeiten).
+
+**Leitgedanke, an dem sich Änderungen messen lassen sollten:** Gute Meldungen
+entstehen nicht durch ein größeres Textfeld, sondern dadurch, dass das
+Formular die halbe Antwort schon kennt. Gefragt wird nur, was der Server nicht
+wissen kann; alles andere kommt automatisch mit.
+
+| Gefragt (drei Pflichtfelder, eines freiwillig) | Automatisch erfasst |
+|---|---|
+| Art der Meldung (Whitelist in `simple_clean_meldung_arten()`) | Seiten-ID und Titel, Adresse |
+| „Worum geht es?" — wird der Titel der Meldung | **zuvor markierte Textstelle** |
+| Beschreibung — der Platzhalter richtet sich nach der Art | Klasse aus `?classroom=` |
+| Name oder Klasse (freiwillig) | Browser, Bildschirmbreite, angemeldet ja/nein |
+
+**Die markierte Textstelle wird laufend mitgeschrieben, nicht erst beim Klick
+gelesen** (`src/js/meldungen.js`, Variable `letzteMarkierung`). Ein Klick auf
+den Link im Footer hebt die Markierung im selben Moment auf — beim Auslesen
+wäre sie schon weg. Genau diese Angabe macht bei einem Schulbuch den
+Unterschied zwischen „auf der Seite stimmt etwas nicht" und einer Meldung, mit
+der sich sofort arbeiten lässt. **Wer die Stelle erst im Klick-Handler
+ausliest, baut den Fehler nach.**
+
+**Zwei Wege, ein Formular:** Der Link „Fehler melden" im Footer (jede Seite,
+`simple_clean_meldung_footer_link()`, aufgerufen aus `footer.php`) öffnet ein
+Fenster direkt auf der gelesenen Seite — der Lesepunkt geht nicht verloren.
+Ohne JavaScript führt derselbe Link auf die Seite mit dem Shortcode
+`[fos_meldeformular]`, deren ID beim Speichern in der Option
+`fos_meldung_seite_id` vermerkt wird. Beide Wege verwenden **dieselbe**
+Funktion `simple_clean_meldung_formular()`; ein zweites, abweichendes Formular
+wäre eine Fehlerquelle.
+
+### Inhaltstyp `fos_meldung`
+
+`public => false`, nicht in Suche, Verzeichnis, Sitemap oder REST — eine
+Meldung enthält oft den Namen einer Schülerin oder eines Schülers. Drei eigene
+Zustände (`fos_meldung_neu`, `_arbeit`, `_erledigt`), registriert mit
+`show_in_admin_status_list`; dadurch steht die Filterzeile „Neu (12) | In
+Arbeit (3) | Erledigt (40)" ohne eigenes Zutun über der Liste.
+
+**`supports => array('title')` — bewusst ohne `'editor'`.** Ohne
+Editor-Unterstützung öffnet WordPress die klassische Bearbeitungsansicht statt
+des Blockeditors. Das ist kein Schönheitsargument: Der Blockeditor würde den
+eingegangenen Meldungstext beim ersten Speichern in Blockauszeichnung
+umschreiben. Der Text steht deshalb in einer eigenen, schreibgeschützten Box.
+
+**Zustandswechsel läuft über `$wpdb->update()` plus `clean_post_cache()`**
+(`simple_clean_meldung_zustand_setzen()`), nicht über `wp_update_post()` —
+dasselbe Muster wie beim `post_parent` im Seitenmanager. Der Aufruf kommt aus
+einem `save_post`-Haken; ein `wp_update_post()` darin würde denselben Haken
+erneut auslösen. Die Status- und Sichtbarkeitszeilen der Veröffentlichen-Box
+sind per CSS ausgeblendet: Sie kennen die eigenen Zustände nicht.
+
+### Missbrauchsschutz
+
+Honigtopf-Feld (für Menschen unsichtbar, aber **nicht** `display:none` — das
+überspringen manche Bots) plus eine Grenze von fünf Meldungen je Viertelstunde
+und Absender. **Gezählt wird erst der Erfolg, nicht der Versuch:** Sonst
+sperrt sich aus, wer dreimal ein Pflichtfeld vergisst — und genau das passiert
+denen, die zum ersten Mal vor so einem Formular sitzen. Die IP dient nur als
+gehashter Schlüssel des Zählers und wird **nirgends gespeichert**; an der
+Meldung hängt sie nicht.
+
+Die gemeldete Adresse wird nur übernommen, wenn sie auf diese Website zeigt —
+sonst stünde ein fremder Link anklickbar in der Admin-Ansicht.
+
+### Falle, die beim Bauen aufgefallen ist
+
+`simple_clean_track_glossar_usage()` hängt auf `save_post` und lief bis dahin
+für **jeden** Inhaltstyp. Ein neuer Typ hat kein `_glossar_term_candidates`,
+also hätte jede gespeicherte Meldung den teuren Rückfall über alle
+Glossarbegriffe ausgelöst. Die Funktion steigt jetzt für alles außer
+`post`/`page` aus (siehe „Glossar-System" oben). **Wer einen weiteren
+Inhaltstyp ergänzt, muss dort nichts mehr tun — genau deshalb ist der Riegel
+allgemein und nicht auf `fos_meldung` gemünzt.**
 
 ## Inhaltsverzeichnis-Block (`fos/inhaltsverzeichnis`)
 

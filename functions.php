@@ -2410,6 +2410,22 @@ function simple_clean_track_glossar_usage($post_id = null) {
         return; // Don't track usage in glossar posts themselves
     }
 
+    // Nur die Inhaltstypen, für die es überhaupt gedacht ist — dieselbe Liste
+    // wie in simple_clean_update_glossar_candidates(), abzüglich 'glossar'
+    // (eine Zeile darüber schon ausgeschlossen).
+    //
+    // WARUM DAS NÖTIG IST: Die Funktion hängt auf save_post und lief damit für
+    // JEDEN Inhaltstyp, auch für neu hinzukommende. Ein solcher Typ hat kein
+    // _glossar_term_candidates — das schreibt update_glossar_candidates nur für
+    // post/page/glossar —, also griff unten der Rückfall „alle Begriffe" und
+    // jagte sämtliche Glossarbegriffe samt Wortvarianten über den Inhalt.
+    // Beim Inhaltstyp der Fehlermeldungen (includes/meldungen.php) hätte das
+    // jede abgeschickte Meldung unnötig verteuert. Dieselbe Falle wie bei den
+    // Revisionen darunter, nur eine Ebene allgemeiner.
+    if (!in_array(get_post_type($post_id), array('post', 'page'), true)) {
+        return;
+    }
+
     // Revisionen (und Autosaves, die ebenfalls Revisionen sind) überspringen.
     //
     // WARUM DAS WICHTIG IST: Bei jedem Statuswechsel legt WordPress
@@ -4263,6 +4279,18 @@ if (is_admin()) {
     require_once get_template_directory() . '/includes/admin/page-manager.php';
     require_once get_template_directory() . '/includes/admin/clipboard-uploader.php';
     Simple_Clean_Clipboard_Uploader::init();
+}
+
+// ===================================================================
+// FEHLERMELDUNGEN
+// ===================================================================
+
+// Das Formular und der Inhaltstyp gehoeren ins Frontend UND ins Backend: Die
+// Meldung wird ueber admin-ajax.php gespeichert, und der Inhaltstyp muss
+// registriert sein, damit die Admin-Liste ihn kennt.
+require_once get_template_directory() . '/includes/meldungen.php';
+if (is_admin()) {
+    require_once get_template_directory() . '/includes/admin/meldungen-admin.php';
 }
 
 // ===================================================================
