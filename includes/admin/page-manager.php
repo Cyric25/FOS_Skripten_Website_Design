@@ -723,7 +723,18 @@ class Simple_Clean_Page_Manager {
 
         $ids = isset($_POST['page_ids']) ? (array) $_POST['page_ids'] : [];
         $ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
-        $ids = array_slice($ids, 0, 500);
+
+        // Obergrenze je Anfrage. Die Oberfläche stückelt von sich aus in
+        // kleinere Pakete (page-manager.js, paketGroesse()), hier steht die
+        // Grenze nur noch als Schutz gegen direkte Aufrufe. Was darüber
+        // hinausgeht, wird GEMELDET statt stillschweigend verworfen — vorher
+        // meldete die Antwort bei 520 gewählten Seiten „500 Seite(n)
+        // geändert." und verschwieg die restlichen 20.
+        $abgeschnitten = 0;
+        if (count($ids) > 500) {
+            $abgeschnitten = count($ids) - 500;
+            $ids = array_slice($ids, 0, 500);
+        }
 
         if (empty($ids)) {
             wp_send_json_error(['message' => 'Keine Seiten ausgewählt.']);
@@ -746,7 +757,72 @@ class Simple_Clean_Page_Manager {
         $uebersprungen = 0;
         $errors = [];
 
-        foreach ($ids as $id) {
+        // ZEITBUDGET — die eigentliche Absicherung gegen das Zeitlimit.
+        //
+        // Statuswechsel und Papierkorb gehen über wp_update_post() bzw.
+        // wp_trash_post() und lösen save_post aus: Glossar-Scan, Revision,
+        // Cache-Verwurf. Je nach Seitengröße, Glossarumfang und Servertempo
+        // kostet das zwischen einer und mehreren Sekunden pro Seite — auf
+        // dem Testserver gemessen 1,5 s im CLI und 3,5 s über HTTP.
+        //
+        // Lief die Schleife dagegen, brach PHP mitten drin ab (HTTP 500).
+        // Die bereits geschriebenen Seiten blieben geändert, die Oberfläche
+        // sah nur einen Fehler und lud nicht neu — es wirkte, als würde nur
+        // die erste Seite geändert. Deshalb hört die Schleife jetzt von sich
+        // aus auf, bevor das Limit erreicht ist, und gibt die noch offenen
+        // IDs zurück. Die Oberfläche schickt sie in der nächsten Anfrage
+        // hinterher (page-manager.js, sendePaket()).
+        //
+        // Der Abbruch wird VORAUSGESCHAUT: Aufgehört wird, sobald die
+        // verstrichene Zeit plus die längste bisher gemessene Seitendauer das
+        // Budget reißen würde. Eine starre Schwelle („mehr als 60 % verbraucht,
+        // jetzt Schluss") reicht nicht — sie merkt erst NACH dem Überschreiten,
+        // dass es zu viel war, und die zuletzt begonnene Seite läuft trotzdem
+        // noch komplett durch. Genau daran wäre es bei 4 s pro Seite und 30 s
+        // Limit weiterhin knapp geworden.
+        //
+        // Mindestens eine Seite wird IMMER bearbeitet, damit der Lauf auch bei
+        // sehr knappem Limit vorankommt und nicht endlos zwischen Oberfläche
+        // und Server pendelt.
+        // `max_execution_time` ist NICHT verlässlich die Zeit, die eine Anfrage
+        // wirklich hat:
+        // - `0` heißt „kein PHP-Limit" und kommt bei PHP-FPM regelmäßig vor.
+        //   Dort begrenzt stattdessen `request_terminate_timeout` oder ein
+        //   Proxy/Gateway davor — Werte, die PHP nicht kennt. Ein Budget, das
+        //   sich bei `0` selbst abschaltet, schützt genau dort nicht, wo es am
+        //   nötigsten wäre.
+        // - Ein großzügiger Wert (120, 300) sagt ebenfalls nichts über das
+        //   Gateway aus, das die Verbindung viel früher kappen kann. Die
+        //   Oberfläche sieht dann HTTP 500/504, obwohl die ersten Seiten schon
+        //   geschrieben sind — das ist der Fehler, den dieses Budget verhindern
+        //   soll.
+        //
+        // Deshalb: fehlender Wert wird als 30 s gelesen, und nach oben wird auf
+        // 20 s Arbeit je Anfrage gedeckelt. Mehr bringt ohnehin nichts, weil
+        // die Oberfläche stückelt — der Rest kommt in der nächsten Anfrage.
+        $zeitlimit    = (int) ini_get('max_execution_time');
+        if ($zeitlimit <= 0) {
+            $zeitlimit = 30;
+        }
+        $budget       = min(20, max(5, (int) floor($zeitlimit * 0.8)));
+        $startzeit    = microtime(true);
+        $letzterStart = $startzeit;
+        $maxdauer     = 0.0;
+        $offen        = [];
+
+        foreach ($ids as $position => $id) {
+            $jetzt = microtime(true);
+
+            if ($position > 0) {
+                $maxdauer = max($maxdauer, $jetzt - $letzterStart);
+
+                if ($budget > 0 && ($jetzt - $startzeit) + $maxdauer > $budget) {
+                    $offen = array_values(array_slice($ids, $position));
+                    break;
+                }
+            }
+            $letzterStart = $jetzt;
+
             $page = get_post($id);
             if (!$page || $page->post_type !== 'page') {
                 $errors[] = "Seite ID $id nicht gefunden";
@@ -891,6 +967,10 @@ class Simple_Clean_Page_Manager {
         if ($uebersprungen > 0) {
             $meldung .= sprintf(' %d ohne Änderung.', $uebersprungen);
         }
+        if ($abgeschnitten > 0) {
+            $meldung .= sprintf(' %d Seite(n) über dem Limit von 500 NICHT bearbeitet.', $abgeschnitten);
+            $errors[] = sprintf('%d Seite(n) wurden nicht bearbeitet: mehr als 500 pro Anfrage.', $abgeschnitten);
+        }
 
         wp_send_json_success([
             'aktion'        => $aktion,
@@ -899,6 +979,21 @@ class Simple_Clean_Page_Manager {
             'errors'        => $errors,
             'message'       => $meldung,
             'reload'        => $reload,
+            // Vom Zeitbudget zurückgestellte Seiten. Die Oberfläche hängt sie
+            // an den Anfang der Warteschlange und schickt sie erneut.
+            'offen'         => $offen,
+            // Nur zur Fehlersuche: Bricht eine Anfrage auf einem fremden Server
+            // trotz Budget ab, zeigen diese drei Werte sofort, ob das Budget zu
+            // großzügig war oder ob etwas VOR PHP die Verbindung gekappt hat
+            // (dann steht hier eine harmlose Dauer und es kam trotzdem kein
+            // Ergebnis an). Die Oberfläche schreibt sie bei einem Abbruch in
+            // die Browser-Konsole.
+            'diagnose'      => [
+                'limit'  => $zeitlimit,
+                'budget' => $budget,
+                'dauer'  => round(microtime(true) - $startzeit, 2),
+                'anzahl' => count($ids),
+            ],
         ]);
     }
 }

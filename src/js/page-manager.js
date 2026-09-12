@@ -158,8 +158,18 @@
             });
 
             // Alle auswählen
+            //
+            // Anhaken betrifft nur die SICHTBAREN Zeilen — zugeklappte
+            // Unterbäume sollen nicht unbemerkt mitkommen. Das Abhaken räumt
+            // dagegen ALLE Häkchen weg, auch die in zugeklappten Zweigen;
+            // sonst gäbe es keinen Weg, eine versteckte Vorauswahl wieder
+            // loszuwerden (siehe Hinweis in aktualisiereAuswahl()).
             $('#page-select-all').on('change', function() {
-                $('.page-select:visible').prop('checked', this.checked);
+                if (this.checked) {
+                    $('.page-select:visible').prop('checked', true);
+                } else {
+                    $('.page-select').prop('checked', false);
+                }
                 self.letzteAuswahl = null;
                 self.aktualisiereAuswahl();
             });
@@ -196,26 +206,75 @@
 
         /**
          * Auswahlzähler, Kopf-Checkbox und Ausführen-Knopf nachziehen
+         *
+         * Gezählt wird über ALLE Häkchen, nicht nur die sichtbaren — genau
+         * die Menge also, die fuehreBulkAus() später verschickt. Vorher zählte
+         * diese Stelle `.page-select:visible`: wer Unterseiten auswählte und
+         * den Elternknoten danach zuklappte, sah „0 ausgewählt" und einen
+         * ausgegrauten Knopf, während in Wahrheit noch fünf Häkchen gesetzt
+         * waren — und beim nächsten Ausführen sechs statt einer Seite
+         * geändert wurden.
+         *
+         * Zugeklappte Häkchen bleiben absichtlich erhalten (eine Auswahl
+         * verschwindet nicht, nur weil man einen Zweig zuklappt), werden im
+         * Zähler aber getrennt ausgewiesen.
          */
         aktualisiereAuswahl: function() {
-            const $alle = $('.page-select:visible');
-            const $gewaehlt = $alle.filter(':checked');
-            const anzahl = $gewaehlt.length;
+            const $alle = $('.page-select');
+            const anzahl = $alle.filter(':checked').length;
 
-            $('#page-bulk-count').text(anzahl + ' ausgewählt');
+            const $sichtbar = $('.page-select:visible');
+            const sichtbarGewaehlt = $sichtbar.filter(':checked').length;
+            const versteckt = anzahl - sichtbarGewaehlt;
+
+            let text = anzahl + ' ausgewählt';
+            if (versteckt > 0) {
+                text += ' (' + versteckt + ' in zugeklappten Zweigen)';
+            }
+            $('#page-bulk-count').text(text);
 
             const aktion = $('#page-bulk-action').val();
             $('#page-bulk-apply').prop('disabled', anzahl === 0 || !aktion);
 
             const $alleBox = $('#page-select-all');
             if ($alleBox.length) {
-                $alleBox.prop('checked', anzahl > 0 && anzahl === $alle.length);
-                $alleBox.prop('indeterminate', anzahl > 0 && anzahl < $alle.length);
+                $alleBox.prop('checked', sichtbarGewaehlt > 0 && sichtbarGewaehlt === $sichtbar.length);
+                $alleBox.prop('indeterminate', sichtbarGewaehlt > 0 && sichtbarGewaehlt < $sichtbar.length);
             }
         },
 
         /**
+         * Wie viele Seiten gehen je Anfrage an den Server?
+         *
+         * Die drei Aktionen unten schreiben über wp_update_post() bzw.
+         * wp_trash_post() und lösen damit save_post aus — Glossar-Scan,
+         * Revision, Cache-Verwurf. Das kostet je Seite mit echtem Inhalt rund
+         * 1,5 s im CLI und 2,5 bis 4,5 s über HTTP — je größer die Seite,
+         * desto teurer. Drei Seiten je Anfrage halten eine Anfrage damit bei
+         * rund 13 s und die Fortschrittsanzeige in Bewegung.
+         *
+         * Alle übrigen Aktionen schreiben nur post_parent oder ein Meta und
+         * brauchen für zehn Seiten rund 0,3 s — die dürfen in großen Paketen
+         * laufen, sonst zahlt man für 500 Seiten unnötig viele Roundtrips.
+         *
+         * Diese Größen sind bewusst nur eine Schätzung: Was tatsächlich in
+         * eine Anfrage passt, entscheidet der Server anhand seines
+         * Zeitbudgets und stellt den Rest über das Antwortfeld `offen`
+         * zurück (siehe ajax_bulk_action() in page-manager.php). Die Zahlen
+         * hier sparen nur Roundtrips, sie sind nicht die Absicherung.
+         */
+        paketGroesse: function(aktion) {
+            const teuer = ['status_publish', 'status_draft', 'trash'];
+            return teuer.indexOf(aktion) !== -1 ? 3 : 100;
+        },
+
+        /**
          * Sammelaktion ausführen
+         *
+         * Verschickt die Auswahl in Paketen (siehe paketGroesse) und zählt die
+         * Rückmeldungen zusammen. Bricht ein Paket ab, hält der Lauf an und
+         * meldet, wie weit er gekommen ist — angefangene Sammelaktionen bleiben
+         * dadurch nachvollziehbar statt stumm halb erledigt.
          */
         fuehreBulkAus: function() {
             const self = this;
@@ -240,54 +299,166 @@
                 }
             }
 
-            const daten = {
-                action: 'page_manager_bulk_action',
-                nonce: pageManagerData.nonce,
-                bulk_action: aktion,
-                page_ids: ids
+            const parentId = (aktion === 'set_parent')
+                ? (parseInt($('#page-bulk-parent').val(), 10) || 0)
+                : null;
+
+            const groesse = self.paketGroesse(aktion);
+
+            // Warteschlange statt fester Pakete: Der Server darf Seiten
+            // zurückstellen, wenn sein Zeitbudget aufgebraucht ist
+            // (ajax_bulk_action(), Antwortfeld `offen`). Die kommen dann vorn
+            // wieder rein und gehen mit der nächsten Anfrage raus.
+            const warteschlange = ids.slice();
+
+            const bilanz = {
+                gesamt: ids.length,
+                erledigt: 0,
+                geaendert: 0,
+                uebersprungen: 0,
+                errors: [],
+                reload: false,
+                // Serverseitige Kennzahlen je Paket (Zeitlimit, Budget, Dauer).
+                // Landen bei einem Abbruch in der Browser-Konsole — ohne sie
+                // ist auf einem fremden Server nicht zu unterscheiden, ob das
+                // Budget zu großzügig war oder ob etwas vor PHP die Verbindung
+                // gekappt hat.
+                diagnose: []
             };
-            if (aktion === 'set_parent') {
-                daten.parent_id = parseInt($('#page-bulk-parent').val(), 10) || 0;
-            }
 
             $('#page-bulk-apply').prop('disabled', true);
-            self.showStatus('saving', 'Aktion wird ausgeführt...');
 
-            $.ajax({
-                url: pageManagerData.ajaxUrl,
-                type: 'POST',
-                data: daten,
-                success: function(response) {
-                    if (!response.success) {
-                        self.showStatus('error', response.data.message);
-                        self.aktualisiereAuswahl();
-                        return;
-                    }
-
-                    let meldung = response.data.message;
-                    if (response.data.errors && response.data.errors.length > 0) {
-                        console.warn('Sammelaktion – übersprungene Seiten:', response.data.errors);
-                        meldung += ' (' + response.data.errors.length
-                            + ' übersprungen — Details in der Konsole)';
-                    }
-                    self.showStatus('saved', meldung);
-
-                    if (response.data.reload) {
-                        // Aufklapp-Zustand sichern, damit er das Neuladen
-                        // übersteht (dasselbe Muster wie in createPage()).
-                        self.saveExpandedState();
-                        setTimeout(function() {
-                            location.reload();
-                        }, 600);
-                    } else {
-                        self.aktualisiereAuswahl();
-                    }
-                },
-                error: function() {
-                    self.showStatus('error', 'Fehler bei der Sammelaktion.');
-                    self.aktualisiereAuswahl();
+            const sendePaket = function() {
+                if (warteschlange.length === 0) {
+                    self.bulkAbschluss(bilanz, null);
+                    return;
                 }
-            });
+
+                const paket = warteschlange.splice(0, groesse);
+
+                if (bilanz.gesamt > paket.length) {
+                    self.showStatus('saving', 'Aktion wird ausgeführt... '
+                        + bilanz.erledigt + ' von ' + bilanz.gesamt);
+                } else {
+                    self.showStatus('saving', 'Aktion wird ausgeführt...');
+                }
+
+                const daten = {
+                    action: 'page_manager_bulk_action',
+                    nonce: pageManagerData.nonce,
+                    bulk_action: aktion,
+                    page_ids: paket
+                };
+                if (parentId !== null) {
+                    daten.parent_id = parentId;
+                }
+
+                $.ajax({
+                    url: pageManagerData.ajaxUrl,
+                    type: 'POST',
+                    data: daten,
+                    success: function(response) {
+                        if (!response || !response.success) {
+                            const grund = (response && response.data && response.data.message)
+                                ? response.data.message
+                                : 'Unerwartete Antwort vom Server';
+                            bilanz.errors.push(grund);
+                            self.bulkAbschluss(bilanz, grund);
+                            return;
+                        }
+
+                        const offen = (response.data.offen && response.data.offen.length)
+                            ? response.data.offen
+                            : [];
+                        const verarbeitet = paket.length - offen.length;
+
+                        bilanz.erledigt += verarbeitet;
+                        bilanz.geaendert += response.data.geaendert || 0;
+                        bilanz.uebersprungen += response.data.uebersprungen || 0;
+                        if (response.data.errors && response.data.errors.length > 0) {
+                            bilanz.errors = bilanz.errors.concat(response.data.errors);
+                        }
+                        if (response.data.reload) {
+                            bilanz.reload = true;
+                        }
+                        if (response.data.diagnose) {
+                            bilanz.diagnose.push(response.data.diagnose);
+                        }
+
+                        if (offen.length > 0) {
+                            // Kam nichts voran, würde erneutes Senden endlos
+                            // pendeln — dann lieber sauber abbrechen. Der Server
+                            // bearbeitet immer mindestens eine Seite, dieser Fall
+                            // sollte also nie eintreten.
+                            if (verarbeitet <= 0) {
+                                self.bulkAbschluss(bilanz, 'Server kam im Zeitbudget nicht voran');
+                                return;
+                            }
+                            Array.prototype.unshift.apply(warteschlange, offen);
+                        }
+
+                        sendePaket();
+                    },
+                    error: function(xhr) {
+                        // Sollte durch das Zeitbudget des Servers nicht mehr
+                        // vorkommen. Falls doch (Gateway-Timeout, Neustart):
+                        // nicht stillschweigend weitermachen, sondern melden,
+                        // wie weit der Lauf gekommen ist — ein Teil des Pakets
+                        // kann bereits geschrieben sein.
+                        const grund = 'Anfrage fehlgeschlagen (HTTP ' + (xhr ? xhr.status : '?') + ')';
+                        bilanz.errors.push(grund);
+                        self.bulkAbschluss(bilanz, grund);
+                    }
+                });
+            };
+
+            sendePaket();
+        },
+
+        /**
+         * Sammelaktion abschließen: Bilanz melden und ggf. neu laden
+         *
+         * @param {Object} bilanz Aufsummierte Rückmeldungen aller Pakete
+         * @param {?string} abbruchgrund Gesetzt, wenn ein Paket gescheitert ist
+         */
+        bulkAbschluss: function(bilanz, abbruchgrund) {
+            const self = this;
+
+            let meldung = bilanz.geaendert + ' Seite(n) geändert.';
+            if (bilanz.uebersprungen > 0) {
+                meldung += ' ' + bilanz.uebersprungen + ' ohne Änderung.';
+            }
+
+            if (abbruchgrund) {
+                meldung = 'Abgebrochen nach ' + bilanz.erledigt + ' von '
+                    + bilanz.gesamt + ' Seiten: ' + abbruchgrund + ' — ' + meldung;
+            }
+
+            if (abbruchgrund) {
+                console.warn('Sammelaktion abgebrochen. Server-Kennzahlen je Paket:',
+                    bilanz.diagnose);
+            }
+
+            if (bilanz.errors.length > 0) {
+                console.warn('Sammelaktion – Meldungen:', bilanz.errors);
+                if (!abbruchgrund) {
+                    meldung += ' (' + bilanz.errors.length
+                        + ' übersprungen — Details in der Konsole)';
+                }
+            }
+
+            self.showStatus(abbruchgrund ? 'error' : 'saved', meldung);
+
+            if (bilanz.reload && bilanz.geaendert > 0) {
+                // Aufklapp-Zustand sichern, damit er das Neuladen
+                // übersteht (dasselbe Muster wie in createPage()).
+                self.saveExpandedState();
+                setTimeout(function() {
+                    location.reload();
+                }, abbruchgrund ? 2500 : 600);
+            } else {
+                self.aktualisiereAuswahl();
+            }
         },
 
         /**

@@ -2410,6 +2410,26 @@ function simple_clean_track_glossar_usage($post_id = null) {
         return; // Don't track usage in glossar posts themselves
     }
 
+    // Revisionen (und Autosaves, die ebenfalls Revisionen sind) überspringen.
+    //
+    // WARUM DAS WICHTIG IST: Bei jedem Statuswechsel legt WordPress
+    // automatisch eine Revision an. Die trägt denselben Inhalt wie die Seite,
+    // aber KEIN _glossar_term_candidates-Meta — die Kandidatenliste schreibt
+    // simple_clean_update_glossar_candidates() nur für post/page/glossar.
+    // Ohne diese Sperre greift unten also der Rückfall „alle Begriffe" und
+    // jagt sämtliche Glossarbegriffe samt Varianten-Regex über den ganzen
+    // Seiteninhalt: gemessen 13,0 s je Revision bei 1613 Begriffen, gegenüber
+    // 0,04 s für die Seite selbst. Das war der Grund, warum die
+    // Sammelaktionen des Seitenmanagers (includes/admin/page-manager.php,
+    // ajax_bulk_action()) nach ein bis zwei Seiten in max_execution_time
+    // liefen und der Rest der Auswahl unverändert blieb.
+    //
+    // Die Revision braucht das Meta auch gar nicht: Ausgewertet wird
+    // _glossar_terms_used immer an der Seite, nie an ihrer Revision.
+    if (wp_is_post_revision($post_id)) {
+        return;
+    }
+
     $content = get_post_field('post_content', $post_id);
     if (empty($content)) {
         return;

@@ -1385,6 +1385,24 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   prüft sowohl die Scan-Nachholung (inkl. „kein zweiter Scan bei erneutem
   Aufruf") als auch die Datenverlust-Sicherung anhand eines echten,
   reproduzierten PCRE-Kompilierungsfehlers.
+- **Usage-Tracking überspringt Revisionen (Fix v1.5.109) — nicht
+  entfernen.** `simple_clean_track_glossar_usage()` hängt auf `save_post`
+  (Priorität 20) und lief dadurch auch auf der **Revision**, die WordPress
+  bei jedem Statuswechsel automatisch anlegt. Die Revision trägt denselben
+  Inhalt, aber kein `_glossar_term_candidates` — das schreibt
+  `simple_clean_update_glossar_candidates()` nur für `post`/`page`/`glossar`.
+  Also griff der Rückfall „alle Begriffe" und jagte sämtliche Begriffe samt
+  Wortvarianten über den vollen Inhalt. Gemessen an einer 85-kB-Seite bei
+  1613 Begriffen: **13,0 s für die Revision gegen 0,04 s für die Seite
+  selbst** — 90 % der Gesamtkosten eines `wp_update_post()`. Ein
+  `wp_is_post_revision()`-Ausstieg gleich zu Beginn der Funktion behebt das;
+  Veröffentlichen einer Seite fiel damit von 14,3 s auf 1,5 s. Die Revision
+  braucht das Meta auch gar nicht: Ausgewertet wird `_glossar_terms_used`
+  immer an der Seite, nie an ihrer Revision.
+
+  **Das war die Ursache des Fehlerberichts „Sammelaktionen ändern nur die
+  erste Seite"** — Details im Abschnitt „Admin-Werkzeuge", Unterabschnitt
+  „Stückelung und Zeitbudget".
 - **Einstellungen:** Optionen `glossar_modal_type` (tooltip|sidebar),
   `glossar_auto_link`, `glossar_first_only`, `glossar_case_sensitive`,
   `glossar_auto_rebuild`; Admin-Seite `simple_clean_glossar_settings_page()`
@@ -1521,6 +1539,78 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
   verändern (Status, Papierkorb, Elternseite), falsch bei den Meta-Aktionen —
   dort genügt eine Statusmeldung. Vor dem Neuladen sichert das JavaScript den
   Aufklapp-Zustand, wie `createPage()` es tut.
+
+  **Stückelung und Zeitbudget (seit v1.5.109) — die Sammelaktion ist KEINE
+  einzelne Anfrage mehr.** Ein Fehlerbericht („ändert nur die erste Seite")
+  führte auf ein Zeitlimit, nicht auf einen Logikfehler: `status_publish`
+  kostete an einer Seite mit echtem Inhalt **11–14 s**, die Schleife lief
+  deshalb in `max_execution_time` (30 s). PHP brach mitten drin ab, die
+  bereits geschriebenen Seiten blieben geändert, die Antwort war HTTP 500 —
+  die Oberfläche meldete nur „Fehler" und lud nicht neu. Über den echten
+  HTTP-Weg gemessen: von zehn ausgewählten Seiten wurde **genau eine**
+  veröffentlicht. Die eigentliche Kostenursache lag im Glossar-Haken und ist
+  behoben (siehe „Glossar-System", Unterabschnitt „Revisionen im
+  Usage-Tracking"), danach: 1,5 s je Seite im CLI, 2,5–4,5 s über HTTP.
+  Zwei Vorkehrungen halten das dauerhaft aus dem Zeitlimit heraus:
+
+  | Ebene | Was sie tut |
+  |---|---|
+  | `paketGroesse()` in `src/js/page-manager.js` | schickt die Auswahl in Paketen: **3** bei `status_publish`/`status_draft`/`trash` (die drei Aktionen mit `save_post`), **100** bei allen übrigen. Nur eine Schätzung zur Roundtrip-Ersparnis, nicht die Absicherung |
+  | Zeitbudget in `ajax_bulk_action()` | **die Absicherung.** Budget = 80 % von `max_execution_time`, **nach oben auf 20 s gedeckelt und bei `0` von 30 s ausgehend** (siehe unten); vor jeder Seite wird geprüft, ob verstrichene Zeit **plus die längste bisher gemessene Seitendauer** das Budget reißen würde. Wenn ja: Schleife beenden, restliche IDs im Antwortfeld `offen` zurückgeben |
+
+  Die Vorausschau ist der Kern: Eine starre Schwelle („mehr als 60 %
+  verbraucht, jetzt Schluss") merkt erst NACH dem Überschreiten, dass es zu
+  viel war, und lässt die zuletzt begonnene Seite trotzdem zu Ende laufen.
+  **Mindestens eine Seite wird immer bearbeitet**, damit der Lauf auch bei
+  sehr knappem Limit vorankommt und nicht endlos zwischen Oberfläche und
+  Server pendelt.
+
+  **`max_execution_time` ist keine verlässliche Auskunft (Nachbesserung
+  v1.5.110).** Die erste Fassung des Budgets schaltete sich bei `0` selbst ab
+  (`$budget = $zeitlimit > 0 ? … : 0`) — und `0` heißt „kein PHP-Limit", was
+  bei PHP-FPM regelmäßig vorkommt: Dort begrenzt `request_terminate_timeout`
+  oder ein Proxy davor, Werte, die PHP nicht kennt. Ausgerechnet auf solchen
+  Servern hätte das Budget also nicht gegriffen. Ein großzügiger Wert (120,
+  300) sagt aus demselben Grund nichts über das Gateway aus. Seither wird ein
+  fehlender Wert als 30 s gelesen und das Budget auf **höchstens 20 s Arbeit
+  je Anfrage** gedeckelt; mehr bringt ohnehin nichts, weil die Oberfläche
+  stückelt. Geprüft mit `max_execution_time` 0, 30 und 300: in allen drei
+  Fällen 20 s Budget, sauber zurückgestellt statt Abbruch.
+
+  Die Antwort enthält zusätzlich ein Feld `diagnose` (`limit`, `budget`,
+  `dauer`, `anzahl`). Bricht eine Sammelaktion auf einem fremden Server
+  trotzdem ab, schreibt `bulkAbschluss()` diese Werte in die Browser-Konsole —
+  daran ist zu erkennen, ob das Budget zu großzügig war oder ob etwas VOR PHP
+  die Verbindung gekappt hat (dann steht dort eine harmlose Dauer, und es kam
+  trotzdem kein Ergebnis an).
+
+  Die Oberfläche führt dazu eine **Warteschlange** statt fester Pakete:
+  Zurückgestellte IDs kommen vorn wieder hinein und gehen mit der nächsten
+  Anfrage raus (`sendePaket()`); ein Paket ohne jeden Fortschritt bricht
+  sauber ab statt zu wiederholen. Gezählt wird über alle Pakete hinweg,
+  `bulkAbschluss()` meldet die Summe — und bei einem Abbruch ehrlich
+  „Abgebrochen nach 10 von 20 Seiten: …". Nachgeprüft mit künstlich auf 8 s
+  gesetztem Limit: 8 Seiten, 3 Runden, 8 von 8 veröffentlicht, kein HTTP 500.
+
+  **Zwei weitere Fehler, im selben Zug behoben (v1.5.109):**
+
+  - **Der Auswahlzähler zählte anders als die Ausführung.**
+    `aktualisiereAuswahl()` zählte `.page-select:visible`, `fuehreBulkAus()`
+    sammelt `.page-select:checked`. Wer Unterseiten auswählte und den
+    Elternknoten danach zuklappte, sah „0 ausgewählt" und einen ausgegrauten
+    Knopf — die fünf Häkchen bestanden aber weiter, und beim nächsten
+    Ausführen gingen sechs statt einer Seite in den Papierkorb (gemessen).
+    Jetzt zählt der Zähler dieselbe Menge, die verschickt wird, und weist
+    zugeklappte Häkchen getrennt aus („6 ausgewählt (5 in zugeklappten
+    Zweigen)"). Die Häkchen bleiben beim Zuklappen bewusst erhalten; das
+    **Abhaken** von „Alle auswählen" räumt seither auch die zugeklappten weg,
+    sonst gäbe es keinen Weg, eine versteckte Vorauswahl loszuwerden.
+  - **Die Obergrenze von 500 IDs verwarf still.** `array_slice($ids, 0, 500)`
+    meldete bei 520 gewählten Seiten „500 Seite(n) geändert." und verschwieg
+    die restlichen 20 (gemessen). Jetzt steht die Zahl in `message` und in
+    `errors`. Aus der Oberfläche ist die Grenze seit der Stückelung ohnehin
+    nicht mehr erreichbar (höchstens 100 IDs je Anfrage); sie bleibt als
+    Schutz gegen direkte Aufrufe.
 
   **Zur Drag-Sortierung:** Das Sortable ist mit `handle: '.drag-handle'`
   initialisiert. Ein Klick auf das Auswahlkästchen kann deshalb kein Ziehen
