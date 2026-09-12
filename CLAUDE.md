@@ -1491,26 +1491,62 @@ Subsysteme, mit Suchankern (Funktionsnamen sind stabiler als Zeilennummern):
 
   **Sammelaktionen (seit v1.5.76).** Auswahlkästchen je Zeile plus Leiste
   `.page-bulk-bar`; ein zusätzlicher Endpunkt `page_manager_bulk_action`
-  (Nonce `page_manager_nonce`, wie die vier bestehenden). **Zwölf** Aktionen
+  (Nonce `page_manager_nonce`, wie die vier bestehenden). **Vierzehn** Aktionen
   als **Whitelist** in `bulk_aktionen()`: `status_publish`, `status_draft`,
-  `set_parent`, `hide_index`, `show_index`, `hide_nav`, `show_nav`,
-  `lock_teacher`, `unlock_teacher`, `lock_nav`, `unlock_nav`, `trash`.
-  Der Wert aus `$_POST` wird nur gegen diese Liste geprüft und nie in einen
-  Methodennamen übersetzt.
+  `set_parent`, `hide_index`, `show_index`, `hide_sidebar`, `show_sidebar`,
+  `hide_nav`, `show_nav`, `lock_teacher`, `unlock_teacher`, `lock_nav`,
+  `unlock_nav`, `trash`. Der Wert aus `$_POST` wird nur gegen diese Liste
+  geprüft und nie in einen Methodennamen übersetzt.
+
+  **Vier Metas, die alle „irgendwie Sichtbarkeit" heißen — die Tabelle ist
+  die Quelle der Wahrheit, die Beschriftungen waren es bis v1.5.111 nicht:**
+
+  | Aktion | Meta | Wirkung |
+  |---|---|---|
+  | `hide_index` / `show_index` | `_simple_clean_hide_from_index` | Seite **samt Unterbaum** nicht mehr im Block `fos/inhaltsverzeichnis`. Seitenleiste unberührt |
+  | `hide_sidebar` / `show_sidebar` | `_simple_clean_hide_from_sidebar` | Seite **samt Unterbaum** nicht mehr im Seitenbaum der Seitenleiste. Inhaltsverzeichnis unberührt |
+  | `hide_nav` / `show_nav` | `_simple_clean_hide_navigation` | **DIESE Seite zeigt selbst keine Seitenleiste an.** Sie bleibt vollständig im Seitenbaum aller anderen Seiten stehen |
+  | `lock_nav` / `unlock_nav` | `_simple_clean_nav_gesperrt` | Seite steht weiter in Verzeichnis und Seitenleiste, ist dort aber nicht mehr anklickbar (`<span>` statt `<a>`) |
+
+  Keines davon ist ein Zugriffsschutz — dafür gibt es `lock_teacher`.
+
+  **Beschriftungskorrektur v1.5.111, aus einem Fehlerbericht entstanden.**
+  `hide_nav`/`show_nav` hießen in der Oberfläche „Aus Seitenleiste
+  ausnehmen" / „Wieder in Seitenleiste aufnehmen" — das versprach genau das,
+  was in Wahrheit das Meta `_simple_clean_hide_from_sidebar` tut, für das es
+  **gar keine Sammelaktion gab**. Der Betreiber hat daraufhin die falsche
+  Aktion benutzt und ihre Wirkung in der Seitenleiste gesucht, wo es keine
+  gab. Zwei Änderungen: Die neuen Aktionen `hide_sidebar`/`show_sidebar`
+  bedienen das fehlende Meta, und `hide_nav`/`show_nav` heißen jetzt „Seite
+  ohne Seitenleiste anzeigen" / „Seitenleiste wieder anzeigen". **Die
+  Aktionsschlüssel blieben absichtlich unverändert** — sie stehen in keiner
+  gespeicherten Einstellung, aber ein Umbenennen hätte den Bezug zu älteren
+  Fehlerberichten und Commits gekappt.
+
+  **Die Seitenleiste zeigt immer nur EINEN Baum — das ist keine Wirkung der
+  Sammelaktion, wird aber regelmäßig dafür gehalten.** `sidebar.php` baut den
+  Baum ab der obersten Elternseite der gerade aufgerufenen Seite
+  (`get_root_page_id()`). Auf einer Installation mit 18 obersten Ebenen gibt
+  es damit 18 voneinander getrennte Seitenleisten. Wer eine Sammelaktion auf
+  Unterseiten **verschiedener** oberster Elternseiten anwendet und das
+  Ergebnis in der Seitenleiste einer einzigen Seite sucht, sieht dort
+  zwangsläufig nur eine Gruppe — die übrigen stehen in dieser Seitenleiste
+  gar nicht. Nachgemessen: drei getrennte Elterngruppen, `lock_nav` auf je
+  zwei Kinder; in der Seitenleiste einer Seite aus Gruppe 1 sind die Kinder
+  der Gruppen 2 und 3 nicht einmal im Baum. Mit **gemeinsamer** Wurzel
+  erscheinen alle sechs korrekt gesperrt. Zum Prüfen einer gruppenübergreifenden
+  Sammelaktion also das Inhaltsverzeichnis nehmen oder die Seiten einzeln
+  öffnen — nicht eine einzelne Seitenleiste.
 
   **`lock_nav`/`unlock_nav` (seit
   `PLAN-Glossar-Mehrfachimport-und-Seitenmanager-Ergaenzungen.md`,
   Phase 2) togglen `_simple_clean_nav_gesperrt`** — dieselbe Sperre, die in
   `functions.php` als Einzelseiten-Checkbox „Für Navigation sperren"
-  existiert (macht eine Seite in Inhaltsverzeichnis/Seitenleiste nicht mehr
-  anklickbar, Unterbaum bleibt bedienbar, **kein Zugriffsschutz** — die
-  Seite bleibt über ihre Adresse erreichbar). **Nicht zu verwechseln** mit
-  `hide_nav`/`show_nav` zwei Zeilen darüber: Die togglen das ANDERE Meta
-  `_simple_clean_hide_navigation` (ob eine Seite selbst eine eigene
-  Sidebar anzeigt) und mit der ebenfalls vorhandenen, aber weiterhin ohne
-  eigene Bulk-Aktion gebliebenen fünften Checkbox
-  `_simple_clean_hide_from_sidebar` (nimmt eine Seite ganz aus dem
-  Seitenbaum).
+  existiert. Abgrenzung zu den drei anderen Sichtbarkeits-Metas: siehe die
+  Tabelle oben. Alle vier haben seit v1.5.111 eine eigene Sammelaktion; die
+  fünfte Checkbox `_simple_clean_hide_from_sidebar` wird von
+  `hide_sidebar`/`show_sidebar` bedient und ist nicht mehr die Ausnahme ohne
+  Sammelaktion.
 
   **Neue Seiten landen immer am Ende ihrer Geschwister (seit demselben
   Plan, Phase 2).** `ajax_create_page()` ermittelte den `menu_order` einer

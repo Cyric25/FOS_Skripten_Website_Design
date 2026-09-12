@@ -49,8 +49,19 @@ class Simple_Clean_Page_Manager {
             'set_parent'     => 'Elternseite zuweisen',
             'hide_index'     => 'Aus Inhaltsverzeichnis ausnehmen',
             'show_index'     => 'Wieder ins Inhaltsverzeichnis aufnehmen',
-            'hide_nav'       => 'Aus Seitenleiste ausnehmen',
-            'show_nav'       => 'Wieder in Seitenleiste aufnehmen',
+            'hide_sidebar'   => 'Aus dem Seitenbaum nehmen',
+            'show_sidebar'   => 'Wieder in den Seitenbaum aufnehmen',
+            // BESCHRIFTUNG GEÄNDERT (v1.5.111), die Schlüssel absichtlich
+            // nicht: Diese beiden hießen „Aus Seitenleiste ausnehmen" /
+            // „Wieder in Seitenleiste aufnehmen" und versprachen damit genau
+            // das, was in Wahrheit hide_sidebar/show_sidebar darüber tun.
+            // Sie schreiben aber _simple_clean_hide_navigation, und das
+            // bedeutet: DIESE Seite zeigt selbst keine Seitenleiste an. Die
+            // Seite bleibt dabei vollständig im Seitenbaum aller anderen
+            // Seiten stehen — nachgemessen. Die alte Beschriftung hat
+            // mindestens einmal zu einer Fehlbedienung geführt.
+            'hide_nav'       => 'Seite ohne Seitenleiste anzeigen',
+            'show_nav'       => 'Seitenleiste wieder anzeigen',
             'lock_nav'       => 'Für Navigation sperren',
             'unlock_nav'     => 'Wieder für Navigation freigeben',
             'lock_teacher'   => 'Nur für Lehrpersonen sichtbar',
@@ -193,8 +204,10 @@ class Simple_Clean_Page_Manager {
                     <optgroup label="Sichtbarkeit">
                         <option value="hide_index">Aus Inhaltsverzeichnis ausnehmen</option>
                         <option value="show_index">Wieder ins Inhaltsverzeichnis aufnehmen</option>
-                        <option value="hide_nav">Aus Seitenleiste ausnehmen</option>
-                        <option value="show_nav">Wieder in Seitenleiste aufnehmen</option>
+                        <option value="hide_sidebar">Aus dem Seitenbaum nehmen</option>
+                        <option value="show_sidebar">Wieder in den Seitenbaum aufnehmen</option>
+                        <option value="hide_nav">Seite ohne Seitenleiste anzeigen</option>
+                        <option value="show_nav">Seitenleiste wieder anzeigen</option>
                         <option value="lock_nav">Für Navigation sperren</option>
                         <option value="unlock_nav">Wieder für Navigation freigeben</option>
                     </optgroup>
@@ -915,6 +928,34 @@ class Simple_Clean_Page_Manager {
                     $geaendert++;
                     break;
 
+                // Nimmt die Seite SAMT UNTERBAUM aus dem Seitenbaum der
+                // Seitenleiste. Ausgewertet in sidebar.php ueber
+                // simple_clean_seitenleiste_versteckte_seiten(); Meta-Key und
+                // Schreibweise wie beim fuenften Haekchen "Nicht in der
+                // Seitenleiste anzeigen" der Meta-Box in functions.php.
+                //
+                // Kein Zugriffsschutz: Die Seite bleibt ueber ihre Adresse
+                // erreichbar und steht weiter im Inhaltsverzeichnis. Wer
+                // wirklich verbergen will, nimmt lock_teacher.
+                //
+                // NICHT zu verwechseln mit hide_nav/show_nav direkt darunter.
+                case 'hide_sidebar':
+                    update_post_meta($id, '_simple_clean_hide_from_sidebar', '1');
+                    $geaendert++;
+                    break;
+
+                case 'show_sidebar':
+                    delete_post_meta($id, '_simple_clean_hide_from_sidebar');
+                    $geaendert++;
+                    break;
+
+                // _simple_clean_hide_navigation heisst: DIESE Seite zeigt
+                // selbst keine Seitenleiste an (simple_clean_should_hide_
+                // navigation() in functions.php, erstes Haekchen der Meta-Box
+                // "Seitenleiste (Sidebar) Einstellungen"). Die Seite bleibt
+                // dabei vollstaendig im Seitenbaum aller anderen Seiten
+                // stehen — wer sie dort loswerden will, braucht
+                // hide_sidebar darueber.
                 case 'hide_nav':
                     update_post_meta($id, '_simple_clean_hide_navigation', '1');
                     $geaendert++;
@@ -927,8 +968,10 @@ class Simple_Clean_Page_Manager {
 
                 // Klicksperre fuer Inhaltsverzeichnis und Seitenleiste (kein
                 // Zugriffsschutz, die Seite bleibt ueber ihre Adresse
-                // erreichbar). NICHT zu verwechseln mit hide_nav/show_nav
-                // zwei Faelle darueber, die das ANDERE Meta
+                // erreichbar). Die Seite steht weiterhin im Baum, sie ist dort
+                // nur nicht mehr anklickbar — das unterscheidet sie von
+                // hide_sidebar. NICHT zu verwechseln mit hide_nav/show_nav
+                // direkt darueber, die das ANDERE Meta
                 // _simple_clean_hide_navigation togglen (ob die Seite selbst
                 // eine eigene Sidebar anzeigt). Meta-Key und Verhalten wie in
                 // der Meta-Box "Navigation, Verzeichnis & Zugriff" in
