@@ -15,6 +15,107 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/* ------------------------------------------------- Meldung als Arbeitsauftrag */
+
+/**
+ * Eine Meldung als Textblock, der sich direkt weiterverwenden lässt.
+ *
+ * ZWECK: Eine Meldung nützt erst, wenn sich daraus ohne Rückfragen eine
+ * Fehlerbehebung ableiten lässt. Der Block enthält deshalb nicht nur den
+ * Meldungstext, sondern alles, was zum Auffinden und Einordnen der Stelle
+ * nötig ist — Seite mit ID und Bearbeitungsadresse, die markierte Textstelle
+ * als Suchschlüssel, dazu Browser und Versionsstände für Anzeigefehler.
+ *
+ * Markdown, weil es sowohl für Menschen lesbar ist als auch von
+ * Coding-Agenten zuverlässig verstanden wird.
+ *
+ * EINZIGE QUELLE des Textes — das JavaScript legt ihn nur in die
+ * Zwischenablage und baut ihn nicht selbst zusammen.
+ *
+ * @param int $post_id
+ * @return string
+ */
+function simple_clean_meldung_als_text($post_id) {
+    $post = get_post($post_id);
+    if (!$post || $post->post_type !== FOS_MELDUNG_CPT) {
+        return '';
+    }
+
+    $arten     = simple_clean_meldung_arten();
+    $zustaende = simple_clean_meldung_zustaende();
+    $art       = (string) get_post_meta($post_id, '_fos_art', true);
+    $art_label = isset($arten[$art]) ? $arten[$art]['label'] : 'unbekannt';
+    $zustand   = isset($zustaende[$post->post_status]) ? $zustaende[$post->post_status] : $post->post_status;
+
+    $seite_id = (int) get_post_meta($post_id, '_fos_seite_id', true);
+    $seite    = $seite_id ? get_post($seite_id) : null;
+    $url      = (string) get_post_meta($post_id, '_fos_url', true);
+    $auswahl  = (string) get_post_meta($post_id, '_fos_auswahl', true);
+    $melder   = (string) get_post_meta($post_id, '_fos_melder', true);
+    $klasse   = (string) get_post_meta($post_id, '_fos_klasse', true);
+    $notiz    = (string) get_post_meta($post_id, '_fos_notiz', true);
+    $theme    = wp_get_theme();
+
+    $z = array();
+    $z[] = '## Fehlermeldung #' . $post_id . ' — ' . $art_label;
+    $z[] = '';
+    $z[] = '**' . $post->post_title . '**';
+    $z[] = '';
+    $z[] = '- Gemeldet: ' . get_the_time('d.m.Y H:i', $post) . ' · Status: ' . $zustand;
+
+    $wer = $melder !== '' ? $melder : 'ohne Namensangabe';
+    $wer .= get_post_meta($post_id, '_fos_angemeldet', true) === '1' ? ' (angemeldet)' : ' (nicht angemeldet)';
+    if ($klasse !== '') {
+        $wer .= ', Klassenmodus ' . $klasse;
+    }
+    $z[] = '- Melder: ' . $wer;
+
+    $z[] = '';
+    $z[] = '### Beschreibung';
+    $z[] = '';
+    $z[] = $post->post_content !== '' ? $post->post_content : '(keine)';
+
+    if ($auswahl !== '') {
+        $z[] = '';
+        $z[] = '### Markierte Textstelle auf der Seite';
+        $z[] = '';
+        foreach (preg_split('/\r\n|\r|\n/', $auswahl) as $zeile) {
+            $z[] = '> ' . $zeile;
+        }
+    }
+
+    $z[] = '';
+    $z[] = '### Betroffene Seite';
+    $z[] = '';
+    if ($seite) {
+        $z[] = '- Titel: ' . $seite->post_title . ' (Seiten-ID ' . $seite_id . ')';
+        $z[] = '- Bearbeiten: ' . admin_url('post.php?post=' . $seite_id . '&action=edit');
+    } else {
+        $z[] = '- Seite nicht mehr vorhanden oder nicht übermittelt';
+    }
+    if ($url !== '') {
+        $z[] = '- Adresse: ' . $url;
+    }
+
+    $z[] = '';
+    $z[] = '### Technisch';
+    $z[] = '';
+    $browser = (string) get_post_meta($post_id, '_fos_browser', true);
+    $z[] = '- Browser: ' . ($browser !== '' ? $browser : 'unbekannt');
+    $viewport = (string) get_post_meta($post_id, '_fos_viewport', true);
+    $z[] = '- Bildschirm: ' . ($viewport !== '' ? $viewport : 'unbekannt');
+    $z[] = '- Theme: ' . $theme->get('Name') . ' ' . $theme->get('Version') . ' · WordPress ' . get_bloginfo('version');
+
+    if ($notiz !== '') {
+        $z[] = '';
+        $z[] = '### Notiz des Betreibers';
+        $z[] = '';
+        $z[] = $notiz;
+    }
+
+    return implode("\n", $z);
+}
+
 /* ------------------------------------------------------------------ Liste */
 
 /**
@@ -87,6 +188,34 @@ function simple_clean_meldung_spalte_inhalt($spalte, $post_id) {
     }
 }
 add_action('manage_' . FOS_MELDUNG_CPT . '_posts_custom_column', 'simple_clean_meldung_spalte_inhalt', 10, 2);
+
+/**
+ * Zeilenaktion „Kopieren" unter jedem Titel.
+ */
+function simple_clean_meldung_zeilenaktion($aktionen, $post) {
+    if ($post->post_type !== FOS_MELDUNG_CPT) {
+        return $aktionen;
+    }
+    $aktionen['fos_kopieren'] = sprintf(
+        '<a href="#" class="fos-meldung-kopieren" data-id="%d">Kopieren</a>',
+        (int) $post->ID
+    );
+    return $aktionen;
+}
+add_filter('post_row_actions', 'simple_clean_meldung_zeilenaktion', 10, 2);
+
+/**
+ * Knopf über der Liste: alle angehakten Meldungen auf einmal kopieren.
+ */
+function simple_clean_meldung_kopierknopf($welche) {
+    global $typenow;
+    if ($typenow !== FOS_MELDUNG_CPT || $welche !== 'top') {
+        return;
+    }
+    echo '<button type="button" class="button" id="fos-meldung-kopieren-auswahl" '
+       . 'style="margin-left:8px;">Ausgewählte kopieren</button>';
+}
+add_action('manage_posts_extra_tablenav', 'simple_clean_meldung_kopierknopf');
 
 /**
  * Filter nach Art über der Liste.
@@ -219,6 +348,7 @@ function simple_clean_meldung_zustand_setzen($post_id, $zustand) {
 function simple_clean_meldung_boxen() {
     add_meta_box('fos-meldung-text', 'Die Meldung', 'simple_clean_meldung_box_text', FOS_MELDUNG_CPT, 'normal', 'high');
     add_meta_box('fos-meldung-bearbeitung', 'Bearbeitung', 'simple_clean_meldung_box_bearbeitung', FOS_MELDUNG_CPT, 'side', 'high');
+    add_meta_box('fos-meldung-kopieren', 'Für die Fehlerbehebung kopieren', 'simple_clean_meldung_box_kopieren', FOS_MELDUNG_CPT, 'normal', 'default');
     add_meta_box('fos-meldung-kontext', 'Automatisch erfasst', 'simple_clean_meldung_box_kontext', FOS_MELDUNG_CPT, 'side', 'default');
 }
 add_action('add_meta_boxes_' . FOS_MELDUNG_CPT, 'simple_clean_meldung_boxen');
@@ -248,6 +378,32 @@ function simple_clean_meldung_box_text($post) {
     <div style="padding:8px 12px;background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;white-space:pre-wrap;">
         <?php echo esc_html($post->post_content); ?>
     </div>
+    <?php
+}
+
+/**
+ * Der fertige Textblock zum Herauskopieren.
+ *
+ * Das Textfeld steht bewusst sichtbar da und nicht nur hinter dem Knopf: So
+ * ist auf einen Blick zu sehen, was mitgeht — und wer lieber von Hand
+ * markiert, kann das tun.
+ */
+function simple_clean_meldung_box_kopieren($post) {
+    $text = simple_clean_meldung_als_text($post->ID);
+    ?>
+    <p class="description" style="margin-top:0;">
+        Dieser Block enthält alles, was zum Beheben nötig ist — Meldungstext,
+        markierte Stelle, Seite mit Bearbeitungslink und die Versionsstände.
+        Einfach in eine Sitzung mit dem Coding-Agenten einfügen.
+    </p>
+    <p>
+        <button type="button" class="button button-primary" id="fos-meldung-kopieren-einzeln">
+            In die Zwischenablage kopieren
+        </button>
+    </p>
+    <textarea id="fos-meldung-kopiertext" readonly rows="16"
+              style="width:100%;font-family:Consolas,Monaco,monospace;font-size:12px;"
+              onclick="this.select();"><?php echo esc_textarea($text); ?></textarea>
     <?php
 }
 
@@ -349,6 +505,43 @@ function simple_clean_meldung_admin_css($hook) {
     echo '<style>#minor-publishing-actions,#misc-publishing-actions{display:none;}</style>';
 }
 add_action('admin_head', 'simple_clean_meldung_admin_css');
+
+/**
+ * Das Kopier-Skript laden — nur auf den beiden Meldungs-Bildschirmen.
+ *
+ * Auf der Liste kommen zusätzlich die fertigen Textblöcke aller angezeigten
+ * Meldungen mit, damit „Ausgewählte kopieren" ohne weitere Anfrage auskommt.
+ */
+function simple_clean_meldung_admin_skript($hook) {
+    global $typenow;
+    if ($typenow !== FOS_MELDUNG_CPT || !in_array($hook, array('edit.php', 'post.php'), true)) {
+        return;
+    }
+
+    $js = get_template_directory() . '/dist/js/meldungen-admin.js';
+    if (!file_exists($js)) {
+        return;
+    }
+    wp_enqueue_script(
+        'fos-meldungen-admin',
+        get_template_directory_uri() . '/dist/js/meldungen-admin.js',
+        array(),
+        filemtime($js),
+        true
+    );
+
+    $texte = array();
+    if ($hook === 'edit.php') {
+        global $wp_query;
+        if (!empty($wp_query->posts)) {
+            foreach ($wp_query->posts as $eintrag) {
+                $texte[(string) $eintrag->ID] = simple_clean_meldung_als_text($eintrag->ID);
+            }
+        }
+    }
+    wp_localize_script('fos-meldungen-admin', 'fosMeldungTexte', $texte);
+}
+add_action('admin_enqueue_scripts', 'simple_clean_meldung_admin_skript');
 
 /**
  * Zahl der neuen Meldungen am Menüpunkt — wie bei den Kommentaren.

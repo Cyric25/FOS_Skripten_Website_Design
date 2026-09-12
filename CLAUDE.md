@@ -1734,6 +1734,62 @@ einem `save_post`-Haken; ein `wp_update_post()` darin würde denselben Haken
 erneut auslösen. Die Status- und Sichtbarkeitszeilen der Veröffentlichen-Box
 sind per CSS ausgeblendet: Sie kennen die eigenen Zustände nicht.
 
+### Meldung als Arbeitsauftrag herauskopieren (seit v1.5.113)
+
+Eine Meldung nützt erst, wenn sich daraus **ohne Rückfragen** eine
+Fehlerbehebung ableiten lässt. `simple_clean_meldung_als_text()` baut deshalb
+einen Markdown-Block, der alles Nötige enthält und sich direkt in eine Sitzung
+mit einem Coding-Agenten einfügen lässt:
+
+```
+## Fehlermeldung #8888 — Inhaltlicher Fehler
+
+**Schmelzpunkt von Naphthalin falsch angegeben**
+
+- Gemeldet: 12.09.2026 17:02 · Status: Neu
+- Melder: Lena, 4B (nicht angemeldet), Klassenmodus 7
+
+### Beschreibung
+…
+### Markierte Textstelle auf der Seite
+> Naphthalin schmilzt bei 112 Grad C …
+### Betroffene Seite
+- Titel: … (Seiten-ID 6628)
+- Bearbeiten: …/wp-admin/post.php?post=6628&action=edit
+- Adresse: …
+### Technisch
+- Browser: … · Bildschirm: … · Theme: 1.5.113 · WordPress 7.1
+### Notiz des Betreibers
+…
+```
+
+**Warum genau diese Angaben:** Die markierte Textstelle ist der Suchschlüssel,
+mit dem sich die Stelle im Seiteninhalt ohne Raten finden lässt. Die Seiten-ID
+samt Bearbeitungsadresse spart den Weg über die Suche. Browser, Bildschirm und
+die beiden Versionsstände entscheiden bei Anzeigefehlern darüber, ob sich ein
+Fehler überhaupt nachstellen lässt.
+
+**Drei Wege, ein Text** — `simple_clean_meldung_als_text()` ist die **einzige
+Quelle**; das JavaScript legt ihn nur in die Zwischenablage und baut ihn nie
+selbst zusammen (eine zweite Textfassung müsste bei jeder Änderung nachgezogen
+werden):
+
+| Wo | Was |
+|---|---|
+| Einzelansicht | Box „Für die Fehlerbehebung kopieren" mit Knopf **und** sichtbarem Textfeld — so ist zu sehen, was mitgeht |
+| Liste, je Zeile | Zeilenaktion „Kopieren" unter dem Titel |
+| Liste, oben | „Ausgewählte kopieren" — alle angehakten Meldungen, getrennt durch `---` |
+
+Für die Liste gibt `simple_clean_meldung_admin_skript()` die fertigen Blöcke
+aller **angezeigten** Meldungen als `fosMeldungTexte` mit; „Ausgewählte
+kopieren" kommt dadurch ohne weitere Anfrage aus. Das Skript hängt nur an den
+beiden Meldungs-Bildschirmen (`edit.php` und `post.php` bei passendem
+`$typenow`).
+
+`navigator.clipboard` gibt es nur in einem sicheren Kontext (https oder
+localhost). Für alles andere bleibt der alte Weg über ein verstecktes
+Textfeld und `document.execCommand('copy')` als Rückfall.
+
 ### Missbrauchsschutz
 
 Honigtopf-Feld (für Menschen unsichtbar, aber **nicht** `display:none` — das

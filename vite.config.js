@@ -23,6 +23,7 @@ export default defineConfig({
         'kapitellink-format': resolve(__dirname, 'src/js/kapitellink-format.js'),
         'darkmode-image-invert': resolve(__dirname, 'src/js/darkmode-image-invert.js'),
         'meldungen': resolve(__dirname, 'src/js/meldungen.js'),
+        'meldungen-admin': resolve(__dirname, 'src/js/meldungen-admin.js'),
         'meldungen-style': resolve(__dirname, 'src/css/meldungen.css')
       },
       output: {
