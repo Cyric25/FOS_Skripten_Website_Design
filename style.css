@@ -1,7 +1,7 @@
 /*
 Theme Name: FOS Online Schulbuch
 Description: WordPress-Theme für das FOS Online Schulbuch mit Container Blocks, Glossar und hierarchischer Navigation
-Version: 1.5.113
+Version: 1.5.114
 Author: Martin Huber
 Text Domain: fos-online-schulbuch
 Requires at least: 5.0
@@ -629,6 +629,27 @@ video {
 
 .footer-text {
     color: var(--color-text-muted, #666);
+}
+
+/* Die Links im Footer („Fehler melden", „Anmelden") standen nur durch das
+   Zeilenumbruch-Leerzeichen aus dem Markup getrennt nebeneinander und lasen
+   sich dadurch wie ein einziger Eintrag.
+
+   Der Trennstrich kommt bewusst als border und nicht als Schriftzeichen „|"
+   im Markup: Ein Zeichen dort gehoerte zum Linktext, Screenreader lesen es
+   mit vor, und es liesse sich nicht mitfaerben. Die Regel greift ueber
+   a + a, gilt also automatisch auch fuer einen spaeter hinzukommenden
+   dritten Link — und ebenso, wenn „Fehler melden" mangels Formularseite
+   einmal wegfaellt. */
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 0.75rem);
+}
+
+.footer-links > a + a {
+    padding-left: var(--space-sm, 0.75rem);
+    border-left: 1px solid var(--color-border, #ddd);
 }
 
 .admin-link {
