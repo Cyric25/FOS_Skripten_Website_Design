@@ -41,10 +41,9 @@ function simple_clean_meldung_als_text($post_id) {
         return '';
     }
 
-    $arten     = simple_clean_meldung_arten();
     $zustaende = simple_clean_meldung_zustaende();
     $art       = (string) get_post_meta($post_id, '_fos_art', true);
-    $art_label = isset($arten[$art]) ? $arten[$art]['label'] : 'unbekannt';
+    $art_label = simple_clean_meldung_art_label($art);
     $zustand   = isset($zustaende[$post->post_status]) ? $zustaende[$post->post_status] : $post->post_status;
 
     $seite_id = (int) get_post_meta($post_id, '_fos_seite_id', true);
@@ -147,9 +146,8 @@ add_filter('manage_' . FOS_MELDUNG_CPT . '_posts_columns', 'simple_clean_meldung
 function simple_clean_meldung_spalte_inhalt($spalte, $post_id) {
     switch ($spalte) {
         case 'fos_art':
-            $arten = simple_clean_meldung_arten();
-            $art   = (string) get_post_meta($post_id, '_fos_art', true);
-            echo isset($arten[$art]) ? esc_html($arten[$art]['label']) : '—';
+            $art = (string) get_post_meta($post_id, '_fos_art', true);
+            echo $art !== '' ? esc_html(simple_clean_meldung_art_label($art)) : '—';
             break;
 
         case 'fos_seite':
@@ -361,11 +359,10 @@ add_action('add_meta_boxes_' . FOS_MELDUNG_CPT, 'simple_clean_meldung_boxen');
  * Blockauszeichnung umschreiben. Hier steht er unverändert.
  */
 function simple_clean_meldung_box_text($post) {
-    $arten = simple_clean_meldung_arten();
-    $art   = (string) get_post_meta($post->ID, '_fos_art', true);
+    $art     = (string) get_post_meta($post->ID, '_fos_art', true);
     $auswahl = (string) get_post_meta($post->ID, '_fos_auswahl', true);
     ?>
-    <p><strong>Art:</strong> <?php echo isset($arten[$art]) ? esc_html($arten[$art]['label']) : '—'; ?></p>
+    <p><strong>Art:</strong> <?php echo $art !== '' ? esc_html(simple_clean_meldung_art_label($art)) : '—'; ?></p>
 
     <?php if ($auswahl !== ''): ?>
         <p><strong>Markierte Textstelle auf der Seite:</strong></p>

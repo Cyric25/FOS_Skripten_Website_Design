@@ -1691,7 +1691,7 @@ wissen kann; alles andere kommt automatisch mit.
 
 | Gefragt (drei Pflichtfelder, eines freiwillig) | Automatisch erfasst |
 |---|---|
-| Art der Meldung (Whitelist in `simple_clean_meldung_arten()`) | Seiten-ID und Titel, Adresse |
+| Art der Meldung — fünf Stück, Whitelist in `simple_clean_meldung_arten()` | Seiten-ID und Titel, Adresse |
 | „Worum geht es?" — wird der Titel der Meldung | **zuvor markierte Textstelle** |
 | Beschreibung — der Platzhalter richtet sich nach der Art | Klasse aus `?classroom=` |
 | Name oder Klasse (freiwillig) | Browser, Bildschirmbreite, angemeldet ja/nein |
@@ -1712,6 +1712,24 @@ Ohne JavaScript führt derselbe Link auf die Seite mit dem Shortcode
 `fos_meldung_seite_id` vermerkt wird. Beide Wege verwenden **dieselbe**
 Funktion `simple_clean_meldung_formular()`; ein zweites, abweichendes Formular
 wäre eine Fehlerquelle.
+
+### Die Arten und ihre Beschriftungen
+
+`simple_clean_meldung_arten()` ist beides zugleich: die Auswahl im Formular
+**und** die Whitelist der Annahme — was dort fehlt, wird abgewiesen. Genau
+deshalb gibt es daneben `simple_clean_meldung_art_label()`.
+
+**Die Trennung ist kein Zierrat.** Wird eine Art umbenannt oder geteilt,
+tragen bereits eingegangene Meldungen weiterhin den alten Schlüssel. Ohne die
+zweite Funktion stünden sie rückwirkend als „unbekannt" in der Liste und im
+Kopierblock. `simple_clean_meldung_art_label()` kennt deshalb zusätzlich die
+früheren Schlüssel. **Wer eine Art ändert, trägt den alten Schlüssel dort
+nach — nicht in `simple_clean_meldung_arten()`, sonst bliebe er wählbar.**
+
+Bisher einziger Fall: `vorschlag` („Verbesserungsvorschlag") war bis v1.5.114
+ein Sammeleintrag und ist seit v1.5.115 in `vorschlag_inhalt` und
+`vorschlag_bedienung` geteilt. Alte Meldungen erscheinen als
+„Verbesserungsvorschlag (ohne nähere Angabe)".
 
 ### Inhaltstyp `fos_meldung`
 

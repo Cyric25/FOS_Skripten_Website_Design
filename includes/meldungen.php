@@ -55,11 +55,46 @@ function simple_clean_meldung_arten() {
             'label' => 'Anzeige oder Technik',
             'hilfe' => 'Was hast du gemacht? Was ist passiert? Was hättest du erwartet?',
         ),
-        'vorschlag' => array(
-            'label' => 'Verbesserungsvorschlag',
-            'hilfe' => 'Was würdest du ändern, und warum wäre das besser?',
+        'vorschlag_inhalt' => array(
+            'label' => 'Verbesserungsvorschlag (inhaltlich)',
+            'hilfe' => 'Was fehlt oder sollte anders dargestellt werden — und warum wäre es so verständlicher?',
+        ),
+        'vorschlag_bedienung' => array(
+            'label' => 'Verbesserungsvorschlag (Anwenderfreundlichkeit)',
+            'hilfe' => 'Was war umständlich zu bedienen? Wie würdest du es dir stattdessen wünschen?',
         ),
     );
+}
+
+/**
+ * Beschriftung einer Art — auch für Schlüssel, die das Formular nicht mehr
+ * anbietet.
+ *
+ * WARUM GETRENNT von simple_clean_meldung_arten(): Die Liste dort ist die
+ * Auswahl im Formular UND die Whitelist der Annahme; was dort fehlt, wird
+ * abgewiesen. Bereits eingegangene Meldungen tragen aber möglicherweise einen
+ * Schlüssel, den es so nicht mehr gibt — die stünden sonst rückwirkend als
+ * „unbekannt" in der Liste. Deshalb kennt diese Funktion zusätzlich die
+ * früheren Schlüssel.
+ *
+ * `vorschlag` war bis v1.5.114 der eine Sammeleintrag „Verbesserungsvorschlag";
+ * seither ist er in eine inhaltliche und eine die Bedienung betreffende
+ * Variante geteilt. Alte Meldungen bleiben lesbar, ohne dass jemand raten
+ * müsste, welche der beiden gemeint war.
+ *
+ * @param string $art
+ * @return string
+ */
+function simple_clean_meldung_art_label($art) {
+    $arten = simple_clean_meldung_arten();
+    if (isset($arten[$art])) {
+        return $arten[$art]['label'];
+    }
+
+    $frueher = array(
+        'vorschlag' => 'Verbesserungsvorschlag (ohne nähere Angabe)',
+    );
+    return isset($frueher[$art]) ? $frueher[$art] : 'unbekannt';
 }
 
 /** Die drei Bearbeitungszustände mit ihren Beschriftungen. */
