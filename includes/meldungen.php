@@ -56,7 +56,7 @@ function simple_clean_meldung_arten() {
             'hilfe' => 'Was hast du gemacht? Was ist passiert? Was hättest du erwartet?',
         ),
         'vorschlag_inhalt' => array(
-            'label' => 'Verbesserungsvorschlag (inhaltlich)',
+            'label' => 'Verbesserungsvorschlag (Inhaltlich)',
             'hilfe' => 'Was fehlt oder sollte anders dargestellt werden — und warum wäre es so verständlicher?',
         ),
         'vorschlag_bedienung' => array(
