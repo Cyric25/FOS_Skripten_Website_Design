@@ -81,7 +81,88 @@
 		return n;
 	}
 
+	// ------------------------------------------------------------------
+	// Klappzustand am Geraet merken (Fehlermeldung #7062,
+	// PLAN-Rueckmeldungen-Klassenmodus-und-Tafel-Lasso.md, AP-3.1)
+	//
+	// localStorage['fos_pidx_klappzustand'] = {"<Kapitel-Post-ID>": true|false}
+	// (true = offen). Gespeichert wird NUR die Abweichung vom Anfangszustand
+	// des Blocks (Attribut openByDefault = das open-Attribut im HTML); wer ein
+	// Kapitel wieder in den Anfangszustand bringt, loescht damit seinen
+	// Eintrag. Schluessel ist die Post-ID aus id="page-index-kapitel-<id>" am
+	// <li> - sie uebersteht Titel- und Adressaenderungen und gilt fuer
+	// dasselbe Kapitel auch in einem anderen Verzeichnisblock.
+	//
+	// Gilt fuer alle Besucher, nicht nur im Klassenmodus (das Theme kennt den
+	// Klassenmodus nicht). Waehrend einer aktiven Suche wird nichts
+	// gespeichert (die Suche klappt alles auf, siehe richteEin()).
+	// ------------------------------------------------------------------
+
+	var KLAPP_SCHLUESSEL = 'fos_pidx_klappzustand';
+	var KAPITEL_ID_MUSTER = /^page-index-kapitel-(\d+)$/;
+
+	function leseKlappzustand() {
+		try {
+			var roh = window.localStorage.getItem(KLAPP_SCHLUESSEL);
+			var wert = roh ? JSON.parse(roh) : null;
+			return wert && typeof wert === 'object' && !Array.isArray(wert) ? wert : {};
+		} catch (e) {
+			return {};
+		}
+	}
+
+	function schreibeKlappzustand(zustand) {
+		try {
+			if (Object.keys(zustand).length === 0) {
+				window.localStorage.removeItem(KLAPP_SCHLUESSEL);
+			} else {
+				window.localStorage.setItem(KLAPP_SCHLUESSEL, JSON.stringify(zustand));
+			}
+		} catch (e) {
+			// Gesperrter Speicher: der Block funktioniert wie ohne Persistenz.
+		}
+	}
+
+	function richteKlappzustandEin(wurzel) {
+		var alle = wurzel.querySelectorAll('details.page-index__sub');
+		var zustand = leseKlappzustand();
+
+		for (var i = 0; i < alle.length; i++) {
+			(function (details) {
+				var kapitel = details.closest('li.page-index__chapter');
+				var treffer = kapitel && kapitel.id ? KAPITEL_ID_MUSTER.exec(kapitel.id) : null;
+				if (!treffer) {
+					return;
+				}
+				var id = treffer[1];
+				var anfang = details.open;
+
+				if (Object.prototype.hasOwnProperty.call(zustand, id)) {
+					details.open = zustand[id] === true;
+				}
+
+				details.addEventListener('toggle', function () {
+					if (wurzel.dataset.pidxSuche === '1') {
+						return;
+					}
+					// Frisch lesen: ein anderer Block oder Tab kann inzwischen
+					// geschrieben haben.
+					var aktuell = leseKlappzustand();
+					if (details.open !== anfang) {
+						aktuell[id] = details.open;
+					} else {
+						delete aktuell[id];
+					}
+					schreibeKlappzustand(aktuell);
+				});
+			})(alle[i]);
+		}
+	}
+
 	function richteEin(wurzel) {
+		// Klappzustand zuerst - er muss auch ohne Suchfeld greifen (#7062).
+		richteKlappzustandEin(wurzel);
+
 		// Lehrpersonen-Toggle (AP-2.2, Vertrag siehe PLAN-Inhaltsverzeichnisse.md,
 		// Abschnitt 4). Unabhaengig vom Suchfeld-Fruehausstieg weiter unten
 		// platziert, da der Toggle auch funktionieren muss, wenn showSearch fuer
@@ -107,12 +188,20 @@
 			return;
 		}
 
-		// Ausgangszustand der Aufklappebenen merken, um ihn beim Leeren des
-		// Feldes exakt wiederherzustellen.
+		// Zustand der Aufklappebenen, um ihn beim Leeren des Feldes exakt
+		// wiederherzustellen. Erfasst wird er seit #7062 beim BEGINN jeder
+		// Suche, nicht einmalig beim Laden - sonst stellte das Leeren den
+		// Stand vom Seitenaufruf her und verwarf, was danach geklappt wurde.
 		var details = wurzel.querySelectorAll('details.page-index__sub');
 		var warOffen = [];
-		for (var i = 0; i < details.length; i++) {
-			warOffen.push(details[i].open);
+		var sucheAktiv = false;
+		var sucheEndeZeitgeber = null;
+
+		function merkeZustandVorSuche() {
+			warOffen = [];
+			for (var i = 0; i < details.length; i++) {
+				warOffen.push(details[i].open);
+			}
 		}
 
 		// Meldebereich fuer Screenreader. Sichtbar ist er nicht (CSS-Klasse
@@ -141,6 +230,10 @@
 			var suchtext = feld.value.trim().toLowerCase();
 
 			if (suchtext === '') {
+				if (!sucheAktiv) {
+					return;
+				}
+				sucheAktiv = false;
 				// Ausgangszustand wiederherstellen.
 				var versteckte = wurzel.querySelectorAll(
 					'.page-index__chapter--hidden, .page-index__page--hidden'
@@ -156,7 +249,25 @@
 				}
 				zeigeKeineTreffer(false);
 				status.textContent = '';
+				// Speichersperre erst NACH den toggle-Ereignissen der
+				// Wiederherstellung aufheben - die feuern asynchron. Selbst
+				// wenn eines durchrutschte, schriebe es nur den Zustand vor der
+				// Suche erneut (idempotent).
+				window.clearTimeout(sucheEndeZeitgeber);
+				sucheEndeZeitgeber = window.setTimeout(function () {
+					if (!sucheAktiv) {
+						delete wurzel.dataset.pidxSuche;
+					}
+				}, 100);
 				return;
+			}
+
+			if (!sucheAktiv) {
+				// Suche beginnt: aktuellen Zustand sichern, Speichern sperren.
+				sucheAktiv = true;
+				window.clearTimeout(sucheEndeZeitgeber);
+				merkeZustandVorSuche();
+				wurzel.dataset.pidxSuche = '1';
 			}
 
 			var sichtbareKapitel = 0;
