@@ -2702,7 +2702,13 @@ diesem Modus tut `assets/js/classroom-page-filter.js` im Browser Folgendes:
   (`#cbd-classroom-nav-header`),
 - **ersetzt den Inhalt von `#sidebar`** durch die Klassen-Navigation — dabei
   werden die Theme-Klassen `page-tree`, `page-item`, `page-link` usw.
-  wiederverwendet, damit die Gestaltung passt,
+  wiederverwendet, damit die Gestaltung passt. Seit CDB 3.1.135 ist die
+  Überschrift `.sidebar-section-title` dort ein Link (`a.cbd-classroom-zugang-link`)
+  zurück zur Klassen-Zugangsseite; die Theme-Regel für die Überschrift
+  bestimmt weiterhin die Farbe,
+- setzt rechts unten einen schwebenden Knopf `#cbd-fragenwand-fab` über den
+  PDF-Knopf (unter 992 px liegt links weiterhin der Navigationsknopf des
+  Themes),
 - hängt an jeden internen Link die Klassenparameter an,
 - versteckt Container-Blöcke, die für die Klasse nicht als „behandelt"
   markiert sind.
