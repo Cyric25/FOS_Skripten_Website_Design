@@ -2026,6 +2026,57 @@ Details je Befund und die vollständigen Übergabenotizen der Phase-2-APs:
 `reference_file_map.md`, Zeilen zu `includes/page-index.php`,
 `src/css/page-index.css` und `src/js/page-index.js`.
 
+### Klappzustand am Gerät (#7062, `PLAN-Rueckmeldungen-Klassenmodus-und-Tafel-Lasso.md`, Phase 3, seit v1.5.117)
+
+Anlass: Fehlermeldung #7062 aus dem Klassenmodus – der Klappzustand der
+Inhaltsangabe sollte am Gerät erhalten bleiben. Umgesetzt **für alle
+Besucher** (Betreiberentscheidung), weil das Theme den Klassenmodus nicht
+kennt und eine Prüfung auf `?classroom=` eine neue Kopplung ans Plugin wäre.
+
+| Eigenschaft | Festlegung |
+|---|---|
+| Schlüssel | `localStorage['fos_pidx_klappzustand']` |
+| Wert | JSON-Objekt `{"<Kapitel-Post-ID>": true\|false}` (true = offen) |
+| Was gespeichert wird | nur die **Abweichung** vom Anfangszustand des Blocks (`openByDefault` = `open`-Attribut im HTML). Zurück in den Anfangszustand → Eintrag gelöscht; leeres Objekt → Schlüssel entfernt |
+| Kennung | Post-ID aus `id="page-index-kapitel-<id>"` am Kapitel-`<li>` (dasselbe Schema wie die Kapitellinks) – übersteht Titel- und Adressänderungen |
+| Übernahme beim Laden | nur echte Booleans (AP-3.fix1); alles andere lässt den Anfangszustand stehen |
+| Ungültig / gesperrt | `try/catch` um alle Zugriffe und `JSON.parse`; der Block funktioniert dann wie ohne Speicher |
+
+**Code (`src/js/page-index.js`):** `richteKlappzustandEin(wurzel)` ist der
+**erste** Aufruf in `richteEin()` – vor dem Frühausstieg ohne Suchfeld,
+damit auch Blöcke mit `showSearch: false` speichern. Je
+`details.page-index__sub` ein `toggle`-Listener, der vor jedem Schreiben
+frisch liest (andere Blöcke/Tabs bleiben erhalten).
+
+**Suche:** Sie klappt bei Suchtext alle Kapitel auf – das darf nicht
+gespeichert werden. Bei **Suchbeginn** (Übergang leer → Text) sichert
+`merkeZustandVorSuche()` den aktuellen Zustand und setzt
+`wurzel.dataset.pidxSuche = '1'` als Speichersperre; beim Leeren wird
+wiederhergestellt und die Sperre 100 ms später aufgehoben (`toggle` feuert
+asynchron; ein durchrutschendes Ereignis schriebe nur den Vorsuch-Zustand
+erneut). **Verhaltensänderung:** Bis v1.5.116 wurde der Wiederherstellungs-
+zustand einmalig beim Laden erfasst, und jedes leere Suchergebnis (auch nur
+Leerzeichen oder ein nachlaufender Entprell-Timer) setzte zwischenzeitliche
+Klappaktionen auf den Ladezustand zurück. Jetzt tut ein leerer Suchtext ohne
+laufende Suche nichts.
+
+**Kapitelsprung:** `behandleHashNavigation()` öffnet nur `<details>`-
+Vorfahren des Ziels; Kapitel liegen auf Ebene 0, der Sprung ändert also
+nichts am gespeicherten Zustand. Ein vom Leser zugeklapptes Kapitel bleibt
+beim Sprung zu.
+
+**Bekannte, bewusst akzeptierte Einschränkungen (Review AP-3.rev):**
+1. Dasselbe Kapitel in zwei Blöcken mit **unterschiedlichem**
+   `openByDefault`: gespeichert wird ein absoluter Wert, gelöscht wird
+   gegen den Anfangszustand des jeweiligen Blocks – bringt Block A das
+   Kapitel in seinen Anfangszustand, verliert Block B seine Abweichung.
+   Keine Live-Synchronisierung zwischen Blöcken.
+2. Zugeklappte Kapitel sind im Server-HTML offen (bei `openByDefault`) und
+   klappen erst nach `DOMContentLoaded` zu – kurzes Aufblitzen mit
+   Layoutsprung.
+3. Ein Klappen innerhalb von 100 ms nach dem Leeren der Suche wird nicht
+   gespeichert (praktisch nicht erreichbar).
+
 ### Kapitellinks (`PLAN-Summary-PDF-und-Content-Links.md`, Phase 3, seit v1.5.97)
 
 Ein Redakteur kann im Editor markierten Text (oder die freie
