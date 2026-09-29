@@ -137,8 +137,12 @@
 				var id = treffer[1];
 				var anfang = details.open;
 
-				if (Object.prototype.hasOwnProperty.call(zustand, id)) {
-					details.open = zustand[id] === true;
+				// Nur echte Wahrheitswerte uebernehmen - ein manipulierter
+				// Eintrag (Zahl, String) laesst den Anfangszustand stehen
+				// (AP-3.fix1, Befund G1 aus AP-3.rev).
+				if (Object.prototype.hasOwnProperty.call(zustand, id)
+					&& typeof zustand[id] === 'boolean') {
+					details.open = zustand[id];
 				}
 
 				details.addEventListener('toggle', function () {
