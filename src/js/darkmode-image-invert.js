@@ -27,6 +27,18 @@
  * tools/test-darkmode-klassifizierung.js + tools/fixtures/darkmode/
  * (neu erzeugen: python -I tools/erzeuge-darkmode-fixtures.py).
  *
+ * DOM-ANBINDUNG (AP-3.2, E11):
+ *   - geprueft werden img in .entry-content und im Blockverweis-Modal
+ *     (.cbd-block-reference-modal), auch nachtraeglich eingefuegte
+ *     (MutationObserver, gedrosselt ueber requestIdleCallback/setTimeout)
+ *   - data-fos-darkmode-checked traegt den GRUND und wird erst NACH der
+ *     Analyse gesetzt: invertiert|hell|deckend|leer|fehler|ohne-groesse
+ *   - SVG nur mit viewBox (complete, aber naturalWidth 0): decode()
+ *     abwarten, dann mit angezeigter Groesse analysieren; ist auch die 0,
+ *     erneut bei load bzw. sobald das Bild sichtbar wird
+ *     (IntersectionObserver)
+ *   - Analyse in Leerlauf-Haeppchen; Messwerte in window.fosDarkmodeStatistik
+ *
  * KEIN import/export: wird als klassisches Script eingebunden.
  */
 (function () {
@@ -103,58 +115,306 @@
     window.fosDarkmodeKlassifiziere = klassifiziere;
     window.fosDarkmodeAbtastgroesse = MAX_SAMPLE_DIMENSION;
 
-    function analyzeImage( img ) {
-        try {
-            var scale = Math.min( 1, MAX_SAMPLE_DIMENSION / Math.max( img.naturalWidth, img.naturalHeight ) );
-            var w = Math.max( 1, Math.round( img.naturalWidth * scale ) );
-            var h = Math.max( 1, Math.round( img.naturalHeight * scale ) );
 
+    // ------------------------------------------------------------------
+    // Ab hier: Anbindung an das DOM (AP-3.2, E11)
+    // ------------------------------------------------------------------
+
+    // Wo Bilder geprueft werden: Seiteninhalt und das Blockverweis-Modal des
+    // CDB-Designers (blocks/block-reference/view.js haengt
+    // div.cbd-block-reference-modal direkt an <body>, also ausserhalb von
+    // .entry-content).
+    var BEREICHE = '.entry-content, .cbd-block-reference-modal';
+    var BILD_SELEKTOR = '.entry-content img, .cbd-block-reference-modal img';
+
+    // Diagnose-Merkmal data-fos-darkmode-checked: Wert = Grund, gesetzt erst
+    // NACH der Analyse. Im Web-Inspector am Geraet ablesbar.
+    //   invertiert | hell | deckend | leer | fehler | ohne-groesse
+    var GRUND = { invertieren: 'invertiert', hell: 'hell', deckend: 'deckend', leer: 'leer' };
+
+    // Messwerte fuer Tests (Browser-Konsole). gesamtMs/maxMs = Zeit auf dem
+    // Hauptthread (Zeichnen der verkleinerten Fassung, getImageData,
+    // Klassifizierung); das Dekodieren/Verkleinern per createImageBitmap
+    // laeuft ausserhalb und ist nicht enthalten.
+    var statistik = { anzahl: 0, gesamtMs: 0, maxMs: 0, zuletztMs: 0 };
+    window.fosDarkmodeStatistik = statistik;
+
+    function jetzt() {
+        return ( window.performance && performance.now ) ? performance.now() : Date.now();
+    }
+
+    /**
+     * Liest die verkleinerte Fassung aus und klassifiziert sie.
+     * quelle: das <img> selbst oder ein bereits verkleinertes ImageBitmap.
+     * @return {string} Grund fuer das Diagnose-Merkmal
+     */
+    function leseUndKlassifiziere( quelle, w, h ) {
+        var start = jetzt();
+        try {
             var canvas = document.createElement( 'canvas' );
             canvas.width = w;
             canvas.height = h;
-            var ctx = canvas.getContext( '2d' );
+            // willReadFrequently: Canvas im Hauptspeicher statt auf der GPU -
+            // getImageData() muss dann nichts von der Grafikkarte zuruecklesen
+            // (gemessen in Chrome: Rueckleseweg war der groesste Kostenblock).
+            var ctx = canvas.getContext( '2d', { willReadFrequently: true } );
             // Einheitlich geglaettet verkleinern; die Messung (E10) ist so
             // gebaut, dass sie mit jedem Verfahren dasselbe Ergebnis liefert.
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage( img, 0, 0, w, h );
+            // Immer mit Zielgroesse zeichnen - auch ein Bitmap, falls ein
+            // Browser die resize-Optionen von createImageBitmap ignoriert.
+            ctx.drawImage( quelle, 0, 0, w, h );
 
             var data = ctx.getImageData( 0, 0, w, h ).data;
 
-            return klassifiziere( data, w, h ).ergebnis === 'invertieren';
+            return GRUND[ klassifiziere( data, w, h ).ergebnis ] || 'fehler';
         } catch ( e ) {
-            // z.B. SecurityError bei fremdgehosteten Bildern ohne CORS-Freigabe
-            return false;
+            // z.B. SecurityError bei fremdgehosteten Bildern ohne CORS-Freigabe,
+            // InvalidStateError bei defekten Bildern
+            return 'fehler';
+        } finally {
+            var dauer = jetzt() - start;
+            statistik.anzahl++;
+            statistik.gesamtMs += dauer;
+            if ( dauer > statistik.maxMs ) statistik.maxMs = dauer;
+            statistik.zuletztMs = jetzt(); // ms seit Seitenstart: letzte Analyse
         }
     }
 
-    function processImage( img ) {
-        if ( img.dataset.fosDarkmodeChecked ) return;
-        img.dataset.fosDarkmodeChecked = '1';
-        if ( analyzeImage( img ) ) {
-            img.classList.add( MARKER_CLASS );
-        }
-    }
+    /**
+     * Verkleinert das Bild auf die Abtastgroesse und klassifiziert es; ruft
+     * fertig(grund) genau einmal auf.
+     *
+     * Bevorzugt createImageBitmap mit resize-Optionen: Dekodieren und
+     * Verkleinern grosser PNGs laufen dann NICHT auf dem Hauptthread (gemessen,
+     * Chrome, 42 Bilder mit kaltem Cache: Hauptthread 41 ms statt ~470 ms beim
+     * direkten drawImage). Rueckfall auf drawImage(img), wenn die Funktion fehlt
+     * oder ablehnt (z. B. SVG ohne eigene Groesse).
+     */
+    function analysiere( img, breite, hoehe, fertig ) {
+        var scale = Math.min( 1, MAX_SAMPLE_DIMENSION / Math.max( breite, hoehe ) );
+        var w = Math.max( 1, Math.round( breite * scale ) );
+        var h = Math.max( 1, Math.round( hoehe * scale ) );
 
-    function scanImages() {
-        var images = document.querySelectorAll( '.entry-content img' );
-        Array.prototype.forEach.call( images, function ( img ) {
-            if ( img.complete && img.naturalWidth ) {
-                processImage( img );
-            } else {
-                img.addEventListener( 'load', function () {
-                    processImage( img );
-                }, { once: true } );
+        if ( typeof window.createImageBitmap === 'function' && img.naturalWidth ) {
+            var bitmapVersuch;
+            try {
+                bitmapVersuch = window.createImageBitmap( img, {
+                    resizeWidth: w,
+                    resizeHeight: h,
+                    resizeQuality: 'high'
+                } );
+            } catch ( e ) {
+                bitmapVersuch = null;
             }
+            if ( bitmapVersuch && typeof bitmapVersuch.then === 'function' ) {
+                bitmapVersuch.then( function ( bitmap ) {
+                    var grund = leseUndKlassifiziere( bitmap, w, h );
+                    if ( bitmap.close ) bitmap.close();
+                    // Gemessen (Chrome): Fuer SVG liefert createImageBitmap mit
+                    // resize ein LEERES Bitmap. 'leer' wird deshalb nie aus dem
+                    // Bitmap-Weg uebernommen, sondern direkt gegengeprueft.
+                    if ( grund === 'leer' ) {
+                        grund = leseUndKlassifiziere( img, w, h );
+                    }
+                    fertig( grund );
+                }, function () {
+                    fertig( leseUndKlassifiziere( img, w, h ) );
+                } );
+                return;
+            }
+        }
+        fertig( leseUndKlassifiziere( img, w, h ) );
+    }
+
+    function setzeErgebnis( img, grund ) {
+        img.dataset.fosDarkmodeChecked = grund;
+        if ( grund === 'invertiert' ) {
+            img.classList.add( MARKER_CLASS );
+        } else {
+            img.classList.remove( MARKER_CLASS );
+        }
+    }
+
+    // --- Bilder ohne messbare Groesse erneut versuchen ---------------------
+    // Einfachste tragfaehige Loesung: ein gemeinsamer IntersectionObserver
+    // (falls vorhanden) meldet, wenn ein bisher groessenloses Bild sichtbar
+    // wird - dann hat es ein Layout und getBoundingClientRect() liefert Masse.
+    // Zusaetzlich loest ein spaeteres 'load' die Pruefung erneut aus. Kein
+    // Intervall, kein Vollscan.
+    var sichtbarBeobachter = null;
+    function spaeterErneut( img ) {
+        img.addEventListener( 'load', function () { pruefeBild( img ); }, { once: true } );
+        if ( typeof window.IntersectionObserver === 'function' ) {
+            if ( ! sichtbarBeobachter ) {
+                sichtbarBeobachter = new IntersectionObserver( function ( eintraege ) {
+                    eintraege.forEach( function ( eintrag ) {
+                        if ( eintrag.isIntersecting ) {
+                            sichtbarBeobachter.unobserve( eintrag.target );
+                            pruefeBild( eintrag.target );
+                        }
+                    } );
+                } );
+            }
+            sichtbarBeobachter.observe( img );
+        }
+    }
+
+    /**
+     * @param {boolean} decodeAbgelehnt decode() ist fehlgeschlagen - dann ist
+     *        ein 'leer' (nichts gezeichnet) in Wahrheit ein defektes Bild
+     *        (z. B. src="" bei .cbd-number-icon). Die Analyse laeuft trotzdem,
+     *        weil WebKit decode() fuer manche SVG ablehnt, die sich zeichnen lassen.
+     */
+    function analysiereMitGroesse( img, fertig, decodeAbgelehnt ) {
+        var breite = img.naturalWidth;
+        var hoehe = img.naturalHeight;
+        if ( ! breite || ! hoehe ) {
+            // SVG nur mit viewBox: keine natuerliche Groesse -> angezeigte Groesse
+            var rect = img.getBoundingClientRect();
+            breite = rect.width;
+            hoehe = rect.height;
+        }
+        if ( ! breite || ! hoehe ) {
+            img._fosDarkmodeLaeuft = false;
+            setzeErgebnis( img, 'ohne-groesse' );
+            spaeterErneut( img );
+            fertig();
+            return;
+        }
+        analysiere( img, breite, hoehe, function ( grund ) {
+            img._fosDarkmodeLaeuft = false;
+            if ( decodeAbgelehnt && grund === 'leer' ) grund = 'fehler';
+            setzeErgebnis( img, grund );
+            fertig();
         } );
     }
 
-    function boot() {
-        if ( 'requestIdleCallback' in window ) {
-            requestIdleCallback( scanImages, { timeout: 2000 } );
-        } else {
-            setTimeout( scanImages, 200 );
+    function nichts() {}
+
+    /**
+     * Prueft ein Bild genau einmal (Ausnahme: 'ohne-groesse' darf erneut).
+     * Das interne Merkmal _fosDarkmodeLaeuft verhindert Doppelpruefungen,
+     * solange auf load/decode/createImageBitmap gewartet wird.
+     * fertig() wird genau einmal aufgerufen, sobald dieser Aufruf nichts mehr
+     * tut (auch wenn er nur einen load-Listener angemeldet hat).
+     */
+    function pruefeBild( img, fertig ) {
+        fertig = fertig || nichts;
+        var bisher = img.dataset.fosDarkmodeChecked;
+        if ( ( bisher && bisher !== 'ohne-groesse' ) || img._fosDarkmodeLaeuft ) {
+            fertig();
+            return;
         }
+        img._fosDarkmodeLaeuft = true;
+
+        if ( ! img.complete ) {
+            img.addEventListener( 'load', function () {
+                img._fosDarkmodeLaeuft = false;
+                pruefeBild( img );
+            }, { once: true } );
+            img.addEventListener( 'error', function () {
+                img._fosDarkmodeLaeuft = false;
+                setzeErgebnis( img, 'fehler' );
+            }, { once: true } );
+            fertig();
+            return;
+        }
+        if ( ! img.naturalWidth && typeof img.decode === 'function' ) {
+            // complete && naturalWidth === 0: SVG ohne Groesse (oder defekt).
+            // Nach decode() steht ggf. doch eine Groesse bereit; bei Ablehnung
+            // (defektes Bild) wird trotzdem gemessen, 'leer' dann als 'fehler'.
+            img.decode().then( function () {
+                analysiereMitGroesse( img, fertig, false );
+            }, function () {
+                analysiereMitGroesse( img, fertig, true );
+            } );
+            return;
+        }
+        analysiereMitGroesse( img, fertig );
+    }
+
+    // --- Warteschlange (R7) ------------------------------------------------
+    // Hoechstens MAX_PARALLEL Bilder gleichzeitig in Arbeit, damit nicht
+    // Dutzende grosse PNGs auf einmal dekodiert werden. Je Durchgang hoechstens
+    // ZEITBUDGET_MS Hauptthread-Arbeit (wichtig fuer den synchronen Rueckfall
+    // ohne createImageBitmap), danach Abgabe an den Browser.
+    // Erster Start im Leerlauf (requestIdleCallback); Folgedurchgaenge per
+    // setTimeout(0) - mit requestIdleCallback je Bild dauerte eine Seite mit
+    // 42 Bildern waehrend des Ladens ueber 5 s (gemessen), weil jeder Aufruf
+    // bis zu seinem Timeout auf Leerlauf wartete.
+    var MAX_PARALLEL = 2;
+    var ZEITBUDGET_MS = 8;
+    var warteschlange = [];
+    var geplant = false;
+    var inArbeit = 0;
+
+    function planeAbarbeitung( sofort ) {
+        if ( geplant || inArbeit >= MAX_PARALLEL || ! warteschlange.length ) return;
+        geplant = true;
+        if ( ! sofort && 'requestIdleCallback' in window ) {
+            requestIdleCallback( arbeiteAb, { timeout: 1000 } );
+        } else {
+            // WebKit (Safari/Edge iOS) kennt requestIdleCallback nicht
+            setTimeout( arbeiteAb, sofort ? 0 : 16 );
+        }
+    }
+
+    function einFertig() {
+        inArbeit--;
+        planeAbarbeitung( true );
+    }
+
+    function arbeiteAb() {
+        geplant = false;
+        var start = jetzt();
+        while ( inArbeit < MAX_PARALLEL && warteschlange.length && ( jetzt() - start ) < ZEITBUDGET_MS ) {
+            inArbeit++;
+            pruefeBild( warteschlange.shift(), einFertig );
+        }
+        planeAbarbeitung( true );
+    }
+
+    function einreihen( img ) {
+        var bisher = img.dataset.fosDarkmodeChecked;
+        if ( bisher && bisher !== 'ohne-groesse' ) return;
+        if ( warteschlange.indexOf( img ) === -1 ) warteschlange.push( img );
+    }
+
+    function scanImages() {
+        Array.prototype.forEach.call( document.querySelectorAll( BILD_SELEKTOR ), einreihen );
+        planeAbarbeitung();
+    }
+
+    // --- Nachtraeglich eingefuegte Bilder (Blockverweis-Modal, AJAX) -------
+    function beobachteNeueBilder() {
+        if ( typeof window.MutationObserver !== 'function' || ! document.body ) return;
+        new MutationObserver( function ( mutationen ) {
+            for ( var i = 0; i < mutationen.length; i++ ) {
+                var knoten = mutationen[ i ].addedNodes;
+                for ( var j = 0; j < knoten.length; j++ ) {
+                    var k = knoten[ j ];
+                    if ( k.nodeType !== 1 ) continue;
+                    if ( k.tagName === 'IMG' ) {
+                        if ( k.closest && k.closest( BEREICHE ) ) einreihen( k );
+                    } else if ( k.getElementsByTagName ) {
+                        var bilder = k.getElementsByTagName( 'img' );
+                        for ( var b = 0; b < bilder.length; b++ ) {
+                            if ( bilder[ b ].closest( BEREICHE ) ) einreihen( bilder[ b ] );
+                        }
+                    }
+                }
+            }
+            // Gedrosselt: Abarbeitung erst im naechsten Leerlauf; mehrere
+            // Mutationen in Folge landen in derselben Warteschlange.
+            planeAbarbeitung();
+        } ).observe( document.body, { childList: true, subtree: true } );
+    }
+
+    function boot() {
+        scanImages();
+        beobachteNeueBilder();
     }
 
     if ( document.readyState === 'complete' ) {
