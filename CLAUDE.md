@@ -731,6 +731,27 @@ triggerEl.classList && triggerEl.classList.contains('fos-darkmode-invert')))`
 NICHT-invertierten Bildes auch wieder verschwindet (kein „Kleben" zwischen
 zwei Bildern in derselben Sitzung).
 
+*Autoren-Klassen – Notausgang bei Fehleinordnung (seit
+`PLAN-Rueckmeldungen-Blockverweis-iPad-Tafel-Darkmode-Formeln.md`, AP-3.4,
+#7107):* Ordnet die Automatik ein Bild falsch ein, kann die Redaktion das
+im Editor erzwingen: Bild-Block markieren → Seitenleiste „Block" →
+„Erweitert" → **„Zusätzliche CSS-Klasse(n)"**:
+
+| Klasse | Wirkung im Darkmode |
+|---|---|
+| `fos-darkmode-invert` | Bild wird **immer** invertiert (z. B. schwarze Formel, die die Automatik übersieht) |
+| `fos-darkmode-no-invert` | Bild wird **nie** invertiert (z. B. Grafik, die fälschlich invertiert wird) |
+
+WordPress setzt die Klasse an das `<figure>` des Bild-Blocks, nicht an das
+`<img>` – deshalb wirken beide Klassen am `<figure>` (oder jedem anderen
+Vorfahren) **und** am `<img>` selbst. `fos-darkmode-no-invert` gewinnt,
+wenn beide zutreffen. CSS in `style.css` (Abschnitt „Bilder ohne
+Hintergrund im Darkmode"), JS in `src/js/darkmode-image-invert.js`
+(`autorenVorgabe()`): keine Analyse, Diagnose-Merkmal
+`data-fos-darkmode-checked="erzwungen"` bzw. `"ausgenommen"`; bei
+`erzwungen` bekommt auch das `<img>` die Klasse, damit die Lightbox
+mitzieht.
+
 *Bekannte, bewusst akzeptierte Einschränkung (aus dem unabhängigen Review
 `AP-1.rev`, geringer Befund, kein Korrekturbedarf):* `scanImages()` läuft nur
 einmalig nach `window.load`. Bilder, die erst nachträglich per AJAX in

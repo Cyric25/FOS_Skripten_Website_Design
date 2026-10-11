@@ -39,6 +39,11 @@
  *     (IntersectionObserver)
  *   - Analyse in Leerlauf-Haeppchen; Messwerte in window.fosDarkmodeStatistik
  *
+ * AUTOREN-KLASSEN (AP-3.4): .fos-darkmode-no-invert (Bild oder Vorfahre,
+ * z. B. <figure> des Bild-Blocks) -> Grund 'ausgenommen', Klasse entfernt;
+ * .fos-darkmode-invert an einem Vorfahren -> 'erzwungen', Klasse auch am
+ * <img>. Keine Analyse in beiden Faellen. Doku fuer Autoren: CLAUDE.md.
+ *
  * KEIN import/export: wird als klassisches Script eingebunden.
  */
 (function () {
@@ -130,6 +135,7 @@
     // Diagnose-Merkmal data-fos-darkmode-checked: Wert = Grund, gesetzt erst
     // NACH der Analyse. Im Web-Inspector am Geraet ablesbar.
     //   invertiert | hell | deckend | leer | fehler | ohne-groesse
+    //   (+ AP-3.4: erzwungen | ausgenommen)
     var GRUND = { invertieren: 'invertiert', hell: 'hell', deckend: 'deckend', leer: 'leer' };
 
     // Messwerte fuer Tests (Browser-Konsole). gesamtMs/maxMs = Zeit auf dem
@@ -230,7 +236,9 @@
 
     function setzeErgebnis( img, grund ) {
         img.dataset.fosDarkmodeChecked = grund;
-        if ( grund === 'invertiert' ) {
+        // 'erzwungen': Klasse auch am <img>, damit die Lightbox (main.js
+        // prueft nur das ausloesende <img>) die Invertierung uebernimmt.
+        if ( grund === 'invertiert' || grund === 'erzwungen' ) {
             img.classList.add( MARKER_CLASS );
         } else {
             img.classList.remove( MARKER_CLASS );
@@ -294,6 +302,25 @@
     function nichts() {}
 
     /**
+     * Autoren-Klassen (AP-3.4, Notausgang fuer Fehleinordnungen der
+     * Automatik). Im Bild-Block landet die "Zusaetzliche CSS-Klasse" am
+     * <figure>, deshalb zaehlen Vorfahren mit:
+     *   .fos-darkmode-no-invert (am Bild oder Vorfahren) -> 'ausgenommen'
+     *   .fos-darkmode-invert    (am Bild oder Vorfahren) -> 'erzwungen'
+     * "nein" gewinnt immer - genauso wie in style.css, wo die no-invert-Regel
+     * bei gleicher Spezifitaet nach der invert-Regel steht.
+     * Wird VOR jeder Analyse geprueft (pruefeBild laesst bereits gepruefte
+     * Bilder aus, die vom Script selbst gesetzte Klasse wird hier also nie
+     * fuer eine Autorenvorgabe gehalten).
+     */
+    function autorenVorgabe( img ) {
+        if ( ! img.closest ) return '';
+        if ( img.closest( '.fos-darkmode-no-invert' ) ) return 'ausgenommen';
+        if ( img.closest( '.' + MARKER_CLASS ) ) return 'erzwungen';
+        return '';
+    }
+
+    /**
      * Prueft ein Bild genau einmal (Ausnahme: 'ohne-groesse' darf erneut).
      * Das interne Merkmal _fosDarkmodeLaeuft verhindert Doppelpruefungen,
      * solange auf load/decode/createImageBitmap gewartet wird.
@@ -304,6 +331,12 @@
         fertig = fertig || nichts;
         var bisher = img.dataset.fosDarkmodeChecked;
         if ( ( bisher && bisher !== 'ohne-groesse' ) || img._fosDarkmodeLaeuft ) {
+            fertig();
+            return;
+        }
+        var vorgabe = autorenVorgabe( img );
+        if ( vorgabe ) {
+            setzeErgebnis( img, vorgabe );
             fertig();
             return;
         }

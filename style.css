@@ -1345,3 +1345,17 @@ video {
 :root[data-theme="dark"] img.fos-darkmode-invert {
     filter: invert(1);
 }
+
+/* Autoren-Klassen (PLAN-Rueckmeldungen-Blockverweis-iPad-Tafel-Darkmode-Formeln.md,
+   AP-3.4): Notausgang, wenn die Automatik ein Bild falsch einordnet.
+   Im Bild-Block landet die "Zusaetzliche CSS-Klasse" am <figure>, deshalb
+   wirken beide Klassen am <figure> UND am <img>. Gleiche Spezifitaet wie die
+   Regel oben; "no-invert" steht bewusst DANACH und gewinnt damit immer
+   (das JS entscheidet genauso). */
+:root[data-theme="dark"] .fos-darkmode-invert img {
+    filter: invert(1);
+}
+:root[data-theme="dark"] .fos-darkmode-no-invert img,
+:root[data-theme="dark"] img.fos-darkmode-no-invert {
+    filter: none;
+}
