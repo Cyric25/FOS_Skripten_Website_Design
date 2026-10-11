@@ -1,0 +1,1715 @@
+{
+ "abtastgroesse": 512,
+ "fixtures": [
+  {
+   "datei": "glycolyse-zweite-atp__BOX.rgba.gz",
+   "id": "glycolyse-zweite-atp",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung.png",
+   "original": [
+    2617,
+    789
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "glycolyse-zweite-atp__BILINEAR.rgba.gz",
+   "id": "glycolyse-zweite-atp",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung.png",
+   "original": [
+    2617,
+    789
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "glycolyse-zweite-atp__NEAREST.rgba.gz",
+   "id": "glycolyse-zweite-atp",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung.png",
+   "original": [
+    2617,
+    789
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "glycolyse-zweite-atp-2048__BOX.rgba.gz",
+   "id": "glycolyse-zweite-atp-2048",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung-2048x617.png",
+   "original": [
+    2048,
+    617
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "glycolyse-zweite-atp-2048__BILINEAR.rgba.gz",
+   "id": "glycolyse-zweite-atp-2048",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung-2048x617.png",
+   "original": [
+    2048,
+    617
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "glycolyse-zweite-atp-2048__NEAREST.rgba.gz",
+   "id": "glycolyse-zweite-atp-2048",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung-2048x617.png",
+   "original": [
+    2048,
+    617
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "nad-regeneration__BOX.rgba.gz",
+   "id": "nad-regeneration",
+   "quelle": "2025/11/NAD-regeneration.png",
+   "original": [
+    4593,
+    1892
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik, 4593 px breit"
+  },
+  {
+   "datei": "nad-regeneration__BILINEAR.rgba.gz",
+   "id": "nad-regeneration",
+   "quelle": "2025/11/NAD-regeneration.png",
+   "original": [
+    4593,
+    1892
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik, 4593 px breit"
+  },
+  {
+   "datei": "nad-regeneration__NEAREST.rgba.gz",
+   "id": "nad-regeneration",
+   "quelle": "2025/11/NAD-regeneration.png",
+   "original": [
+    4593,
+    1892
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik, 4593 px breit"
+  },
+  {
+   "datei": "nad-regeneration-2048__BOX.rgba.gz",
+   "id": "nad-regeneration-2048",
+   "quelle": "2025/11/NAD-regeneration-2048x844.png",
+   "original": [
+    2048,
+    844
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "nad-regeneration-2048__BILINEAR.rgba.gz",
+   "id": "nad-regeneration-2048",
+   "quelle": "2025/11/NAD-regeneration-2048x844.png",
+   "original": [
+    2048,
+    844
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "nad-regeneration-2048__NEAREST.rgba.gz",
+   "id": "nad-regeneration-2048",
+   "quelle": "2025/11/NAD-regeneration-2048x844.png",
+   "original": [
+    2048,
+    844
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "gluconeogenese__BOX.rgba.gz",
+   "id": "gluconeogenese",
+   "quelle": "2025/11/Gluconeogenese.png",
+   "original": [
+    1833,
+    5022
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel, Hochformat 1833x5022, farbige Pfeile"
+  },
+  {
+   "datei": "gluconeogenese__BILINEAR.rgba.gz",
+   "id": "gluconeogenese",
+   "quelle": "2025/11/Gluconeogenese.png",
+   "original": [
+    1833,
+    5022
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel, Hochformat 1833x5022, farbige Pfeile"
+  },
+  {
+   "datei": "gluconeogenese__NEAREST.rgba.gz",
+   "id": "gluconeogenese",
+   "quelle": "2025/11/Gluconeogenese.png",
+   "original": [
+    1833,
+    5022
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel, Hochformat 1833x5022, farbige Pfeile"
+  },
+  {
+   "datei": "gluconeogenese-2048__BOX.rgba.gz",
+   "id": "gluconeogenese-2048",
+   "quelle": "2025/11/Gluconeogenese-748x2048.png",
+   "original": [
+    748,
+    2048
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "gluconeogenese-2048__BILINEAR.rgba.gz",
+   "id": "gluconeogenese-2048",
+   "quelle": "2025/11/Gluconeogenese-748x2048.png",
+   "original": [
+    748,
+    2048
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "gluconeogenese-2048__NEAREST.rgba.gz",
+   "id": "gluconeogenese-2048",
+   "quelle": "2025/11/Gluconeogenese-748x2048.png",
+   "original": [
+    748,
+    2048
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "schritt-2-vt__BOX.rgba.gz",
+   "id": "schritt-2-vt",
+   "quelle": "2026/01/Schritt-2-vt.png",
+   "original": [
+    2867,
+    901
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "schritt-2-vt__BILINEAR.rgba.gz",
+   "id": "schritt-2-vt",
+   "quelle": "2026/01/Schritt-2-vt.png",
+   "original": [
+    2867,
+    901
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "schritt-2-vt__NEAREST.rgba.gz",
+   "id": "schritt-2-vt",
+   "quelle": "2026/01/Schritt-2-vt.png",
+   "original": [
+    2867,
+    901
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "schritt-2-vt-2048__BOX.rgba.gz",
+   "id": "schritt-2-vt-2048",
+   "quelle": "2026/01/Schritt-2-vt-2048x644.png",
+   "original": [
+    2048,
+    644
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "schritt-2-vt-2048__BILINEAR.rgba.gz",
+   "id": "schritt-2-vt-2048",
+   "quelle": "2026/01/Schritt-2-vt-2048x644.png",
+   "original": [
+    2048,
+    644
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "schritt-2-vt-2048__NEAREST.rgba.gz",
+   "id": "schritt-2-vt-2048",
+   "quelle": "2026/01/Schritt-2-vt-2048x644.png",
+   "original": [
+    2048,
+    644
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "fettsaeure-akrivierung__BOX.rgba.gz",
+   "id": "fettsaeure-akrivierung",
+   "quelle": "2026/02/Fettsaeure-Akrivierung.png",
+   "original": [
+    2241,
+    1027
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "fettsaeure-akrivierung__BILINEAR.rgba.gz",
+   "id": "fettsaeure-akrivierung",
+   "quelle": "2026/02/Fettsaeure-Akrivierung.png",
+   "original": [
+    2241,
+    1027
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "fettsaeure-akrivierung__NEAREST.rgba.gz",
+   "id": "fettsaeure-akrivierung",
+   "quelle": "2026/02/Fettsaeure-Akrivierung.png",
+   "original": [
+    2241,
+    1027
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "fettsaeure-akrivierung-2048__BOX.rgba.gz",
+   "id": "fettsaeure-akrivierung-2048",
+   "quelle": "2026/02/Fettsaeure-Akrivierung-2048x939.png",
+   "original": [
+    2048,
+    939
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "fettsaeure-akrivierung-2048__BILINEAR.rgba.gz",
+   "id": "fettsaeure-akrivierung-2048",
+   "quelle": "2026/02/Fettsaeure-Akrivierung-2048x939.png",
+   "original": [
+    2048,
+    939
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "fettsaeure-akrivierung-2048__NEAREST.rgba.gz",
+   "id": "fettsaeure-akrivierung-2048",
+   "quelle": "2026/02/Fettsaeure-Akrivierung-2048x939.png",
+   "original": [
+    2048,
+    939
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "bild5__BOX.rgba.gz",
+   "id": "bild5",
+   "quelle": "2025/05/Bild5.png",
+   "original": [
+    1382,
+    429
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "bild5__BILINEAR.rgba.gz",
+   "id": "bild5",
+   "quelle": "2025/05/Bild5.png",
+   "original": [
+    1382,
+    429
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "bild5__NEAREST.rgba.gz",
+   "id": "bild5",
+   "quelle": "2025/05/Bild5.png",
+   "original": [
+    1382,
+    429
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "bild5-1024__BOX.rgba.gz",
+   "id": "bild5-1024",
+   "quelle": "2025/05/Bild5-1024x318.png",
+   "original": [
+    1024,
+    318
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "bild5-1024__BILINEAR.rgba.gz",
+   "id": "bild5-1024",
+   "quelle": "2025/05/Bild5-1024x318.png",
+   "original": [
+    1024,
+    318
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "bild5-1024__NEAREST.rgba.gz",
+   "id": "bild5-1024",
+   "quelle": "2025/05/Bild5-1024x318.png",
+   "original": [
+    1024,
+    318
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "harnstoffzyklus__BOX.rgba.gz",
+   "id": "harnstoffzyklus",
+   "quelle": "2026/04/Harnstoffzyklus.png",
+   "original": [
+    1842,
+    1764
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "harnstoffzyklus__BILINEAR.rgba.gz",
+   "id": "harnstoffzyklus",
+   "quelle": "2026/04/Harnstoffzyklus.png",
+   "original": [
+    1842,
+    1764
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "harnstoffzyklus__NEAREST.rgba.gz",
+   "id": "harnstoffzyklus",
+   "quelle": "2026/04/Harnstoffzyklus.png",
+   "original": [
+    1842,
+    1764
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "harnstoffzyklus-1536__BOX.rgba.gz",
+   "id": "harnstoffzyklus-1536",
+   "quelle": "2026/04/Harnstoffzyklus-1536x1471.png",
+   "original": [
+    1536,
+    1471
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "harnstoffzyklus-1536__BILINEAR.rgba.gz",
+   "id": "harnstoffzyklus-1536",
+   "quelle": "2026/04/Harnstoffzyklus-1536x1471.png",
+   "original": [
+    1536,
+    1471
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "harnstoffzyklus-1536__NEAREST.rgba.gz",
+   "id": "harnstoffzyklus-1536",
+   "quelle": "2026/04/Harnstoffzyklus-1536x1471.png",
+   "original": [
+    1536,
+    1471
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "peptidbindung-2__BOX.rgba.gz",
+   "id": "peptidbindung-2",
+   "quelle": "2026/03/Peptidbindung-2.png",
+   "original": [
+    1622,
+    509
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "peptidbindung-2__BILINEAR.rgba.gz",
+   "id": "peptidbindung-2",
+   "quelle": "2026/03/Peptidbindung-2.png",
+   "original": [
+    1622,
+    509
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "peptidbindung-2__NEAREST.rgba.gz",
+   "id": "peptidbindung-2",
+   "quelle": "2026/03/Peptidbindung-2.png",
+   "original": [
+    1622,
+    509
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "peptidbindung-2-1536__BOX.rgba.gz",
+   "id": "peptidbindung-2-1536",
+   "quelle": "2026/03/Peptidbindung-2-1536x482.png",
+   "original": [
+    1536,
+    482
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "peptidbindung-2-1536__BILINEAR.rgba.gz",
+   "id": "peptidbindung-2-1536",
+   "quelle": "2026/03/Peptidbindung-2-1536x482.png",
+   "original": [
+    1536,
+    482
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "peptidbindung-2-1536__NEAREST.rgba.gz",
+   "id": "peptidbindung-2-1536",
+   "quelle": "2026/03/Peptidbindung-2-1536x482.png",
+   "original": [
+    1536,
+    482
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "cis__BOX.rgba.gz",
+   "id": "cis",
+   "quelle": "2026/02/CIS.png",
+   "original": [
+    1309,
+    1772
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "cis__BILINEAR.rgba.gz",
+   "id": "cis",
+   "quelle": "2026/02/CIS.png",
+   "original": [
+    1309,
+    1772
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "cis__NEAREST.rgba.gz",
+   "id": "cis",
+   "quelle": "2026/02/CIS.png",
+   "original": [
+    1309,
+    1772
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "cis-1135__BOX.rgba.gz",
+   "id": "cis-1135",
+   "quelle": "2026/02/CIS-1135x1536.png",
+   "original": [
+    1135,
+    1536
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "cis-1135__BILINEAR.rgba.gz",
+   "id": "cis-1135",
+   "quelle": "2026/02/CIS-1135x1536.png",
+   "original": [
+    1135,
+    1536
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "cis-1135__NEAREST.rgba.gz",
+   "id": "cis-1135",
+   "quelle": "2026/02/CIS-1135x1536.png",
+   "original": [
+    1135,
+    1536
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "isomere-c3h8o__BOX.rgba.gz",
+   "id": "isomere-c3h8o",
+   "quelle": "2025/10/ISOMERE-C3H8O.png",
+   "original": [
+    1826,
+    504
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "isomere-c3h8o__BILINEAR.rgba.gz",
+   "id": "isomere-c3h8o",
+   "quelle": "2025/10/ISOMERE-C3H8O.png",
+   "original": [
+    1826,
+    504
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "isomere-c3h8o__NEAREST.rgba.gz",
+   "id": "isomere-c3h8o",
+   "quelle": "2025/10/ISOMERE-C3H8O.png",
+   "original": [
+    1826,
+    504
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "isomere-c3h8o-1536__BOX.rgba.gz",
+   "id": "isomere-c3h8o-1536",
+   "quelle": "2025/10/ISOMERE-C3H8O-1536x424.png",
+   "original": [
+    1536,
+    424
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "isomere-c3h8o-1536__BILINEAR.rgba.gz",
+   "id": "isomere-c3h8o-1536",
+   "quelle": "2025/10/ISOMERE-C3H8O-1536x424.png",
+   "original": [
+    1536,
+    424
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "isomere-c3h8o-1536__NEAREST.rgba.gz",
+   "id": "isomere-c3h8o-1536",
+   "quelle": "2025/10/ISOMERE-C3H8O-1536x424.png",
+   "original": [
+    1536,
+    424
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "atp__BOX.rgba.gz",
+   "id": "atp",
+   "quelle": "2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "wurde schon mit alter Logik erkannt"
+  },
+  {
+   "datei": "atp__BILINEAR.rgba.gz",
+   "id": "atp",
+   "quelle": "2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "wurde schon mit alter Logik erkannt"
+  },
+  {
+   "datei": "atp__NEAREST.rgba.gz",
+   "id": "atp",
+   "quelle": "2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "wurde schon mit alter Logik erkannt"
+  },
+  {
+   "datei": "atp-1024__BOX.rgba.gz",
+   "id": "atp-1024",
+   "quelle": "2025/09/ATP-1024x573.png",
+   "original": [
+    1024,
+    573
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "atp-1024__BILINEAR.rgba.gz",
+   "id": "atp-1024",
+   "quelle": "2025/09/ATP-1024x573.png",
+   "original": [
+    1024,
+    573
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "atp-1024__NEAREST.rgba.gz",
+   "id": "atp-1024",
+   "quelle": "2025/09/ATP-1024x573.png",
+   "original": [
+    1024,
+    573
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "foto-bunsenbrenner__BOX.rgba.gz",
+   "id": "foto-bunsenbrenner",
+   "quelle": "2026/07/Bunsen_burner_flame_types.jpg",
+   "original": [
+    1668,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 460,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-bunsenbrenner__BILINEAR.rgba.gz",
+   "id": "foto-bunsenbrenner",
+   "quelle": "2026/07/Bunsen_burner_flame_types.jpg",
+   "original": [
+    1668,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 460,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-bunsenbrenner__NEAREST.rgba.gz",
+   "id": "foto-bunsenbrenner",
+   "quelle": "2026/07/Bunsen_burner_flame_types.jpg",
+   "original": [
+    1668,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 460,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-pattaya__BOX.rgba.gz",
+   "id": "foto-pattaya",
+   "quelle": "2026/07/pattaya-5789606_1280-1.jpg",
+   "original": [
+    2251,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 341,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-pattaya__BILINEAR.rgba.gz",
+   "id": "foto-pattaya",
+   "quelle": "2026/07/pattaya-5789606_1280-1.jpg",
+   "original": [
+    2251,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 341,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-pattaya__NEAREST.rgba.gz",
+   "id": "foto-pattaya",
+   "quelle": "2026/07/pattaya-5789606_1280-1.jpg",
+   "original": [
+    2251,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 341,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-logo__BOX.rgba.gz",
+   "id": "foto-logo",
+   "quelle": "2025/05/Logo.jpg",
+   "original": [
+    1130,
+    1130
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Logo als JPG (deckend)"
+  },
+  {
+   "datei": "foto-logo__BILINEAR.rgba.gz",
+   "id": "foto-logo",
+   "quelle": "2025/05/Logo.jpg",
+   "original": [
+    1130,
+    1130
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Logo als JPG (deckend)"
+  },
+  {
+   "datei": "foto-logo__NEAREST.rgba.gz",
+   "id": "foto-logo",
+   "quelle": "2025/05/Logo.jpg",
+   "original": [
+    1130,
+    1130
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Logo als JPG (deckend)"
+  },
+  {
+   "datei": "foto-betha-faltblatt__BOX.rgba.gz",
+   "id": "foto-betha-faltblatt",
+   "quelle": "2026/03/Betha-faltblatt.jpg",
+   "original": [
+    250,
+    250
+   ],
+   "breite": 250,
+   "hoehe": 250,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "kleines JPG unter Abtastgroesse (keine Verkleinerung)"
+  },
+  {
+   "datei": "foto-betha-faltblatt__BILINEAR.rgba.gz",
+   "id": "foto-betha-faltblatt",
+   "quelle": "2026/03/Betha-faltblatt.jpg",
+   "original": [
+    250,
+    250
+   ],
+   "breite": 250,
+   "hoehe": 250,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "kleines JPG unter Abtastgroesse (keine Verkleinerung)"
+  },
+  {
+   "datei": "foto-betha-faltblatt__NEAREST.rgba.gz",
+   "id": "foto-betha-faltblatt",
+   "quelle": "2026/03/Betha-faltblatt.jpg",
+   "original": [
+    250,
+    250
+   ],
+   "breite": 250,
+   "hoehe": 250,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "kleines JPG unter Abtastgroesse (keine Verkleinerung)"
+  },
+  {
+   "datei": "foto-bildschirmfoto__BOX.rgba.gz",
+   "id": "foto-bildschirmfoto",
+   "quelle": "2025/11/Bildschirmfoto_12-11-2025_121610_.jpg",
+   "original": [
+    2321,
+    1210
+   ],
+   "breite": 512,
+   "hoehe": 267,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Bildschirmfoto"
+  },
+  {
+   "datei": "foto-bildschirmfoto__BILINEAR.rgba.gz",
+   "id": "foto-bildschirmfoto",
+   "quelle": "2025/11/Bildschirmfoto_12-11-2025_121610_.jpg",
+   "original": [
+    2321,
+    1210
+   ],
+   "breite": 512,
+   "hoehe": 267,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Bildschirmfoto"
+  },
+  {
+   "datei": "foto-bildschirmfoto__NEAREST.rgba.gz",
+   "id": "foto-bildschirmfoto",
+   "quelle": "2025/11/Bildschirmfoto_12-11-2025_121610_.jpg",
+   "original": [
+    2321,
+    1210
+   ],
+   "breite": 512,
+   "hoehe": 267,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Bildschirmfoto"
+  },
+  {
+   "datei": "deckend-designer-png__BOX.rgba.gz",
+   "id": "deckend-designer-png",
+   "quelle": "2025/05/Designer.png",
+   "original": [
+    1024,
+    1024
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "deckend UND dunkel (wl ~98): nur die Transparenzpruefung schuetzt"
+  },
+  {
+   "datei": "deckend-designer-png__BILINEAR.rgba.gz",
+   "id": "deckend-designer-png",
+   "quelle": "2025/05/Designer.png",
+   "original": [
+    1024,
+    1024
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "deckend UND dunkel (wl ~98): nur die Transparenzpruefung schuetzt"
+  },
+  {
+   "datei": "deckend-designer-png__NEAREST.rgba.gz",
+   "id": "deckend-designer-png",
+   "quelle": "2025/05/Designer.png",
+   "original": [
+    1024,
+    1024
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "deckend UND dunkel (wl ~98): nur die Transparenzpruefung schuetzt"
+  },
+  {
+   "datei": "deckend-chromatogramm__BOX.rgba.gz",
+   "id": "deckend-chromatogramm",
+   "quelle": "2026/01/Chromatogramm.png",
+   "original": [
+    2958,
+    1788
+   ],
+   "breite": 512,
+   "hoehe": 309,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, ~1 % transparenter Rand"
+  },
+  {
+   "datei": "deckend-chromatogramm__BILINEAR.rgba.gz",
+   "id": "deckend-chromatogramm",
+   "quelle": "2026/01/Chromatogramm.png",
+   "original": [
+    2958,
+    1788
+   ],
+   "breite": 512,
+   "hoehe": 309,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, ~1 % transparenter Rand"
+  },
+  {
+   "datei": "deckend-chromatogramm__NEAREST.rgba.gz",
+   "id": "deckend-chromatogramm",
+   "quelle": "2026/01/Chromatogramm.png",
+   "original": [
+    2958,
+    1788
+   ],
+   "breite": 512,
+   "hoehe": 309,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, ~1 % transparenter Rand"
+  },
+  {
+   "datei": "deckend-beta-carotin__BOX.rgba.gz",
+   "id": "deckend-beta-carotin",
+   "quelle": "2025/12/Beta-Carotin.png",
+   "original": [
+    3111,
+    1464
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, Strukturformel"
+  },
+  {
+   "datei": "deckend-beta-carotin__BILINEAR.rgba.gz",
+   "id": "deckend-beta-carotin",
+   "quelle": "2025/12/Beta-Carotin.png",
+   "original": [
+    3111,
+    1464
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, Strukturformel"
+  },
+  {
+   "datei": "deckend-beta-carotin__NEAREST.rgba.gz",
+   "id": "deckend-beta-carotin",
+   "quelle": "2025/12/Beta-Carotin.png",
+   "original": [
+    3111,
+    1464
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, Strukturformel"
+  },
+  {
+   "datei": "svg-pphw-atp__BOX.rgba.gz",
+   "id": "svg-pphw-atp",
+   "quelle": "svgpng:2026/05/PPHW_-_ATP.svg",
+   "original": [
+    730,
+    716
+   ],
+   "breite": 512,
+   "hoehe": 502,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-atp__BILINEAR.rgba.gz",
+   "id": "svg-pphw-atp",
+   "quelle": "svgpng:2026/05/PPHW_-_ATP.svg",
+   "original": [
+    730,
+    716
+   ],
+   "breite": 512,
+   "hoehe": 502,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-atp__NEAREST.rgba.gz",
+   "id": "svg-pphw-atp",
+   "quelle": "svgpng:2026/05/PPHW_-_ATP.svg",
+   "original": [
+    730,
+    716
+   ],
+   "breite": 512,
+   "hoehe": 502,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-nadph__BOX.rgba.gz",
+   "id": "svg-pphw-nadph",
+   "quelle": "svgpng:2026/05/PPHW_-_NADPH.svg",
+   "original": [
+    707,
+    540
+   ],
+   "breite": 512,
+   "hoehe": 391,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-nadph__BILINEAR.rgba.gz",
+   "id": "svg-pphw-nadph",
+   "quelle": "svgpng:2026/05/PPHW_-_NADPH.svg",
+   "original": [
+    707,
+    540
+   ],
+   "breite": 512,
+   "hoehe": 391,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-nadph__NEAREST.rgba.gz",
+   "id": "svg-pphw-nadph",
+   "quelle": "svgpng:2026/05/PPHW_-_NADPH.svg",
+   "original": [
+    707,
+    540
+   ],
+   "breite": 512,
+   "hoehe": 391,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-zeichnung__BOX.rgba.gz",
+   "id": "svg-zeichnung",
+   "quelle": "svgpng:2026/05/zeichnung.svg",
+   "original": [
+    750,
+    488
+   ],
+   "breite": 512,
+   "hoehe": 333,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-zeichnung__BILINEAR.rgba.gz",
+   "id": "svg-zeichnung",
+   "quelle": "svgpng:2026/05/zeichnung.svg",
+   "original": [
+    750,
+    488
+   ],
+   "breite": 512,
+   "hoehe": 333,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-zeichnung__NEAREST.rgba.gz",
+   "id": "svg-zeichnung",
+   "quelle": "svgpng:2026/05/zeichnung.svg",
+   "original": [
+    750,
+    488
+   ],
+   "breite": 512,
+   "hoehe": 333,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "farbig-ghs02-flamme__BOX.rgba.gz",
+   "id": "farbig-ghs02-flamme",
+   "quelle": "2025/05/GHS02_flamme.png",
+   "original": [
+    3000,
+    2999
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"
+  },
+  {
+   "datei": "farbig-ghs02-flamme__BILINEAR.rgba.gz",
+   "id": "farbig-ghs02-flamme",
+   "quelle": "2025/05/GHS02_flamme.png",
+   "original": [
+    3000,
+    2999
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"
+  },
+  {
+   "datei": "farbig-ghs02-flamme__NEAREST.rgba.gz",
+   "id": "farbig-ghs02-flamme",
+   "quelle": "2025/05/GHS02_flamme.png",
+   "original": [
+    3000,
+    2999
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"
+  },
+  {
+   "datei": "farbig-atmungskette__BOX.rgba.gz",
+   "id": "farbig-atmungskette",
+   "quelle": "2026/02/Atmungskette-Uebersicht.png",
+   "original": [
+    2084,
+    1233
+   ],
+   "breite": 512,
+   "hoehe": 303,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"
+  },
+  {
+   "datei": "farbig-atmungskette__BILINEAR.rgba.gz",
+   "id": "farbig-atmungskette",
+   "quelle": "2026/02/Atmungskette-Uebersicht.png",
+   "original": [
+    2084,
+    1233
+   ],
+   "breite": 512,
+   "hoehe": 303,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"
+  },
+  {
+   "datei": "farbig-atmungskette__NEAREST.rgba.gz",
+   "id": "farbig-atmungskette",
+   "quelle": "2026/02/Atmungskette-Uebersicht.png",
+   "original": [
+    2084,
+    1233
+   ],
+   "breite": 512,
+   "hoehe": 303,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"
+  },
+  {
+   "datei": "farbig-ketonkoerper-transport__BOX.rgba.gz",
+   "id": "farbig-ketonkoerper-transport",
+   "quelle": "2026/02/Ketonkoerper-Transport.png",
+   "original": [
+    4357,
+    4124
+   ],
+   "breite": 512,
+   "hoehe": 485,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"
+  },
+  {
+   "datei": "farbig-ketonkoerper-transport__BILINEAR.rgba.gz",
+   "id": "farbig-ketonkoerper-transport",
+   "quelle": "2026/02/Ketonkoerper-Transport.png",
+   "original": [
+    4357,
+    4124
+   ],
+   "breite": 512,
+   "hoehe": 485,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"
+  },
+  {
+   "datei": "farbig-ketonkoerper-transport__NEAREST.rgba.gz",
+   "id": "farbig-ketonkoerper-transport",
+   "quelle": "2026/02/Ketonkoerper-Transport.png",
+   "original": [
+    4357,
+    4124
+   ],
+   "breite": 512,
+   "hoehe": 485,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"
+  },
+  {
+   "datei": "farbig-einstabmesskette__BOX.rgba.gz",
+   "id": "farbig-einstabmesskette",
+   "quelle": "2025/11/Einstabmesskette.png",
+   "original": [
+    2752,
+    2446
+   ],
+   "breite": 512,
+   "hoehe": 455,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Geraetezeichnung mit hellen Flaechen (wl ~209)"
+  },
+  {
+   "datei": "farbig-einstabmesskette__BILINEAR.rgba.gz",
+   "id": "farbig-einstabmesskette",
+   "quelle": "2025/11/Einstabmesskette.png",
+   "original": [
+    2752,
+    2446
+   ],
+   "breite": 512,
+   "hoehe": 455,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Geraetezeichnung mit hellen Flaechen (wl ~209)"
+  },
+  {
+   "datei": "farbig-einstabmesskette__NEAREST.rgba.gz",
+   "id": "farbig-einstabmesskette",
+   "quelle": "2025/11/Einstabmesskette.png",
+   "original": [
+    2752,
+    2446
+   ],
+   "breite": 512,
+   "hoehe": 455,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Geraetezeichnung mit hellen Flaechen (wl ~209)"
+  },
+  {
+   "datei": "hell-atp-invertiert__BOX.rgba.gz",
+   "id": "hell-atp-invertiert",
+   "quelle": "hell:2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "heller-strich",
+   "begruendung": "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); in der Mediathek gibt es kein weisses Logo auf transparentem Grund"
+  },
+  {
+   "datei": "hell-atp-invertiert__BILINEAR.rgba.gz",
+   "id": "hell-atp-invertiert",
+   "quelle": "hell:2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "heller-strich",
+   "begruendung": "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); in der Mediathek gibt es kein weisses Logo auf transparentem Grund"
+  },
+  {
+   "datei": "hell-atp-invertiert__NEAREST.rgba.gz",
+   "id": "hell-atp-invertiert",
+   "quelle": "hell:2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "heller-strich",
+   "begruendung": "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); in der Mediathek gibt es kein weisses Logo auf transparentem Grund"
+  }
+ ]
+}

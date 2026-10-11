@@ -30,6 +30,50 @@
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
+    /**
+     * Reine Klassifizierung der abgetasteten Pixel (RGBA, nicht vormultipliziert,
+     * wie getImageData sie liefert). Ohne DOM-Zugriff, damit sie im Node-Harnisch
+     * tools/test-darkmode-klassifizierung.js gegen Fixtures geprueft werden kann.
+     *
+     * @return {{ergebnis: string, anteilTransparent: number, strichPixel: number, helligkeit: number}}
+     *         ergebnis: 'invertieren' | 'hell' | 'deckend' | 'leer'
+     */
+    function klassifiziere( data, w, h ) {
+        var totalPixels = w * h;
+        var transparentCount = 0;
+        var opaqueLumSum = 0;
+        var opaqueCount = 0;
+
+        for ( var i = 0; i < data.length; i += 4 ) {
+            var alpha = data[ i + 3 ];
+            if ( alpha < TRANSPARENT_ALPHA_THRESHOLD ) {
+                transparentCount++;
+            } else {
+                opaqueLumSum += luminance( data[ i ], data[ i + 1 ], data[ i + 2 ] );
+                opaqueCount++;
+            }
+        }
+
+        var kennzahlen = {
+            ergebnis: '',
+            anteilTransparent: totalPixels ? transparentCount / totalPixels : 0,
+            strichPixel: opaqueCount,
+            helligkeit: opaqueCount ? opaqueLumSum / opaqueCount : 0
+        };
+
+        if ( kennzahlen.anteilTransparent < MIN_TRANSPARENT_RATIO ) {
+            kennzahlen.ergebnis = 'deckend'; // Bild hat einen (weitgehend) deckenden Hintergrund
+        } else if ( opaqueCount === 0 ) {
+            kennzahlen.ergebnis = 'leer'; // vollstaendig transparent, nichts zu invertieren
+        } else {
+            kennzahlen.ergebnis = kennzahlen.helligkeit < DARK_LUMINANCE_THRESHOLD ? 'invertieren' : 'hell';
+        }
+        return kennzahlen;
+    }
+
+    window.fosDarkmodeKlassifiziere = klassifiziere;
+    window.fosDarkmodeAbtastgroesse = MAX_SAMPLE_DIMENSION;
+
     function analyzeImage( img ) {
         try {
             var scale = Math.min( 1, MAX_SAMPLE_DIMENSION / Math.max( img.naturalWidth, img.naturalHeight ) );
@@ -44,29 +88,7 @@
 
             var data = ctx.getImageData( 0, 0, w, h ).data;
 
-            var totalPixels = w * h;
-            var transparentCount = 0;
-            var opaqueLumSum = 0;
-            var opaqueCount = 0;
-
-            for ( var i = 0; i < data.length; i += 4 ) {
-                var alpha = data[ i + 3 ];
-                if ( alpha < TRANSPARENT_ALPHA_THRESHOLD ) {
-                    transparentCount++;
-                } else {
-                    opaqueLumSum += luminance( data[ i ], data[ i + 1 ], data[ i + 2 ] );
-                    opaqueCount++;
-                }
-            }
-
-            if ( transparentCount / totalPixels < MIN_TRANSPARENT_RATIO ) {
-                return false; // Bild hat einen (weitgehend) deckenden Hintergrund
-            }
-            if ( opaqueCount === 0 ) {
-                return false; // vollstaendig transparent, nichts zu invertieren
-            }
-
-            return ( opaqueLumSum / opaqueCount ) < DARK_LUMINANCE_THRESHOLD;
+            return klassifiziere( data, w, h ).ergebnis === 'invertieren';
         } catch ( e ) {
             // z.B. SecurityError bei fremdgehosteten Bildern ohne CORS-Freigabe
             return false;
