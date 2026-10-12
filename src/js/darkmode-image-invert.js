@@ -23,6 +23,21 @@
  *   - Strich        = Alpha >= 32 (auch halbtransparente Kantenpixel)
  *   - Helligkeit    = alpha-gewichtet (Summe a*L / Summe a) ueber alle
  *                     Strichpixel - unabhaengig vom Verkleinerungsverfahren
+ *   - freie Tinte   (AP-3.fix1) = Anteil dunkler, (nahezu) deckender Pixel,
+ *                     die an transparenten bzw. durchscheinend hellen Grund
+ *                     grenzen, aber NICHT an eine deckend helle Flaeche.
+ * Entscheidung: deckend -> nie; Helligkeit < 110 -> invertieren; sonst
+ * invertieren, wenn freie Tinte >= 1,6 Promille der Abtastflaeche.
+ * WARUM DIE FREIE TINTE (Befund K1, Betreiber-Leitlinie 2026-10-12: "schwarze
+ * Linien/Schrift auf transparentem Grund -> invertieren; Norm-Piktogramme mit
+ * deckend heller Flaeche -> nicht"): Halbtransparente Pastell-Markerflaechen
+ * oder grosse helle Farbflaechen heben die mittlere Helligkeit ueber jede
+ * Schwelle, obwohl daneben schwarze Schrift auf transparentem Grund steht, die
+ * im Darkmode unsichtbar wird. Die Helligkeit allein trennt das nicht von
+ * GHS-Piktogrammen (schwarzes Symbol auf deckend weisser Raute) - die
+ * Nachbarschaft der dunklen Pixel schon. Bitte nicht durch eine hoehere
+ * Helligkeitsschwelle ersetzen: Lipid-Grafiken (wl 131-155) und
+ * Malat-Aspartat-Shuttle (166) liegen ueber GHS03 (165).
  * Kalibriert gegen echte Mediathek-Bilder in drei Verkleinerungsarten:
  * tools/test-darkmode-klassifizierung.js + tools/fixtures/darkmode/
  * (neu erzeugen: python -I tools/erzeuge-darkmode-fixtures.py).
@@ -63,6 +78,23 @@
     // Alpha-gewichtete mittlere Helligkeit (0-255) der Strichpixel, unterhalb
     // derer ein Bild als "dunkel" gilt
     var DARK_LUMINANCE_THRESHOLD = 110;
+    // --- freie Tinte (AP-3.fix1) ---
+    // relative Leuchtdichte (linear, 0-1) unterhalb derer ein Pixel "dunkle
+    // Tinte" ist (~ sRGB-Grau 63; Kontrast zu #121212 < ~1,8). Linear statt
+    // L(0-255), damit gesaettigtes Rot (GHS-Rahmen, Y 0,21) NICHT als dunkel zaehlt.
+    var TINTE_LEUCHTDICHTE = 0.05;
+    // ab dieser Leuchtdichte ist ein deckendes Pixel "helle Flaeche" (~ sRGB 160)
+    var FLAECHE_LEUCHTDICHTE = 0.35;
+    // Tinte muss nahezu deckend sein (weiche Schatten zaehlen nicht)
+    var TINTE_MIN_ALPHA = 128;
+    // ab hier gilt ein Pixel als deckend (darunter: durchscheinend, z. B. Textmarker)
+    var DECKEND_ALPHA = 224;
+    // Nachbarschaft in Abtastpixeln (Quadrat 2*r+1)
+    var UMGEBUNG_RADIUS = 2;
+    // Mindestanteil freier Tinte an der Abtastflaeche (1,6 Promille);
+    // kalibriert: darf nicht max. 1,1 (Einstabmesskette), muss min. 2,2
+    // (kompetitiver Inhibitor), siehe Plan AP-3.fix1
+    var MIN_FREIE_TINTE = 0.0016;
     // Laengste Kante, auf die ein Bild vor der Analyse herunterskaliert wird
     // (muss mit ABTASTGROESSE in tools/erzeuge-darkmode-fixtures.py
     // uebereinstimmen - der Harnisch prueft das)
@@ -74,12 +106,86 @@
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
+    // sRGB 0-255 -> linear 0-1 (einmalig als Tabelle)
+    var LINEAR = ( function () {
+        var t = new Float64Array( 256 );
+        for ( var i = 0; i < 256; i++ ) {
+            var c = i / 255;
+            t[ i ] = c <= 0.04045 ? c / 12.92 : Math.pow( ( c + 0.055 ) / 1.055, 2.4 );
+        }
+        return t;
+    }() );
+
+    function leuchtdichte( r, g, b ) {
+        return 0.2126 * LINEAR[ r ] + 0.7152 * LINEAR[ g ] + 0.0722 * LINEAR[ b ];
+    }
+
+    // Maske um r Pixel ausdehnen (Quadrat), separabel mit gleitender Summe: O(w*h)
+    function dehne( maske, w, h, r ) {
+        var n = w * h;
+        var zeile = new Uint8Array( n );
+        var aus = new Uint8Array( n );
+        var x, y, c, b;
+        for ( y = 0; y < h; y++ ) {
+            c = 0;
+            b = y * w;
+            for ( x = -r; x < w; x++ ) {
+                if ( x + r < w ) { c += maske[ b + x + r ]; }
+                if ( x - r - 1 >= 0 ) { c -= maske[ b + x - r - 1 ]; }
+                if ( x >= 0 ) { zeile[ b + x ] = c > 0 ? 1 : 0; }
+            }
+        }
+        for ( x = 0; x < w; x++ ) {
+            c = 0;
+            for ( y = -r; y < h; y++ ) {
+                if ( y + r < h ) { c += zeile[ ( y + r ) * w + x ]; }
+                if ( y - r - 1 >= 0 ) { c -= zeile[ ( y - r - 1 ) * w + x ]; }
+                if ( y >= 0 ) { aus[ y * w + x ] = c > 0 ? 1 : 0; }
+            }
+        }
+        return aus;
+    }
+
+    /**
+     * Anteil "freier Tinte" an der Flaeche (0-1): dunkle, (nahezu) deckende
+     * Pixel mit transparentem/durchscheinend hellem Grund in der Naehe und
+     * OHNE deckend helle Flaeche in der Naehe. Schwarze Schrift auf
+     * transparentem Grund zaehlt, das schwarze Symbol eines GHS-Piktogramms
+     * auf weisser Raute und Umrisslinien heller Flaechen nicht.
+     */
+    function freieTinte( data, w, h ) {
+        var n = w * h;
+        if ( ! n || data.length < n * 4 ) { return 0; }
+        var grund = new Uint8Array( n );
+        var flaeche = new Uint8Array( n );
+        var tinte = new Uint8Array( n );
+        var p, i, a, y;
+        for ( p = 0, i = 0; p < n; p++, i += 4 ) {
+            a = data[ i + 3 ];
+            if ( a < TRANSPARENT_ALPHA_THRESHOLD ) { grund[ p ] = 1; continue; }
+            y = leuchtdichte( data[ i ], data[ i + 1 ], data[ i + 2 ] );
+            if ( a < DECKEND_ALPHA ) {
+                if ( y >= TINTE_LEUCHTDICHTE ) { grund[ p ] = 1; } // durchscheinend hell (Textmarker)
+            } else if ( y >= FLAECHE_LEUCHTDICHTE ) {
+                flaeche[ p ] = 1;
+            }
+            if ( a >= TINTE_MIN_ALPHA && y < TINTE_LEUCHTDICHTE ) { tinte[ p ] = 1; }
+        }
+        var nahGrund = dehne( grund, w, h, UMGEBUNG_RADIUS );
+        var nahFlaeche = dehne( flaeche, w, h, UMGEBUNG_RADIUS );
+        var frei = 0;
+        for ( p = 0; p < n; p++ ) {
+            if ( tinte[ p ] && nahGrund[ p ] && ! nahFlaeche[ p ] ) { frei++; }
+        }
+        return frei / n;
+    }
+
     /**
      * Reine Klassifizierung der abgetasteten Pixel (RGBA, nicht vormultipliziert,
      * wie getImageData sie liefert). Ohne DOM-Zugriff, damit sie im Node-Harnisch
      * tools/test-darkmode-klassifizierung.js gegen Fixtures geprueft werden kann.
      *
-     * @return {{ergebnis: string, anteilTransparent: number, strichPixel: number, helligkeit: number}}
+     * @return {{ergebnis: string, anteilTransparent: number, strichPixel: number, helligkeit: number, freieTinte: number}}
      *         ergebnis: 'invertieren' | 'hell' | 'deckend' | 'leer'
      */
     function klassifiziere( data, w, h ) {
@@ -104,15 +210,20 @@
             ergebnis: '',
             anteilTransparent: totalPixels ? transparentCount / totalPixels : 0,
             strichPixel: strokeCount,
-            helligkeit: alphaSum ? weightedLumSum / alphaSum : 0
+            helligkeit: alphaSum ? weightedLumSum / alphaSum : 0,
+            freieTinte: 0
         };
 
         if ( kennzahlen.anteilTransparent < MIN_TRANSPARENT_RATIO ) {
             kennzahlen.ergebnis = 'deckend'; // Bild hat einen (weitgehend) deckenden Hintergrund
         } else if ( ! totalPixels || strokeCount / totalPixels < MIN_STROKE_RATIO ) {
             kennzahlen.ergebnis = 'leer'; // (fast) vollstaendig transparent, nichts zu invertieren
+        } else if ( kennzahlen.helligkeit < DARK_LUMINANCE_THRESHOLD ) {
+            kennzahlen.ergebnis = 'invertieren'; // ueberwiegend dunkel
         } else {
-            kennzahlen.ergebnis = kennzahlen.helligkeit < DARK_LUMINANCE_THRESHOLD ? 'invertieren' : 'hell';
+            // hell im Mittel - aber steht dunkle Tinte frei auf transparentem Grund?
+            kennzahlen.freieTinte = freieTinte( data, w, h );
+            kennzahlen.ergebnis = kennzahlen.freieTinte >= MIN_FREIE_TINTE ? 'invertieren' : 'hell';
         }
         return kennzahlen;
     }
