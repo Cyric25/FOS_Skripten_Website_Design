@@ -1,0 +1,3155 @@
+{
+ "abtastgroesse": 512,
+ "fixtures": [
+  {
+   "datei": "glycolyse-zweite-atp__BOX.rgba.gz",
+   "id": "glycolyse-zweite-atp",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung.png",
+   "original": [
+    2617,
+    789
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "glycolyse-zweite-atp__BILINEAR.rgba.gz",
+   "id": "glycolyse-zweite-atp",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung.png",
+   "original": [
+    2617,
+    789
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "glycolyse-zweite-atp__NEAREST.rgba.gz",
+   "id": "glycolyse-zweite-atp",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung.png",
+   "original": [
+    2617,
+    789
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "glycolyse-zweite-atp-2048__BOX.rgba.gz",
+   "id": "glycolyse-zweite-atp-2048",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung-2048x617.png",
+   "original": [
+    2048,
+    617
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "glycolyse-zweite-atp-2048__BILINEAR.rgba.gz",
+   "id": "glycolyse-zweite-atp-2048",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung-2048x617.png",
+   "original": [
+    2048,
+    617
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "glycolyse-zweite-atp-2048__NEAREST.rgba.gz",
+   "id": "glycolyse-zweite-atp-2048",
+   "quelle": "2025/09/Glycolyse-zweite-ATP-Bildung-2048x617.png",
+   "original": [
+    2048,
+    617
+   ],
+   "breite": 512,
+   "hoehe": 154,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "nad-regeneration__BOX.rgba.gz",
+   "id": "nad-regeneration",
+   "quelle": "2025/11/NAD-regeneration.png",
+   "original": [
+    4593,
+    1892
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik, 4593 px breit"
+  },
+  {
+   "datei": "nad-regeneration__BILINEAR.rgba.gz",
+   "id": "nad-regeneration",
+   "quelle": "2025/11/NAD-regeneration.png",
+   "original": [
+    4593,
+    1892
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik, 4593 px breit"
+  },
+  {
+   "datei": "nad-regeneration__NEAREST.rgba.gz",
+   "id": "nad-regeneration",
+   "quelle": "2025/11/NAD-regeneration.png",
+   "original": [
+    4593,
+    1892
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik, 4593 px breit"
+  },
+  {
+   "datei": "nad-regeneration-2048__BOX.rgba.gz",
+   "id": "nad-regeneration-2048",
+   "quelle": "2025/11/NAD-regeneration-2048x844.png",
+   "original": [
+    2048,
+    844
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "nad-regeneration-2048__BILINEAR.rgba.gz",
+   "id": "nad-regeneration-2048",
+   "quelle": "2025/11/NAD-regeneration-2048x844.png",
+   "original": [
+    2048,
+    844
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "nad-regeneration-2048__NEAREST.rgba.gz",
+   "id": "nad-regeneration-2048",
+   "quelle": "2025/11/NAD-regeneration-2048x844.png",
+   "original": [
+    2048,
+    844
+   ],
+   "breite": 512,
+   "hoehe": 211,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "gluconeogenese__BOX.rgba.gz",
+   "id": "gluconeogenese",
+   "quelle": "2025/11/Gluconeogenese.png",
+   "original": [
+    1833,
+    5022
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel, Hochformat 1833x5022, farbige Pfeile"
+  },
+  {
+   "datei": "gluconeogenese__BILINEAR.rgba.gz",
+   "id": "gluconeogenese",
+   "quelle": "2025/11/Gluconeogenese.png",
+   "original": [
+    1833,
+    5022
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel, Hochformat 1833x5022, farbige Pfeile"
+  },
+  {
+   "datei": "gluconeogenese__NEAREST.rgba.gz",
+   "id": "gluconeogenese",
+   "quelle": "2025/11/Gluconeogenese.png",
+   "original": [
+    1833,
+    5022
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel, Hochformat 1833x5022, farbige Pfeile"
+  },
+  {
+   "datei": "gluconeogenese-2048__BOX.rgba.gz",
+   "id": "gluconeogenese-2048",
+   "quelle": "2025/11/Gluconeogenese-748x2048.png",
+   "original": [
+    748,
+    2048
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "gluconeogenese-2048__BILINEAR.rgba.gz",
+   "id": "gluconeogenese-2048",
+   "quelle": "2025/11/Gluconeogenese-748x2048.png",
+   "original": [
+    748,
+    2048
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "gluconeogenese-2048__NEAREST.rgba.gz",
+   "id": "gluconeogenese-2048",
+   "quelle": "2025/11/Gluconeogenese-748x2048.png",
+   "original": [
+    748,
+    2048
+   ],
+   "breite": 187,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "schritt-2-vt__BOX.rgba.gz",
+   "id": "schritt-2-vt",
+   "quelle": "2026/01/Schritt-2-vt.png",
+   "original": [
+    2867,
+    901
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "schritt-2-vt__BILINEAR.rgba.gz",
+   "id": "schritt-2-vt",
+   "quelle": "2026/01/Schritt-2-vt.png",
+   "original": [
+    2867,
+    901
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "schritt-2-vt__NEAREST.rgba.gz",
+   "id": "schritt-2-vt",
+   "quelle": "2026/01/Schritt-2-vt.png",
+   "original": [
+    2867,
+    901
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "schritt-2-vt-2048__BOX.rgba.gz",
+   "id": "schritt-2-vt-2048",
+   "quelle": "2026/01/Schritt-2-vt-2048x644.png",
+   "original": [
+    2048,
+    644
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "schritt-2-vt-2048__BILINEAR.rgba.gz",
+   "id": "schritt-2-vt-2048",
+   "quelle": "2026/01/Schritt-2-vt-2048x644.png",
+   "original": [
+    2048,
+    644
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "schritt-2-vt-2048__NEAREST.rgba.gz",
+   "id": "schritt-2-vt-2048",
+   "quelle": "2026/01/Schritt-2-vt-2048x644.png",
+   "original": [
+    2048,
+    644
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "fettsaeure-akrivierung__BOX.rgba.gz",
+   "id": "fettsaeure-akrivierung",
+   "quelle": "2026/02/Fettsaeure-Akrivierung.png",
+   "original": [
+    2241,
+    1027
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "fettsaeure-akrivierung__BILINEAR.rgba.gz",
+   "id": "fettsaeure-akrivierung",
+   "quelle": "2026/02/Fettsaeure-Akrivierung.png",
+   "original": [
+    2241,
+    1027
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "fettsaeure-akrivierung__NEAREST.rgba.gz",
+   "id": "fettsaeure-akrivierung",
+   "quelle": "2026/02/Fettsaeure-Akrivierung.png",
+   "original": [
+    2241,
+    1027
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "fettsaeure-akrivierung-2048__BOX.rgba.gz",
+   "id": "fettsaeure-akrivierung-2048",
+   "quelle": "2026/02/Fettsaeure-Akrivierung-2048x939.png",
+   "original": [
+    2048,
+    939
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "fettsaeure-akrivierung-2048__BILINEAR.rgba.gz",
+   "id": "fettsaeure-akrivierung-2048",
+   "quelle": "2026/02/Fettsaeure-Akrivierung-2048x939.png",
+   "original": [
+    2048,
+    939
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "fettsaeure-akrivierung-2048__NEAREST.rgba.gz",
+   "id": "fettsaeure-akrivierung-2048",
+   "quelle": "2026/02/Fettsaeure-Akrivierung-2048x939.png",
+   "original": [
+    2048,
+    939
+   ],
+   "breite": 512,
+   "hoehe": 235,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "bild5__BOX.rgba.gz",
+   "id": "bild5",
+   "quelle": "2025/05/Bild5.png",
+   "original": [
+    1382,
+    429
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "bild5__BILINEAR.rgba.gz",
+   "id": "bild5",
+   "quelle": "2025/05/Bild5.png",
+   "original": [
+    1382,
+    429
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "bild5__NEAREST.rgba.gz",
+   "id": "bild5",
+   "quelle": "2025/05/Bild5.png",
+   "original": [
+    1382,
+    429
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "0 Strichpixel bei alter Logik"
+  },
+  {
+   "datei": "bild5-1024__BOX.rgba.gz",
+   "id": "bild5-1024",
+   "quelle": "2025/05/Bild5-1024x318.png",
+   "original": [
+    1024,
+    318
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "bild5-1024__BILINEAR.rgba.gz",
+   "id": "bild5-1024",
+   "quelle": "2025/05/Bild5-1024x318.png",
+   "original": [
+    1024,
+    318
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "bild5-1024__NEAREST.rgba.gz",
+   "id": "bild5-1024",
+   "quelle": "2025/05/Bild5-1024x318.png",
+   "original": [
+    1024,
+    318
+   ],
+   "breite": 512,
+   "hoehe": 159,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "fehlfall",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "harnstoffzyklus__BOX.rgba.gz",
+   "id": "harnstoffzyklus",
+   "quelle": "2026/04/Harnstoffzyklus.png",
+   "original": [
+    1842,
+    1764
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "harnstoffzyklus__BILINEAR.rgba.gz",
+   "id": "harnstoffzyklus",
+   "quelle": "2026/04/Harnstoffzyklus.png",
+   "original": [
+    1842,
+    1764
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "harnstoffzyklus__NEAREST.rgba.gz",
+   "id": "harnstoffzyklus",
+   "quelle": "2026/04/Harnstoffzyklus.png",
+   "original": [
+    1842,
+    1764
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "harnstoffzyklus-1536__BOX.rgba.gz",
+   "id": "harnstoffzyklus-1536",
+   "quelle": "2026/04/Harnstoffzyklus-1536x1471.png",
+   "original": [
+    1536,
+    1471
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "harnstoffzyklus-1536__BILINEAR.rgba.gz",
+   "id": "harnstoffzyklus-1536",
+   "quelle": "2026/04/Harnstoffzyklus-1536x1471.png",
+   "original": [
+    1536,
+    1471
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "harnstoffzyklus-1536__NEAREST.rgba.gz",
+   "id": "harnstoffzyklus-1536",
+   "quelle": "2026/04/Harnstoffzyklus-1536x1471.png",
+   "original": [
+    1536,
+    1471
+   ],
+   "breite": 512,
+   "hoehe": 490,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "peptidbindung-2__BOX.rgba.gz",
+   "id": "peptidbindung-2",
+   "quelle": "2026/03/Peptidbindung-2.png",
+   "original": [
+    1622,
+    509
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "peptidbindung-2__BILINEAR.rgba.gz",
+   "id": "peptidbindung-2",
+   "quelle": "2026/03/Peptidbindung-2.png",
+   "original": [
+    1622,
+    509
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "peptidbindung-2__NEAREST.rgba.gz",
+   "id": "peptidbindung-2",
+   "quelle": "2026/03/Peptidbindung-2.png",
+   "original": [
+    1622,
+    509
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "peptidbindung-2-1536__BOX.rgba.gz",
+   "id": "peptidbindung-2-1536",
+   "quelle": "2026/03/Peptidbindung-2-1536x482.png",
+   "original": [
+    1536,
+    482
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "peptidbindung-2-1536__BILINEAR.rgba.gz",
+   "id": "peptidbindung-2-1536",
+   "quelle": "2026/03/Peptidbindung-2-1536x482.png",
+   "original": [
+    1536,
+    482
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "peptidbindung-2-1536__NEAREST.rgba.gz",
+   "id": "peptidbindung-2-1536",
+   "quelle": "2026/03/Peptidbindung-2-1536x482.png",
+   "original": [
+    1536,
+    482
+   ],
+   "breite": 512,
+   "hoehe": 161,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "cis__BOX.rgba.gz",
+   "id": "cis",
+   "quelle": "2026/02/CIS.png",
+   "original": [
+    1309,
+    1772
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "cis__BILINEAR.rgba.gz",
+   "id": "cis",
+   "quelle": "2026/02/CIS.png",
+   "original": [
+    1309,
+    1772
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "cis__NEAREST.rgba.gz",
+   "id": "cis",
+   "quelle": "2026/02/CIS.png",
+   "original": [
+    1309,
+    1772
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "cis-1135__BOX.rgba.gz",
+   "id": "cis-1135",
+   "quelle": "2026/02/CIS-1135x1536.png",
+   "original": [
+    1135,
+    1536
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "cis-1135__BILINEAR.rgba.gz",
+   "id": "cis-1135",
+   "quelle": "2026/02/CIS-1135x1536.png",
+   "original": [
+    1135,
+    1536
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "cis-1135__NEAREST.rgba.gz",
+   "id": "cis-1135",
+   "quelle": "2026/02/CIS-1135x1536.png",
+   "original": [
+    1135,
+    1536
+   ],
+   "breite": 378,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "isomere-c3h8o__BOX.rgba.gz",
+   "id": "isomere-c3h8o",
+   "quelle": "2025/10/ISOMERE-C3H8O.png",
+   "original": [
+    1826,
+    504
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "isomere-c3h8o__BILINEAR.rgba.gz",
+   "id": "isomere-c3h8o",
+   "quelle": "2025/10/ISOMERE-C3H8O.png",
+   "original": [
+    1826,
+    504
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "isomere-c3h8o__NEAREST.rgba.gz",
+   "id": "isomere-c3h8o",
+   "quelle": "2025/10/ISOMERE-C3H8O.png",
+   "original": [
+    1826,
+    504
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "1-15 Restpixel bei alter Logik"
+  },
+  {
+   "datei": "isomere-c3h8o-1536__BOX.rgba.gz",
+   "id": "isomere-c3h8o-1536",
+   "quelle": "2025/10/ISOMERE-C3H8O-1536x424.png",
+   "original": [
+    1536,
+    424
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "isomere-c3h8o-1536__BILINEAR.rgba.gz",
+   "id": "isomere-c3h8o-1536",
+   "quelle": "2025/10/ISOMERE-C3H8O-1536x424.png",
+   "original": [
+    1536,
+    424
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "isomere-c3h8o-1536__NEAREST.rgba.gz",
+   "id": "isomere-c3h8o-1536",
+   "quelle": "2025/10/ISOMERE-C3H8O-1536x424.png",
+   "original": [
+    1536,
+    424
+   ],
+   "breite": 512,
+   "hoehe": 141,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "knapp",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "atp__BOX.rgba.gz",
+   "id": "atp",
+   "quelle": "2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "wurde schon mit alter Logik erkannt"
+  },
+  {
+   "datei": "atp__BILINEAR.rgba.gz",
+   "id": "atp",
+   "quelle": "2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "wurde schon mit alter Logik erkannt"
+  },
+  {
+   "datei": "atp__NEAREST.rgba.gz",
+   "id": "atp",
+   "quelle": "2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "wurde schon mit alter Logik erkannt"
+  },
+  {
+   "datei": "atp-1024__BOX.rgba.gz",
+   "id": "atp-1024",
+   "quelle": "2025/09/ATP-1024x573.png",
+   "original": [
+    1024,
+    573
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "atp-1024__BILINEAR.rgba.gz",
+   "id": "atp-1024",
+   "quelle": "2025/09/ATP-1024x573.png",
+   "original": [
+    1024,
+    573
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "atp-1024__NEAREST.rgba.gz",
+   "id": "atp-1024",
+   "quelle": "2025/09/ATP-1024x573.png",
+   "original": [
+    1024,
+    573
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "kontrolle-positiv",
+   "begruendung": "groesste Zwischengroesse"
+  },
+  {
+   "datei": "foto-bunsenbrenner__BOX.rgba.gz",
+   "id": "foto-bunsenbrenner",
+   "quelle": "2026/07/Bunsen_burner_flame_types.jpg",
+   "original": [
+    1668,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 460,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-bunsenbrenner__BILINEAR.rgba.gz",
+   "id": "foto-bunsenbrenner",
+   "quelle": "2026/07/Bunsen_burner_flame_types.jpg",
+   "original": [
+    1668,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 460,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-bunsenbrenner__NEAREST.rgba.gz",
+   "id": "foto-bunsenbrenner",
+   "quelle": "2026/07/Bunsen_burner_flame_types.jpg",
+   "original": [
+    1668,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 460,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-pattaya__BOX.rgba.gz",
+   "id": "foto-pattaya",
+   "quelle": "2026/07/pattaya-5789606_1280-1.jpg",
+   "original": [
+    2251,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 341,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-pattaya__BILINEAR.rgba.gz",
+   "id": "foto-pattaya",
+   "quelle": "2026/07/pattaya-5789606_1280-1.jpg",
+   "original": [
+    2251,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 341,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-pattaya__NEAREST.rgba.gz",
+   "id": "foto-pattaya",
+   "quelle": "2026/07/pattaya-5789606_1280-1.jpg",
+   "original": [
+    2251,
+    1500
+   ],
+   "breite": 512,
+   "hoehe": 341,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Foto"
+  },
+  {
+   "datei": "foto-logo__BOX.rgba.gz",
+   "id": "foto-logo",
+   "quelle": "2025/05/Logo.jpg",
+   "original": [
+    1130,
+    1130
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Logo als JPG (deckend)"
+  },
+  {
+   "datei": "foto-logo__BILINEAR.rgba.gz",
+   "id": "foto-logo",
+   "quelle": "2025/05/Logo.jpg",
+   "original": [
+    1130,
+    1130
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Logo als JPG (deckend)"
+  },
+  {
+   "datei": "foto-logo__NEAREST.rgba.gz",
+   "id": "foto-logo",
+   "quelle": "2025/05/Logo.jpg",
+   "original": [
+    1130,
+    1130
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Logo als JPG (deckend)"
+  },
+  {
+   "datei": "foto-betha-faltblatt__BOX.rgba.gz",
+   "id": "foto-betha-faltblatt",
+   "quelle": "2026/03/Betha-faltblatt.jpg",
+   "original": [
+    250,
+    250
+   ],
+   "breite": 250,
+   "hoehe": 250,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "kleines JPG unter Abtastgroesse (keine Verkleinerung)"
+  },
+  {
+   "datei": "foto-betha-faltblatt__BILINEAR.rgba.gz",
+   "id": "foto-betha-faltblatt",
+   "quelle": "2026/03/Betha-faltblatt.jpg",
+   "original": [
+    250,
+    250
+   ],
+   "breite": 250,
+   "hoehe": 250,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "kleines JPG unter Abtastgroesse (keine Verkleinerung)"
+  },
+  {
+   "datei": "foto-betha-faltblatt__NEAREST.rgba.gz",
+   "id": "foto-betha-faltblatt",
+   "quelle": "2026/03/Betha-faltblatt.jpg",
+   "original": [
+    250,
+    250
+   ],
+   "breite": 250,
+   "hoehe": 250,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "kleines JPG unter Abtastgroesse (keine Verkleinerung)"
+  },
+  {
+   "datei": "foto-bildschirmfoto__BOX.rgba.gz",
+   "id": "foto-bildschirmfoto",
+   "quelle": "2025/11/Bildschirmfoto_12-11-2025_121610_.jpg",
+   "original": [
+    2321,
+    1210
+   ],
+   "breite": 512,
+   "hoehe": 267,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Bildschirmfoto"
+  },
+  {
+   "datei": "foto-bildschirmfoto__BILINEAR.rgba.gz",
+   "id": "foto-bildschirmfoto",
+   "quelle": "2025/11/Bildschirmfoto_12-11-2025_121610_.jpg",
+   "original": [
+    2321,
+    1210
+   ],
+   "breite": 512,
+   "hoehe": 267,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Bildschirmfoto"
+  },
+  {
+   "datei": "foto-bildschirmfoto__NEAREST.rgba.gz",
+   "id": "foto-bildschirmfoto",
+   "quelle": "2025/11/Bildschirmfoto_12-11-2025_121610_.jpg",
+   "original": [
+    2321,
+    1210
+   ],
+   "breite": 512,
+   "hoehe": 267,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "foto",
+   "begruendung": "Bildschirmfoto"
+  },
+  {
+   "datei": "deckend-designer-png__BOX.rgba.gz",
+   "id": "deckend-designer-png",
+   "quelle": "2025/05/Designer.png",
+   "original": [
+    1024,
+    1024
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "deckend UND dunkel (wl ~98): nur die Transparenzpruefung schuetzt"
+  },
+  {
+   "datei": "deckend-designer-png__BILINEAR.rgba.gz",
+   "id": "deckend-designer-png",
+   "quelle": "2025/05/Designer.png",
+   "original": [
+    1024,
+    1024
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "deckend UND dunkel (wl ~98): nur die Transparenzpruefung schuetzt"
+  },
+  {
+   "datei": "deckend-designer-png__NEAREST.rgba.gz",
+   "id": "deckend-designer-png",
+   "quelle": "2025/05/Designer.png",
+   "original": [
+    1024,
+    1024
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "deckend UND dunkel (wl ~98): nur die Transparenzpruefung schuetzt"
+  },
+  {
+   "datei": "deckend-chromatogramm__BOX.rgba.gz",
+   "id": "deckend-chromatogramm",
+   "quelle": "2026/01/Chromatogramm.png",
+   "original": [
+    2958,
+    1788
+   ],
+   "breite": 512,
+   "hoehe": 309,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, ~1 % transparenter Rand"
+  },
+  {
+   "datei": "deckend-chromatogramm__BILINEAR.rgba.gz",
+   "id": "deckend-chromatogramm",
+   "quelle": "2026/01/Chromatogramm.png",
+   "original": [
+    2958,
+    1788
+   ],
+   "breite": 512,
+   "hoehe": 309,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, ~1 % transparenter Rand"
+  },
+  {
+   "datei": "deckend-chromatogramm__NEAREST.rgba.gz",
+   "id": "deckend-chromatogramm",
+   "quelle": "2026/01/Chromatogramm.png",
+   "original": [
+    2958,
+    1788
+   ],
+   "breite": 512,
+   "hoehe": 309,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, ~1 % transparenter Rand"
+  },
+  {
+   "datei": "deckend-beta-carotin__BOX.rgba.gz",
+   "id": "deckend-beta-carotin",
+   "quelle": "2025/12/Beta-Carotin.png",
+   "original": [
+    3111,
+    1464
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, Strukturformel"
+  },
+  {
+   "datei": "deckend-beta-carotin__BILINEAR.rgba.gz",
+   "id": "deckend-beta-carotin",
+   "quelle": "2025/12/Beta-Carotin.png",
+   "original": [
+    3111,
+    1464
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, Strukturformel"
+  },
+  {
+   "datei": "deckend-beta-carotin__NEAREST.rgba.gz",
+   "id": "deckend-beta-carotin",
+   "quelle": "2025/12/Beta-Carotin.png",
+   "original": [
+    3111,
+    1464
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend",
+   "begruendung": "weisser Hintergrund, Strukturformel"
+  },
+  {
+   "datei": "svg-pphw-atp__BOX.rgba.gz",
+   "id": "svg-pphw-atp",
+   "quelle": "svgpng:2026/05/PPHW_-_ATP.svg",
+   "original": [
+    730,
+    716
+   ],
+   "breite": 512,
+   "hoehe": 502,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-atp__BILINEAR.rgba.gz",
+   "id": "svg-pphw-atp",
+   "quelle": "svgpng:2026/05/PPHW_-_ATP.svg",
+   "original": [
+    730,
+    716
+   ],
+   "breite": 512,
+   "hoehe": 502,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-atp__NEAREST.rgba.gz",
+   "id": "svg-pphw-atp",
+   "quelle": "svgpng:2026/05/PPHW_-_ATP.svg",
+   "original": [
+    730,
+    716
+   ],
+   "breite": 512,
+   "hoehe": 502,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-nadph__BOX.rgba.gz",
+   "id": "svg-pphw-nadph",
+   "quelle": "svgpng:2026/05/PPHW_-_NADPH.svg",
+   "original": [
+    707,
+    540
+   ],
+   "breite": 512,
+   "hoehe": 391,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-nadph__BILINEAR.rgba.gz",
+   "id": "svg-pphw-nadph",
+   "quelle": "svgpng:2026/05/PPHW_-_NADPH.svg",
+   "original": [
+    707,
+    540
+   ],
+   "breite": 512,
+   "hoehe": 391,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-pphw-nadph__NEAREST.rgba.gz",
+   "id": "svg-pphw-nadph",
+   "quelle": "svgpng:2026/05/PPHW_-_NADPH.svg",
+   "original": [
+    707,
+    540
+   ],
+   "breite": 512,
+   "hoehe": 391,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-zeichnung__BOX.rgba.gz",
+   "id": "svg-zeichnung",
+   "quelle": "svgpng:2026/05/zeichnung.svg",
+   "original": [
+    750,
+    488
+   ],
+   "breite": 512,
+   "hoehe": 333,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-zeichnung__BILINEAR.rgba.gz",
+   "id": "svg-zeichnung",
+   "quelle": "svgpng:2026/05/zeichnung.svg",
+   "original": [
+    750,
+    488
+   ],
+   "breite": 512,
+   "hoehe": 333,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "svg-zeichnung__NEAREST.rgba.gz",
+   "id": "svg-zeichnung",
+   "quelle": "svgpng:2026/05/zeichnung.svg",
+   "original": [
+    750,
+    488
+   ],
+   "breite": 512,
+   "hoehe": 333,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "deckend-svg",
+   "begruendung": "eingebettetes PNG, deckend weiss"
+  },
+  {
+   "datei": "farbig-ghs02-flamme__BOX.rgba.gz",
+   "id": "farbig-ghs02-flamme",
+   "quelle": "2025/05/GHS02_flamme.png",
+   "original": [
+    3000,
+    2999
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"
+  },
+  {
+   "datei": "farbig-ghs02-flamme__BILINEAR.rgba.gz",
+   "id": "farbig-ghs02-flamme",
+   "quelle": "2025/05/GHS02_flamme.png",
+   "original": [
+    3000,
+    2999
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"
+  },
+  {
+   "datei": "farbig-ghs02-flamme__NEAREST.rgba.gz",
+   "id": "farbig-ghs02-flamme",
+   "quelle": "2025/05/GHS02_flamme.png",
+   "original": [
+    3000,
+    2999
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"
+  },
+  {
+   "datei": "farbig-atmungskette__BOX.rgba.gz",
+   "id": "farbig-atmungskette",
+   "quelle": "2026/02/Atmungskette-Uebersicht.png",
+   "original": [
+    2084,
+    1233
+   ],
+   "breite": 512,
+   "hoehe": 303,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-umgestellt",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 3B, vorher 'darf nicht'): schwarze Beschriftung/Pfeile auf transparentem Grund; urspruenglich: Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"
+  },
+  {
+   "datei": "farbig-atmungskette__BILINEAR.rgba.gz",
+   "id": "farbig-atmungskette",
+   "quelle": "2026/02/Atmungskette-Uebersicht.png",
+   "original": [
+    2084,
+    1233
+   ],
+   "breite": 512,
+   "hoehe": 303,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-umgestellt",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 3B, vorher 'darf nicht'): schwarze Beschriftung/Pfeile auf transparentem Grund; urspruenglich: Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"
+  },
+  {
+   "datei": "farbig-atmungskette__NEAREST.rgba.gz",
+   "id": "farbig-atmungskette",
+   "quelle": "2026/02/Atmungskette-Uebersicht.png",
+   "original": [
+    2084,
+    1233
+   ],
+   "breite": 512,
+   "hoehe": 303,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-umgestellt",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 3B, vorher 'darf nicht'): schwarze Beschriftung/Pfeile auf transparentem Grund; urspruenglich: Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"
+  },
+  {
+   "datei": "farbig-ketonkoerper-transport__BOX.rgba.gz",
+   "id": "farbig-ketonkoerper-transport",
+   "quelle": "2026/02/Ketonkoerper-Transport.png",
+   "original": [
+    4357,
+    4124
+   ],
+   "breite": 512,
+   "hoehe": 485,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-umgestellt",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 5B, vorher 'darf nicht'): schwarze Zell-Umrisse/Pfeile auf transparentem Grund; urspruenglich: 4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"
+  },
+  {
+   "datei": "farbig-ketonkoerper-transport__BILINEAR.rgba.gz",
+   "id": "farbig-ketonkoerper-transport",
+   "quelle": "2026/02/Ketonkoerper-Transport.png",
+   "original": [
+    4357,
+    4124
+   ],
+   "breite": 512,
+   "hoehe": 485,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-umgestellt",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 5B, vorher 'darf nicht'): schwarze Zell-Umrisse/Pfeile auf transparentem Grund; urspruenglich: 4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"
+  },
+  {
+   "datei": "farbig-ketonkoerper-transport__NEAREST.rgba.gz",
+   "id": "farbig-ketonkoerper-transport",
+   "quelle": "2026/02/Ketonkoerper-Transport.png",
+   "original": [
+    4357,
+    4124
+   ],
+   "breite": 512,
+   "hoehe": 485,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-umgestellt",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 5B, vorher 'darf nicht'): schwarze Zell-Umrisse/Pfeile auf transparentem Grund; urspruenglich: 4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"
+  },
+  {
+   "datei": "farbig-einstabmesskette__BOX.rgba.gz",
+   "id": "farbig-einstabmesskette",
+   "quelle": "2025/11/Einstabmesskette.png",
+   "original": [
+    2752,
+    2446
+   ],
+   "breite": 512,
+   "hoehe": 455,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Geraetezeichnung mit hellen Flaechen (wl ~209); Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 9A) bestaetigt: nicht invertieren"
+  },
+  {
+   "datei": "farbig-einstabmesskette__BILINEAR.rgba.gz",
+   "id": "farbig-einstabmesskette",
+   "quelle": "2025/11/Einstabmesskette.png",
+   "original": [
+    2752,
+    2446
+   ],
+   "breite": 512,
+   "hoehe": 455,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Geraetezeichnung mit hellen Flaechen (wl ~209); Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 9A) bestaetigt: nicht invertieren"
+  },
+  {
+   "datei": "farbig-einstabmesskette__NEAREST.rgba.gz",
+   "id": "farbig-einstabmesskette",
+   "quelle": "2025/11/Einstabmesskette.png",
+   "original": [
+    2752,
+    2446
+   ],
+   "breite": 512,
+   "hoehe": 455,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "farbig-hell",
+   "begruendung": "Geraetezeichnung mit hellen Flaechen (wl ~209); Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 9A) bestaetigt: nicht invertieren"
+  },
+  {
+   "datei": "hell-atp-invertiert__BOX.rgba.gz",
+   "id": "hell-atp-invertiert",
+   "quelle": "hell:2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "heller-strich",
+   "begruendung": "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); in der Mediathek gibt es kein weisses Logo auf transparentem Grund"
+  },
+  {
+   "datei": "hell-atp-invertiert__BILINEAR.rgba.gz",
+   "id": "hell-atp-invertiert",
+   "quelle": "hell:2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "heller-strich",
+   "begruendung": "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); in der Mediathek gibt es kein weisses Logo auf transparentem Grund"
+  },
+  {
+   "datei": "hell-atp-invertiert__NEAREST.rgba.gz",
+   "id": "hell-atp-invertiert",
+   "quelle": "hell:2025/09/ATP.png",
+   "original": [
+    1497,
+    837
+   ],
+   "breite": 512,
+   "hoehe": 286,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "heller-strich",
+   "begruendung": "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); in der Mediathek gibt es kein weisses Logo auf transparentem Grund"
+  },
+  {
+   "datei": "k1-phospholipide__BOX.rgba.gz",
+   "id": "k1-phospholipide",
+   "quelle": "2025/10/phospholipide.png",
+   "original": [
+    1647,
+    795
+   ],
+   "breite": 512,
+   "hoehe": 247,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt (1.5.117) invertiert; halbtransparente Pastell-Markerflaechen ueberstimmten die schwarzen Linien (wl 155)"
+  },
+  {
+   "datei": "k1-phospholipide__BILINEAR.rgba.gz",
+   "id": "k1-phospholipide",
+   "quelle": "2025/10/phospholipide.png",
+   "original": [
+    1647,
+    795
+   ],
+   "breite": 512,
+   "hoehe": 247,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt (1.5.117) invertiert; halbtransparente Pastell-Markerflaechen ueberstimmten die schwarzen Linien (wl 155)"
+  },
+  {
+   "datei": "k1-phospholipide__NEAREST.rgba.gz",
+   "id": "k1-phospholipide",
+   "quelle": "2025/10/phospholipide.png",
+   "original": [
+    1647,
+    795
+   ],
+   "breite": 512,
+   "hoehe": 247,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt (1.5.117) invertiert; halbtransparente Pastell-Markerflaechen ueberstimmten die schwarzen Linien (wl 155)"
+  },
+  {
+   "datei": "k1-sphingomyelin__BOX.rgba.gz",
+   "id": "k1-sphingomyelin",
+   "quelle": "2025/10/Sphingomyelin.png",
+   "original": [
+    1757,
+    828
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 132)"
+  },
+  {
+   "datei": "k1-sphingomyelin__BILINEAR.rgba.gz",
+   "id": "k1-sphingomyelin",
+   "quelle": "2025/10/Sphingomyelin.png",
+   "original": [
+    1757,
+    828
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 132)"
+  },
+  {
+   "datei": "k1-sphingomyelin__NEAREST.rgba.gz",
+   "id": "k1-sphingomyelin",
+   "quelle": "2025/10/Sphingomyelin.png",
+   "original": [
+    1757,
+    828
+   ],
+   "breite": 512,
+   "hoehe": 241,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 132)"
+  },
+  {
+   "datei": "k1-ceramid__BOX.rgba.gz",
+   "id": "k1-ceramid",
+   "quelle": "2025/10/Ceramid.png",
+   "original": [
+    717,
+    828
+   ],
+   "breite": 443,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 142)"
+  },
+  {
+   "datei": "k1-ceramid__BILINEAR.rgba.gz",
+   "id": "k1-ceramid",
+   "quelle": "2025/10/Ceramid.png",
+   "original": [
+    717,
+    828
+   ],
+   "breite": 443,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 142)"
+  },
+  {
+   "datei": "k1-ceramid__NEAREST.rgba.gz",
+   "id": "k1-ceramid",
+   "quelle": "2025/10/Ceramid.png",
+   "original": [
+    717,
+    828
+   ],
+   "breite": 443,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 142)"
+  },
+  {
+   "datei": "k1-glykolipid__BOX.rgba.gz",
+   "id": "k1-glykolipid",
+   "quelle": "2025/10/Glykolipid.png",
+   "original": [
+    1859,
+    828
+   ],
+   "breite": 512,
+   "hoehe": 228,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 133)"
+  },
+  {
+   "datei": "k1-glykolipid__BILINEAR.rgba.gz",
+   "id": "k1-glykolipid",
+   "quelle": "2025/10/Glykolipid.png",
+   "original": [
+    1859,
+    828
+   ],
+   "breite": 512,
+   "hoehe": 228,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 133)"
+  },
+  {
+   "datei": "k1-glykolipid__NEAREST.rgba.gz",
+   "id": "k1-glykolipid",
+   "quelle": "2025/10/Glykolipid.png",
+   "original": [
+    1859,
+    828
+   ],
+   "breite": 512,
+   "hoehe": 228,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "wie phospholipide (wl 133)"
+  },
+  {
+   "datei": "k1-glycolyse-phasen__BOX.rgba.gz",
+   "id": "k1-glycolyse-phasen",
+   "quelle": "2025/09/Glycolyse-Phasen.png",
+   "original": [
+    1609,
+    1200
+   ],
+   "breite": 512,
+   "hoehe": 382,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt invertiert; graue/schwarze Beschriftung neben Farbflaechen (wl 116)"
+  },
+  {
+   "datei": "k1-glycolyse-phasen__BILINEAR.rgba.gz",
+   "id": "k1-glycolyse-phasen",
+   "quelle": "2025/09/Glycolyse-Phasen.png",
+   "original": [
+    1609,
+    1200
+   ],
+   "breite": 512,
+   "hoehe": 382,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt invertiert; graue/schwarze Beschriftung neben Farbflaechen (wl 116)"
+  },
+  {
+   "datei": "k1-glycolyse-phasen__NEAREST.rgba.gz",
+   "id": "k1-glycolyse-phasen",
+   "quelle": "2025/09/Glycolyse-Phasen.png",
+   "original": [
+    1609,
+    1200
+   ],
+   "breite": 512,
+   "hoehe": 382,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt invertiert; graue/schwarze Beschriftung neben Farbflaechen (wl 116)"
+  },
+  {
+   "datei": "k1-dc1-1__BOX.rgba.gz",
+   "id": "k1-dc1-1",
+   "quelle": "2025/11/DC1-1.png",
+   "original": [
+    1662,
+    1525
+   ],
+   "breite": 512,
+   "hoehe": 470,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt in BOX/BILINEAR invertiert; schwarze Linien der DC-Kammer, halbtransparente Flaechen (wl 162-167)"
+  },
+  {
+   "datei": "k1-dc1-1__BILINEAR.rgba.gz",
+   "id": "k1-dc1-1",
+   "quelle": "2025/11/DC1-1.png",
+   "original": [
+    1662,
+    1525
+   ],
+   "breite": 512,
+   "hoehe": 470,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt in BOX/BILINEAR invertiert; schwarze Linien der DC-Kammer, halbtransparente Flaechen (wl 162-167)"
+  },
+  {
+   "datei": "k1-dc1-1__NEAREST.rgba.gz",
+   "id": "k1-dc1-1",
+   "quelle": "2025/11/DC1-1.png",
+   "original": [
+    1662,
+    1525
+   ],
+   "breite": 512,
+   "hoehe": 470,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-regression",
+   "begruendung": "alt in BOX/BILINEAR invertiert; schwarze Linien der DC-Kammer, halbtransparente Flaechen (wl 162-167)"
+  },
+  {
+   "datei": "k1-schritt-1-vt__BOX.rgba.gz",
+   "id": "k1-schritt-1-vt",
+   "quelle": "2026/01/Schritt-1-vt.png",
+   "original": [
+    3127,
+    1426
+   ],
+   "breite": 512,
+   "hoehe": 233,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 137)"
+  },
+  {
+   "datei": "k1-schritt-1-vt__BILINEAR.rgba.gz",
+   "id": "k1-schritt-1-vt",
+   "quelle": "2026/01/Schritt-1-vt.png",
+   "original": [
+    3127,
+    1426
+   ],
+   "breite": 512,
+   "hoehe": 233,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 137)"
+  },
+  {
+   "datei": "k1-schritt-1-vt__NEAREST.rgba.gz",
+   "id": "k1-schritt-1-vt",
+   "quelle": "2026/01/Schritt-1-vt.png",
+   "original": [
+    3127,
+    1426
+   ],
+   "breite": 512,
+   "hoehe": 233,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 137)"
+  },
+  {
+   "datei": "k1-schritt-4-vt__BOX.rgba.gz",
+   "id": "k1-schritt-4-vt",
+   "quelle": "2026/01/Schritt-4-vt.png",
+   "original": [
+    3557,
+    1343
+   ],
+   "breite": 512,
+   "hoehe": 193,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 124)"
+  },
+  {
+   "datei": "k1-schritt-4-vt__BILINEAR.rgba.gz",
+   "id": "k1-schritt-4-vt",
+   "quelle": "2026/01/Schritt-4-vt.png",
+   "original": [
+    3557,
+    1343
+   ],
+   "breite": 512,
+   "hoehe": 193,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 124)"
+  },
+  {
+   "datei": "k1-schritt-4-vt__NEAREST.rgba.gz",
+   "id": "k1-schritt-4-vt",
+   "quelle": "2026/01/Schritt-4-vt.png",
+   "original": [
+    3557,
+    1343
+   ],
+   "breite": 512,
+   "hoehe": 193,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 124)"
+  },
+  {
+   "datei": "k1-schritt-5-vt__BOX.rgba.gz",
+   "id": "k1-schritt-5-vt",
+   "quelle": "2026/01/Schritt-5-vt.png",
+   "original": [
+    3557,
+    1653
+   ],
+   "breite": 512,
+   "hoehe": 238,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 115)"
+  },
+  {
+   "datei": "k1-schritt-5-vt__BILINEAR.rgba.gz",
+   "id": "k1-schritt-5-vt",
+   "quelle": "2026/01/Schritt-5-vt.png",
+   "original": [
+    3557,
+    1653
+   ],
+   "breite": 512,
+   "hoehe": 238,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 115)"
+  },
+  {
+   "datei": "k1-schritt-5-vt__NEAREST.rgba.gz",
+   "id": "k1-schritt-5-vt",
+   "quelle": "2026/01/Schritt-5-vt.png",
+   "original": [
+    3557,
+    1653
+   ],
+   "breite": 512,
+   "hoehe": 238,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "k1-textmarker",
+   "begruendung": "schwarze Formel mit Textmarker (wl 115)"
+  },
+  {
+   "datei": "grenz-alpha-helix-3__BOX.rgba.gz",
+   "id": "grenz-alpha-helix-3",
+   "quelle": "2026/03/Alpha-Helix-3.png",
+   "original": [
+    749,
+    1017
+   ],
+   "breite": 377,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren. 3D-Modell, CPK-Farben kippen; wl 104 (knappste transparente Alpha-Helix-Variante; Alpha-Helix 83 und -2 95 liegen tiefer und sind durch dieses Fixture mitgedeckt). Varianten mit deckend weissem Grund (-1, -2-1, -2-2, -3-1, -3-2, -4) nur ueber Autoren-Klasse fos-darkmode-invert"
+  },
+  {
+   "datei": "grenz-alpha-helix-3__BILINEAR.rgba.gz",
+   "id": "grenz-alpha-helix-3",
+   "quelle": "2026/03/Alpha-Helix-3.png",
+   "original": [
+    749,
+    1017
+   ],
+   "breite": 377,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren. 3D-Modell, CPK-Farben kippen; wl 104 (knappste transparente Alpha-Helix-Variante; Alpha-Helix 83 und -2 95 liegen tiefer und sind durch dieses Fixture mitgedeckt). Varianten mit deckend weissem Grund (-1, -2-1, -2-2, -3-1, -3-2, -4) nur ueber Autoren-Klasse fos-darkmode-invert"
+  },
+  {
+   "datei": "grenz-alpha-helix-3__NEAREST.rgba.gz",
+   "id": "grenz-alpha-helix-3",
+   "quelle": "2026/03/Alpha-Helix-3.png",
+   "original": [
+    749,
+    1017
+   ],
+   "breite": 377,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren. 3D-Modell, CPK-Farben kippen; wl 104 (knappste transparente Alpha-Helix-Variante; Alpha-Helix 83 und -2 95 liegen tiefer und sind durch dieses Fixture mitgedeckt). Varianten mit deckend weissem Grund (-1, -2-1, -2-2, -3-1, -3-2, -4) nur ueber Autoren-Klasse fos-darkmode-invert"
+  },
+  {
+   "datei": "grenz-spannungsreihe__BOX.rgba.gz",
+   "id": "grenz-spannungsreihe",
+   "quelle": "2025/11/Spannungseihe.png",
+   "original": [
+    2994,
+    1627
+   ],
+   "breite": 512,
+   "hoehe": 278,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 100-104)"
+  },
+  {
+   "datei": "grenz-spannungsreihe__BILINEAR.rgba.gz",
+   "id": "grenz-spannungsreihe",
+   "quelle": "2025/11/Spannungseihe.png",
+   "original": [
+    2994,
+    1627
+   ],
+   "breite": 512,
+   "hoehe": 278,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 100-104)"
+  },
+  {
+   "datei": "grenz-spannungsreihe__NEAREST.rgba.gz",
+   "id": "grenz-spannungsreihe",
+   "quelle": "2025/11/Spannungseihe.png",
+   "original": [
+    2994,
+    1627
+   ],
+   "breite": 512,
+   "hoehe": 278,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 100-104)"
+  },
+  {
+   "datei": "grenz-apo-holoenzym__BOX.rgba.gz",
+   "id": "grenz-apo-holoenzym",
+   "quelle": "2026/04/APO-und-Holoenzym.png",
+   "original": [
+    1665,
+    786
+   ],
+   "breite": 512,
+   "hoehe": 242,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 102)"
+  },
+  {
+   "datei": "grenz-apo-holoenzym__BILINEAR.rgba.gz",
+   "id": "grenz-apo-holoenzym",
+   "quelle": "2026/04/APO-und-Holoenzym.png",
+   "original": [
+    1665,
+    786
+   ],
+   "breite": 512,
+   "hoehe": 242,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 102)"
+  },
+  {
+   "datei": "grenz-apo-holoenzym__NEAREST.rgba.gz",
+   "id": "grenz-apo-holoenzym",
+   "quelle": "2026/04/APO-und-Holoenzym.png",
+   "original": [
+    1665,
+    786
+   ],
+   "breite": 512,
+   "hoehe": 242,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 102)"
+  },
+  {
+   "datei": "grenz-steuerung-glyc-glucon__BOX.rgba.gz",
+   "id": "grenz-steuerung-glyc-glucon",
+   "quelle": "2025/11/Steruerung-Glycolyse-Gluconeogenese.png",
+   "original": [
+    3217,
+    3684
+   ],
+   "breite": 447,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 142)"
+  },
+  {
+   "datei": "grenz-steuerung-glyc-glucon__BILINEAR.rgba.gz",
+   "id": "grenz-steuerung-glyc-glucon",
+   "quelle": "2025/11/Steruerung-Glycolyse-Gluconeogenese.png",
+   "original": [
+    3217,
+    3684
+   ],
+   "breite": 447,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 142)"
+  },
+  {
+   "datei": "grenz-steuerung-glyc-glucon__NEAREST.rgba.gz",
+   "id": "grenz-steuerung-glyc-glucon",
+   "quelle": "2025/11/Steruerung-Glycolyse-Gluconeogenese.png",
+   "original": [
+    3217,
+    3684
+   ],
+   "breite": 447,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 142)"
+  },
+  {
+   "datei": "grenz-glycogen-wiki__BOX.rgba.gz",
+   "id": "grenz-glycogen-wiki",
+   "quelle": "2025/12/Glycogen-Wiki.png",
+   "original": [
+    1280,
+    1640
+   ],
+   "breite": 400,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 120)"
+  },
+  {
+   "datei": "grenz-glycogen-wiki__BILINEAR.rgba.gz",
+   "id": "grenz-glycogen-wiki",
+   "quelle": "2025/12/Glycogen-Wiki.png",
+   "original": [
+    1280,
+    1640
+   ],
+   "breite": 400,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 120)"
+  },
+  {
+   "datei": "grenz-glycogen-wiki__NEAREST.rgba.gz",
+   "id": "grenz-glycogen-wiki",
+   "quelle": "2025/12/Glycogen-Wiki.png",
+   "original": [
+    1280,
+    1640
+   ],
+   "breite": 400,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 120)"
+  },
+  {
+   "datei": "grenz-fetttransport__BOX.rgba.gz",
+   "id": "grenz-fetttransport",
+   "quelle": "2026/02/Fetttranspoirt.png",
+   "original": [
+    2331,
+    2270
+   ],
+   "breite": 512,
+   "hoehe": 499,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 150)"
+  },
+  {
+   "datei": "grenz-fetttransport__BILINEAR.rgba.gz",
+   "id": "grenz-fetttransport",
+   "quelle": "2026/02/Fetttranspoirt.png",
+   "original": [
+    2331,
+    2270
+   ],
+   "breite": 512,
+   "hoehe": 499,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 150)"
+  },
+  {
+   "datei": "grenz-fetttransport__NEAREST.rgba.gz",
+   "id": "grenz-fetttransport",
+   "quelle": "2026/02/Fetttranspoirt.png",
+   "original": [
+    2331,
+    2270
+   ],
+   "breite": 512,
+   "hoehe": 499,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 150)"
+  },
+  {
+   "datei": "grenz-malat-aspartat-2__BOX.rgba.gz",
+   "id": "grenz-malat-aspartat-2",
+   "quelle": "2026/02/Malat-Aspartat-Shuttle-2.png",
+   "original": [
+    3559,
+    1816
+   ],
+   "breite": 512,
+   "hoehe": 261,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 166); Malat-Aspartat-Shuttle-1 (kontrollgruppe.html 4B) ist praktisch dasselbe Bild"
+  },
+  {
+   "datei": "grenz-malat-aspartat-2__BILINEAR.rgba.gz",
+   "id": "grenz-malat-aspartat-2",
+   "quelle": "2026/02/Malat-Aspartat-Shuttle-2.png",
+   "original": [
+    3559,
+    1816
+   ],
+   "breite": 512,
+   "hoehe": 261,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 166); Malat-Aspartat-Shuttle-1 (kontrollgruppe.html 4B) ist praktisch dasselbe Bild"
+  },
+  {
+   "datei": "grenz-malat-aspartat-2__NEAREST.rgba.gz",
+   "id": "grenz-malat-aspartat-2",
+   "quelle": "2026/02/Malat-Aspartat-Shuttle-2.png",
+   "original": [
+    3559,
+    1816
+   ],
+   "breite": 512,
+   "hoehe": 261,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-grenzfall",
+   "begruendung": "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 166); Malat-Aspartat-Shuttle-1 (kontrollgruppe.html 4B) ist praktisch dasselbe Bild"
+  },
+  {
+   "datei": "kg-triglycerid__BOX.rgba.gz",
+   "id": "kg-triglycerid",
+   "quelle": "2025/05/Triglycerid.png",
+   "original": [
+    298,
+    220
+   ],
+   "breite": 298,
+   "hoehe": 220,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 2B): dunkelgraue Beschriftung auf transparent (wl 126)"
+  },
+  {
+   "datei": "kg-triglycerid__BILINEAR.rgba.gz",
+   "id": "kg-triglycerid",
+   "quelle": "2025/05/Triglycerid.png",
+   "original": [
+    298,
+    220
+   ],
+   "breite": 298,
+   "hoehe": 220,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 2B): dunkelgraue Beschriftung auf transparent (wl 126)"
+  },
+  {
+   "datei": "kg-triglycerid__NEAREST.rgba.gz",
+   "id": "kg-triglycerid",
+   "quelle": "2025/05/Triglycerid.png",
+   "original": [
+    298,
+    220
+   ],
+   "breite": 298,
+   "hoehe": 220,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 2B): dunkelgraue Beschriftung auf transparent (wl 126)"
+  },
+  {
+   "datei": "kg-dc2__BOX.rgba.gz",
+   "id": "kg-dc2",
+   "quelle": "2025/11/DC2.png",
+   "original": [
+    1662,
+    1525
+   ],
+   "breite": 512,
+   "hoehe": 470,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 6B): schwarze Linien, halbtransparente Flaechen (wl 190); DC1 ist durch k1-dc1-1 gedeckt"
+  },
+  {
+   "datei": "kg-dc2__BILINEAR.rgba.gz",
+   "id": "kg-dc2",
+   "quelle": "2025/11/DC2.png",
+   "original": [
+    1662,
+    1525
+   ],
+   "breite": 512,
+   "hoehe": 470,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 6B): schwarze Linien, halbtransparente Flaechen (wl 190); DC1 ist durch k1-dc1-1 gedeckt"
+  },
+  {
+   "datei": "kg-dc2__NEAREST.rgba.gz",
+   "id": "kg-dc2",
+   "quelle": "2025/11/DC2.png",
+   "original": [
+    1662,
+    1525
+   ],
+   "breite": 512,
+   "hoehe": 470,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 6B): schwarze Linien, halbtransparente Flaechen (wl 190); DC1 ist durch k1-dc1-1 gedeckt"
+  },
+  {
+   "datei": "kg-pdc-uebersicht__BOX.rgba.gz",
+   "id": "kg-pdc-uebersicht",
+   "quelle": "2026/01/PDC-Uebersicht.png",
+   "original": [
+    2544,
+    1261
+   ],
+   "breite": 512,
+   "hoehe": 254,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 7B): deckende Pastellflaechen, schwarze Schrift auf transparent (wl 211)"
+  },
+  {
+   "datei": "kg-pdc-uebersicht__BILINEAR.rgba.gz",
+   "id": "kg-pdc-uebersicht",
+   "quelle": "2026/01/PDC-Uebersicht.png",
+   "original": [
+    2544,
+    1261
+   ],
+   "breite": 512,
+   "hoehe": 254,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 7B): deckende Pastellflaechen, schwarze Schrift auf transparent (wl 211)"
+  },
+  {
+   "datei": "kg-pdc-uebersicht__NEAREST.rgba.gz",
+   "id": "kg-pdc-uebersicht",
+   "quelle": "2026/01/PDC-Uebersicht.png",
+   "original": [
+    2544,
+    1261
+   ],
+   "breite": 512,
+   "hoehe": 254,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 7B): deckende Pastellflaechen, schwarze Schrift auf transparent (wl 211)"
+  },
+  {
+   "datei": "kg-kompetitiver-inhibitor__BOX.rgba.gz",
+   "id": "kg-kompetitiver-inhibitor",
+   "quelle": "2025/09/kompetetiver-Inhibitor-MMD-1.png",
+   "original": [
+    2572,
+    1681
+   ],
+   "breite": 512,
+   "hoehe": 335,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 8B): Diagramm deckend hell, Formelzeichen schwarz auf transparent (wl 232)"
+  },
+  {
+   "datei": "kg-kompetitiver-inhibitor__BILINEAR.rgba.gz",
+   "id": "kg-kompetitiver-inhibitor",
+   "quelle": "2025/09/kompetetiver-Inhibitor-MMD-1.png",
+   "original": [
+    2572,
+    1681
+   ],
+   "breite": 512,
+   "hoehe": 335,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 8B): Diagramm deckend hell, Formelzeichen schwarz auf transparent (wl 232)"
+  },
+  {
+   "datei": "kg-kompetitiver-inhibitor__NEAREST.rgba.gz",
+   "id": "kg-kompetitiver-inhibitor",
+   "quelle": "2025/09/kompetetiver-Inhibitor-MMD-1.png",
+   "original": [
+    2572,
+    1681
+   ],
+   "breite": 512,
+   "hoehe": 335,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "betreiber-kontrollgruppe",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (Fall 8B): Diagramm deckend hell, Formelzeichen schwarz auf transparent (wl 232)"
+  },
+  {
+   "datei": "ghs01-explos__BOX.rgba.gz",
+   "id": "ghs01-explos",
+   "quelle": "2025/05/GHS01_explos.png",
+   "original": [
+    2999,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 195), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs01-explos__BILINEAR.rgba.gz",
+   "id": "ghs01-explos",
+   "quelle": "2025/05/GHS01_explos.png",
+   "original": [
+    2999,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 195), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs01-explos__NEAREST.rgba.gz",
+   "id": "ghs01-explos",
+   "quelle": "2025/05/GHS01_explos.png",
+   "original": [
+    2999,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 195), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs03-rondflam__BOX.rgba.gz",
+   "id": "ghs03-rondflam",
+   "quelle": "2025/05/GHS03_rondflam.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 1A): nicht invertieren (wl 165)"
+  },
+  {
+   "datei": "ghs03-rondflam__BILINEAR.rgba.gz",
+   "id": "ghs03-rondflam",
+   "quelle": "2025/05/GHS03_rondflam.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 1A): nicht invertieren (wl 165)"
+  },
+  {
+   "datei": "ghs03-rondflam__NEAREST.rgba.gz",
+   "id": "ghs03-rondflam",
+   "quelle": "2025/05/GHS03_rondflam.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 1A): nicht invertieren (wl 165)"
+  },
+  {
+   "datei": "ghs04-bottle__BOX.rgba.gz",
+   "id": "ghs04-bottle",
+   "quelle": "2025/05/GHS04_bottle.png",
+   "original": [
+    3000,
+    3001
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs04-bottle__BILINEAR.rgba.gz",
+   "id": "ghs04-bottle",
+   "quelle": "2025/05/GHS04_bottle.png",
+   "original": [
+    3000,
+    3001
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs04-bottle__NEAREST.rgba.gz",
+   "id": "ghs04-bottle",
+   "quelle": "2025/05/GHS04_bottle.png",
+   "original": [
+    3000,
+    3001
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs05-acid__BOX.rgba.gz",
+   "id": "ghs05-acid",
+   "quelle": "2025/05/GHS05_acid.png",
+   "original": [
+    2999,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs05-acid__BILINEAR.rgba.gz",
+   "id": "ghs05-acid",
+   "quelle": "2025/05/GHS05_acid.png",
+   "original": [
+    2999,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs05-acid__NEAREST.rgba.gz",
+   "id": "ghs05-acid",
+   "quelle": "2025/05/GHS05_acid.png",
+   "original": [
+    2999,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs06-skull__BOX.rgba.gz",
+   "id": "ghs06-skull",
+   "quelle": "2025/05/GHS06_skull.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 183), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs06-skull__BILINEAR.rgba.gz",
+   "id": "ghs06-skull",
+   "quelle": "2025/05/GHS06_skull.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 183), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs06-skull__NEAREST.rgba.gz",
+   "id": "ghs06-skull",
+   "quelle": "2025/05/GHS06_skull.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 183), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs07-exclam__BOX.rgba.gz",
+   "id": "ghs07-exclam",
+   "quelle": "2025/05/GHS07_exclam.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs07-exclam__BILINEAR.rgba.gz",
+   "id": "ghs07-exclam",
+   "quelle": "2025/05/GHS07_exclam.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "ghs07-exclam__NEAREST.rgba.gz",
+   "id": "ghs07-exclam",
+   "quelle": "2025/05/GHS07_exclam.png",
+   "original": [
+    3000,
+    3000
+   ],
+   "breite": 512,
+   "hoehe": 512,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "betreiber-piktogramm",
+   "begruendung": "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"
+  },
+  {
+   "datei": "synth-n-piktogramm__BOX.rgba.gz",
+   "id": "synth-n-piktogramm",
+   "quelle": "synth:piktogramm",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: Raute deckend hellgrau mit rotem Rahmen und grossem schwarzem Symbol innen (Norm-Piktogramm)"
+  },
+  {
+   "datei": "synth-n-piktogramm__BILINEAR.rgba.gz",
+   "id": "synth-n-piktogramm",
+   "quelle": "synth:piktogramm",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: Raute deckend hellgrau mit rotem Rahmen und grossem schwarzem Symbol innen (Norm-Piktogramm)"
+  },
+  {
+   "datei": "synth-n-piktogramm__NEAREST.rgba.gz",
+   "id": "synth-n-piktogramm",
+   "quelle": "synth:piktogramm",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: Raute deckend hellgrau mit rotem Rahmen und grossem schwarzem Symbol innen (Norm-Piktogramm)"
+  },
+  {
+   "datei": "synth-n-farbkarte__BOX.rgba.gz",
+   "id": "synth-n-farbkarte",
+   "quelle": "synth:farbkarte",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende orange Karte, schwarze Schriftstriche nur INNERHALB der Karte"
+  },
+  {
+   "datei": "synth-n-farbkarte__BILINEAR.rgba.gz",
+   "id": "synth-n-farbkarte",
+   "quelle": "synth:farbkarte",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende orange Karte, schwarze Schriftstriche nur INNERHALB der Karte"
+  },
+  {
+   "datei": "synth-n-farbkarte__NEAREST.rgba.gz",
+   "id": "synth-n-farbkarte",
+   "quelle": "synth:farbkarte",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende orange Karte, schwarze Schriftstriche nur INNERHALB der Karte"
+  },
+  {
+   "datei": "synth-n-freigestellt__BOX.rgba.gz",
+   "id": "synth-n-freigestellt",
+   "quelle": "synth:freigestellt",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BOX",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: freigestelltes 'Foto' (deckende Ellipse mit Mitteltoenen), keine dunkle Tinte"
+  },
+  {
+   "datei": "synth-n-freigestellt__BILINEAR.rgba.gz",
+   "id": "synth-n-freigestellt",
+   "quelle": "synth:freigestellt",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BILINEAR",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: freigestelltes 'Foto' (deckende Ellipse mit Mitteltoenen), keine dunkle Tinte"
+  },
+  {
+   "datei": "synth-n-freigestellt__NEAREST.rgba.gz",
+   "id": "synth-n-freigestellt",
+   "quelle": "synth:freigestellt",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "NEAREST",
+   "erwartet": "nicht-invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: freigestelltes 'Foto' (deckende Ellipse mit Mitteltoenen), keine dunkle Tinte"
+  },
+  {
+   "datei": "synth-m-linien-marker__BOX.rgba.gz",
+   "id": "synth-m-linien-marker",
+   "quelle": "synth:linien-marker",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: schwarze Formel-Linien auf transparent, grosse halbtransparente gelbe Markerflaechen darueber"
+  },
+  {
+   "datei": "synth-m-linien-marker__BILINEAR.rgba.gz",
+   "id": "synth-m-linien-marker",
+   "quelle": "synth:linien-marker",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: schwarze Formel-Linien auf transparent, grosse halbtransparente gelbe Markerflaechen darueber"
+  },
+  {
+   "datei": "synth-m-linien-marker__NEAREST.rgba.gz",
+   "id": "synth-m-linien-marker",
+   "quelle": "synth:linien-marker",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: schwarze Formel-Linien auf transparent, grosse halbtransparente gelbe Markerflaechen darueber"
+  },
+  {
+   "datei": "synth-m-schrift-kaesten__BOX.rgba.gz",
+   "id": "synth-m-schrift-kaesten",
+   "quelle": "synth:schrift-kaesten",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende Pastellkaesten, schwarze Schriftstriche frei auf transparentem Grund daneben"
+  },
+  {
+   "datei": "synth-m-schrift-kaesten__BILINEAR.rgba.gz",
+   "id": "synth-m-schrift-kaesten",
+   "quelle": "synth:schrift-kaesten",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende Pastellkaesten, schwarze Schriftstriche frei auf transparentem Grund daneben"
+  },
+  {
+   "datei": "synth-m-schrift-kaesten__NEAREST.rgba.gz",
+   "id": "synth-m-schrift-kaesten",
+   "quelle": "synth:schrift-kaesten",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende Pastellkaesten, schwarze Schriftstriche frei auf transparentem Grund daneben"
+  },
+  {
+   "datei": "synth-m-graue-beschriftung__BOX.rgba.gz",
+   "id": "synth-m-graue-beschriftung",
+   "quelle": "synth:graue-beschriftung",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BOX",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende Farbbalken, dunkelgraue Beschriftung frei auf transparentem Grund (wie Triglycerid)"
+  },
+  {
+   "datei": "synth-m-graue-beschriftung__BILINEAR.rgba.gz",
+   "id": "synth-m-graue-beschriftung",
+   "quelle": "synth:graue-beschriftung",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "BILINEAR",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende Farbbalken, dunkelgraue Beschriftung frei auf transparentem Grund (wie Triglycerid)"
+  },
+  {
+   "datei": "synth-m-graue-beschriftung__NEAREST.rgba.gz",
+   "id": "synth-m-graue-beschriftung",
+   "quelle": "synth:graue-beschriftung",
+   "original": [
+    1200,
+    900
+   ],
+   "breite": 512,
+   "hoehe": 384,
+   "verfahren": "NEAREST",
+   "erwartet": "invertieren",
+   "gruppe": "synth-grauzone",
+   "begruendung": "synthetisch: deckende Farbbalken, dunkelgraue Beschriftung frei auf transparentem Grund (wie Triglycerid)"
+  }
+ ]
+}

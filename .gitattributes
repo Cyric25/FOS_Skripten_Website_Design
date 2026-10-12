@@ -1,0 +1,3 @@
+# Pixel-Fixtures des Darkmode-Harnischs (tools/test-darkmode-klassifizierung.js):
+# Rohdaten, nie Zeilenenden umschreiben. index.json bleibt Text (lesbarer Diff, AP-3.rev G5).
+tools/fixtures/**/*.gz binary

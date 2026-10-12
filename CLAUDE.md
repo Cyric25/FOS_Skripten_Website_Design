@@ -675,68 +675,257 @@ von Anfang an hatten. **Merksatz:** Jede neue Schaltfläche mit
 `background: none` braucht zusätzlich eine explizite `color`-Angabe.
 
 **Automatische Invertierung hintergrundloser Bilder (seit
-`PLAN-Darkmode-Bildinvertierung.md`, 2026-09, abgeschlossen):**
+`PLAN-Darkmode-Bildinvertierung.md`, 2026-09; vollständig neu gefasst durch
+`PLAN-Rueckmeldungen-Blockverweis-iPad-Tafel-Darkmode-Formeln.md`, Phase 3,
+Meldung #7107, Theme 1.5.118):**
 Selbstgezeichnete Strukturbilder (z. B. Formelzeichnungen) haben oft einen
-transparenten Hintergrund und dunkle Linien — im Darkmode auf dem dunklen
-Seitenhintergrund unsichtbar. Ein neues Script erkennt solche Bilder
-automatisch und invertiert nur sie, ohne dass Redakteure sie manuell
-kennzeichnen müssen.
+transparenten Hintergrund und schwarze Linien oder Schrift — im Darkmode auf
+dem dunklen Seitenhintergrund unsichtbar. Ein Script erkennt solche Bilder
+automatisch und invertiert nur sie (CSS `filter: invert(1)`), ohne dass
+Redakteure sie kennzeichnen müssen. Ausgelöst wurde die Überarbeitung durch
+#7107: Große Formel-PNGs mit feinen Linien wurden nie invertiert.
 
-*Mechanismus:* `src/js/darkmode-image-invert.js` durchläuft nach `window.load`
-(verzögert per `requestIdleCallback`, Rückfall `setTimeout` — nicht
-render-blockierend) alle `<img>` in `.entry-content` (bewusst NICHT
-site-weit). Für jedes Bild wird `analyzeImage(img)` aufgerufen: Das Bild
-zeichnet sich auf einen unsichtbaren, auf max. 200px Kantenlänge
-herunterskalierten `<canvas>` (Performance), `getImageData()` liefert die
-Pixel. Zwei Bedingungen müssen BEIDE zutreffen, sonst bleibt das Bild
-unangetastet:
-1. Mindestens 5 % der Pixel sind nennenswert transparent (Alpha < 250) —
-   Näherung für „hat keinen deckenden Hintergrund".
-2. Die mittlere Luminanz (Rec.-709-Gewichtung) der undurchsichtigen Pixel
-   liegt unter 100 (0–255-Skala) — Näherung für „ist überwiegend dunkel".
+**Betreiber-Leitlinie (Martin, 2026-10-12) — das ist der Maßstab, an dem jede
+künftige Änderung der Erkennung zu messen ist:**
+- schwarze Linien oder Schrift **frei auf transparentem Grund** → invertieren
+  (auch bei farbigen Flächen, Pastell-Markern oder Membranzeichnungen daneben);
+- **Norm-Piktogramme mit deckend heller Fläche** (GHS-Rauten, Einstabmesskette
+  mit hellen Flächen) → nicht invertieren;
+- **Fotos und Bilder mit deckendem Hintergrund** → nicht invertieren.
 
-Treffen beide zu, bekommt das `<img>` die Klasse `fos-darkmode-invert`
-(`img.dataset.fosDarkmodeChecked` verhindert Doppelanalyse). Die eigentliche
-Invertierung passiert ausschließlich per CSS in `style.css`:
-`:root[data-theme="dark"] img.fos-darkmode-invert { filter: invert(1); }` —
-reine Invertierung ohne `hue-rotate`, bewusst konsistent mit dem
-Tafelbild-Feature im CDB-Designer-Plugin (siehe dort, Abschnitt
-„Tafelmodus im Darkmode"), das denselben Trade-off (Farbtöne kippen in ihr
-Komplement) bereits nutzt. Damit läuft das Umschalten zwischen Hell- und
-Dunkelmodus ohne erneute Bildanalyse — nur die CSS-Regel greift oder nicht.
-`try/catch` um die Canvas-Analyse fängt `SecurityError` bei
-fremdgehosteten Bildern ohne CORS-Freigabe ab (Rückfall: keine
-Invertierung, kein Konsolenfehler). Enqueue in
-`simple_clean_theme_assets()` (`functions.php`) folgt exakt dem Muster von
-`'simple-clean-script'`.
+*Mechanismus:* `src/js/darkmode-image-invert.js` (klassisches Script, kein
+`import`/`export`) prüft `<img>` in `.entry-content` **und** im
+Blockverweis-Modal `.cbd-block-reference-modal` (CDB-Designer hängt es an
+`<body>`, also außerhalb von `.entry-content`); bewusst NICHT site-weit. Die
+Prüfung läuft erst nach `window.load`, nicht render-blockierend.
+Die Entscheidung trifft eine **reine Funktion**
+`klassifiziere(rgba, breite, hoehe)` (exportiert als
+`window.fosDarkmodeKlassifiziere`, Abtastgröße als
+`window.fosDarkmodeAbtastgroesse`); sie liefert
+`{ergebnis: 'invertieren'|'hell'|'deckend'|'leer', anteilTransparent,
+strichPixel, helligkeit, freieTinte}`. Nur bei `invertieren` bekommt das
+`<img>` die Klasse `fos-darkmode-invert`; die Invertierung selbst passiert
+ausschließlich per CSS in `style.css`
+(`:root[data-theme="dark"] img.fos-darkmode-invert { filter: invert(1); }`),
+ohne `hue-rotate` und ohne `prefers-color-scheme`. Das Umschalten zwischen
+Hell und Dunkel braucht deshalb keine neue Analyse; die Bilder werden auch im
+hellen Modus vorklassifiziert.
 
-*Finale Schwellenwerte (nach Live-Kalibrierung, unverändert gegenüber dem
-ersten Entwurf):* `TRANSPARENT_ALPHA_THRESHOLD = 250`,
-`MIN_TRANSPARENT_RATIO = 0.05`, `DARK_LUMINANCE_THRESHOLD = 100`,
-`MAX_SAMPLE_DIMENSION = 200`. Auf der realen Content-Seite „Die wichtigsten
-Organischen Grundlagen" (30 Bilder) erkennt die Funktion reproduzierbar
-genau 2 Bilder (`Alkane.png`, `Alkene-1.png` — echte Strukturformeln mit
-transparentem Hintergrund) als invertierungswürdig, 0 falsch-positive unter
-den restlichen 28.
+*Messung (E10) — bitte NICHT auf „nur deckende Pixel zählen" zurückbauen:*
+Feine schwarze Linien großer Formel-PNGs werden beim Verkleinern auf die
+Abtastgröße **halbtransparent**. Die alte Messung (Alpha ≥ 250 als Strich,
+200 px, mittlere Luminanz < 100) fand dann 0 Strichpixel und invertierte nie.
+Jetzt (Konstanten in `darkmode-image-invert.js`):
+- Abtastung bis `MAX_SAMPLE_DIMENSION = 512` px Kantenlänge,
+  `imageSmoothingEnabled = true`, `imageSmoothingQuality = 'high'`.
+- transparent = Alpha < `TRANSPARENT_ALPHA_THRESHOLD` (16); Strich = Alpha ≥
+  `STROKE_ALPHA_THRESHOLD` (32, auch halbtransparente Kantenpixel).
+- Helligkeit = **alpha-gewichtet** (Σ a·L / Σ a, L = Rec.-709) über alle
+  Strichpixel — unabhängig vom Verkleinerungsverfahren des Browsers.
+
+*Entscheidungsfolge in `klassifiziere()`:*
+1. transparente Pixel < `MIN_TRANSPARENT_RATIO` (5 %) → `deckend` (nie
+   invertieren; schützt Fotos, deckend weiße SVG-Rasterungen).
+2. Strichpixel < `MIN_STROKE_RATIO` (0,05 %) → `leer`.
+3. gewichtete Helligkeit < `DARK_LUMINANCE_THRESHOLD` (110) → `invertieren`.
+4. sonst die **Regel „freie Tinte"** (seit AP-3.fix1, Befund K1): `invertieren`,
+   wenn die freie Tinte ≥ `MIN_FREIE_TINTE` (0,0016 = **1,6 ‰** der
+   Abtastfläche) ist, sonst `hell` (nicht invertieren).
+
+*Warum „freie Tinte"?* Halbtransparente Pastell-Marker oder große helle
+Farbflächen heben die mittlere Helligkeit über jede Schwelle, obwohl daneben
+schwarze Schrift auf transparentem Grund steht (Lipid-Grafiken, Glycolyse-
+Phasen, Membranzeichnungen) — sie wurden unsichtbar, obwohl 1.5.117 sie noch
+invertierte (Regression, im Review gefunden). Eine höhere Helligkeitsschwelle
+löst das nicht: Lipid-Grafiken (Helligkeit 131–155) und Malat-Aspartat-Shuttle
+(166) liegen über dem GHS03-Piktogramm (165), das NICHT invertiert werden
+soll. Trennend ist die **Nachbarschaft der dunklen Pixel**:
+*Freie Tinte* = Anteil der Pixel, die
+- dunkel sind (lineare Leuchtdichte < `TINTE_LEUCHTDICHTE` 0,05 ≈ sRGB-Grau
+  63; linear statt 0–255, damit das gesättigte Rot der GHS-Rahmen nicht als
+  dunkel zählt) und nahezu deckend (Alpha ≥ `TINTE_MIN_ALPHA` 128), und
+- im Quadrat ±`UMGEBUNG_RADIUS` (2 Abtastpixel) transparenten (Alpha < 16)
+  oder durchscheinend hellen Grund (Alpha < `DECKEND_ALPHA` 224, nicht dunkel
+  — Textmarker) haben, aber
+- **keine** deckend helle Fläche (Alpha ≥ 224, Leuchtdichte ≥
+  `FLAECHE_LEUCHTDICHTE` 0,35) im selben Umkreis.
+Umsetzung mit zwei separablen Dilatationen (O(w·h), ~7 ms je 512×512-Bild in
+Node, 1–10 ms im Browser); berechnet nur für Bilder, die nach Regel 3 `hell`
+wären.
+*Kalibrierung (knappste Paare, das ist die engste Stelle der ganzen Erkennung):*
+darf **nicht** invertieren: GHS-Piktogramme 0,0 ‰, **Einstabmesskette
+~1,1 ‰** (Spanne über die Verkleinerungsarten 1,0–1,1); muss invertieren:
+**kompetitiver Inhibitor ~2,2 ‰** (2,2–2,4), PDC-Übersicht ~7,3 ‰, Rest ≥ 3 ‰.
+Die Schwelle 1,6 ‰ liegt dazwischen (Faktor 2 Abstand zu beiden Seiten); sie
+ist an genau EINEM negativen Grenzbild (Einstabmesskette) gesetzt, also eine
+Kalibrierung an der Betreiberentscheidung, kein Naturgesetz. Kippt ein
+künftiges Bild: Autoren-Klasse (unten) bzw. neues Fixture — nicht die
+Schwelle auf Verdacht verschieben (siehe „Werkzeuge").
+
+*Diagnose am Gerät (ohne Konsole):* `data-fos-darkmode-checked` am `<img>`
+(Web-Inspector, am iPad über einen Mac oder eine Lehrperson am Desktop) trägt
+den **Grund** und wird erst NACH der Analyse gesetzt:
+
+| Wert | Bedeutung | Wirkung im Darkmode |
+|---|---|---|
+| `invertiert` | Automatik hat entschieden: invertieren | `invert(1)` |
+| `hell` | transparent, aber helle/deckende Flächen bzw. keine freie Tinte (GHS, Einstabmesskette) | unverändert |
+| `deckend` | < 5 % transparent (Foto, weißer Grund) — auch 0×0-Bild (G1) | unverändert |
+| `leer` | kaum Strichpixel | unverändert |
+| `fehler` | Bild nicht dekodierbar/defekt (auch Canvas-`SecurityError` bei fremden Bildern ohne CORS) | unverändert, kein Konsolenfehler |
+| `ohne-groesse` | noch ohne Größe (z. B. SVG nur mit `viewBox` in `display:none`); wird bei `load`/Sichtbarwerden erneut geprüft | unverändert, vorläufig |
+| `erzwungen` | Autoren-Klasse `fos-darkmode-invert` | `invert(1)` |
+| `ausgenommen` | Autoren-Klasse `fos-darkmode-no-invert` | unverändert |
+
+*Nachgeladene Bilder und Blockverweis-Modal:* Ein `MutationObserver` auf
+`document.body` (gedrosselt) reiht nachträglich eingefügte `<img>` in
+`.entry-content` und `.cbd-block-reference-modal` ein — der frühere Absatz
+„`scanImages()` nur einmalig" ist damit überholt und gestrichen. Alle
+Prüfungen laufen über eine **Warteschlange**: höchstens `MAX_PARALLEL` (2)
+Bilder gleichzeitig, `ZEITBUDGET_MS` (8 ms) Hauptthread-Arbeit je Durchgang,
+Folgedurchgänge per `setTimeout(0)`, Start per `requestIdleCallback`.
+`loading="lazy"`-Bilder, die noch nicht geladen sind, belegen keinen Platz
+(sie hängen nur `load`/`error` an). Ein internes Merkmal
+(`img._fosDarkmodeLaeuft`) verhindert Doppelprüfungen. Messwerte im Browser:
+`window.fosDarkmodeStatistik` (`anzahl`, `gesamtMs`, `maxMs`, `zuletztMs`);
+gemessen 46–191 ms Hauptthread für 42 Bilder (kalter Cache, Desktop).
+
+*`createImageBitmap`-Pfad und die SVG-Falle:* Dekodieren und Verkleinern
+laufen bevorzugt über `createImageBitmap(img, {resizeWidth, resizeHeight,
+resizeQuality: 'high'})` (außerhalb des Hauptthreads; der Canvas nutzt
+`willReadFrequently`). **Falle:** Für SVG liefert `createImageBitmap` mit
+resize-Optionen in Chrome ein **leeres** Bitmap. Deshalb wird ein `leer` aus
+dem Bitmap-Weg IMMER per direktem `drawImage(img)` gegengeprüft — bitte nicht
+„optimieren". Ohne `createImageBitmap` (Safari < 15) greift der synchrone
+Rückfallpfad (korrekt, aber ~1,1 s Hauptthread für 42 Bilder).
+**SVG nur mit `viewBox`:** WebKit/Firefox melden `complete` mit
+`naturalWidth 0` (Chrome 300×90). Das Script wartet auf `img.decode()` und
+nutzt dann die angezeigte Größe (`getBoundingClientRect`); lehnt `decode()`
+ab und steht das Bild mit 0×0 im Layout, gilt es als defekt (`fehler`,
+höchstens EIN `load`-Listener — AP-3.fix2: keine Endlosschleife). Ein Bild
+ohne Layout (`display:none`) bleibt `ohne-groesse`, bis es sichtbar wird
+(gemeinsamer `IntersectionObserver`, kein Intervall).
 
 *Lightbox-Sonderfall:* Die Custom-Lightbox in `src/js/main.js` zeigt die
 vergrößerte Ansicht NICHT über einen Klon des Original-`<img>`, sondern über
 ein einziges, wiederverwendetes `<img id="clb-img">`, dessen `src` bei jedem
 Öffnen neu gesetzt wird (`openLightbox(src, triggerEl)`). Die Markerklasse
-würde deshalb ohne Zusatzcode nicht auf `#clb-img` landen. Seit diesem
-Vorhaben überträgt `openLightbox()` sie per
+würde deshalb ohne Zusatzcode nicht auf `#clb-img` landen. Seit
+`PLAN-Darkmode-Bildinvertierung.md` überträgt `openLightbox()` sie per
 `clbImg.classList.toggle('fos-darkmode-invert', !!(triggerEl &&
 triggerEl.classList && triggerEl.classList.contains('fos-darkmode-invert')))`
 — `toggle()` statt `add()`, damit die Klasse beim nächsten Öffnen eines
 NICHT-invertierten Bildes auch wieder verschwindet (kein „Kleben" zwischen
-zwei Bildern in derselben Sitzung).
+zwei Bildern in derselben Sitzung). `main.js` blieb in Phase 3 unverändert.
 
-*Bekannte, bewusst akzeptierte Einschränkung (aus dem unabhängigen Review
-`AP-1.rev`, geringer Befund, kein Korrekturbedarf):* `scanImages()` läuft nur
-einmalig nach `window.load`. Bilder, die erst nachträglich per AJAX in
-`.entry-content` eingefügt werden (z. B. dynamisch nachgeladene
-Container-Block-Inhalte), werden nicht erfasst. Kein Bestandteil dieses
-Vorhabens; Kandidat für ein mögliches Folgevorhaben.
+*Werkzeuge (alles unter `Theme/tools/`, nicht im Theme-ZIP — `tools/` steht
+in der Exclude-Liste von `create-theme-zip.js`):*
+- **Prüfharnisch** (Node, lädt das Script im `vm`-Kontext, 70 Fixture-Bilder ×
+  3 Verkleinerungsarten = 426 Prüfungen):
+  `node tools/test-darkmode-klassifizierung.js` — `--tabelle` gibt die
+  Kennzahlen je Fixture aus (Anteil transparent, Strichpixel, gewichtete
+  Helligkeit, freie Tinte); `FOS_DARKMODE_DATEI=dist/js/darkmode-image-invert.js
+  node tools/test-darkmode-klassifizierung.js` prüft eine andere Datei (z. B.
+  die gebaute `dist`-Fassung oder eine Kopie für Mutationsproben). Der
+  Harnisch ist ESM, weil `Theme/package.json` `"type": "module"` setzt.
+  Tests niemals ändern, damit sie bestehen — Erwartungen in `index.json`
+  ändern sich nur mit ausdrücklicher Betreiberfreigabe (Gruppe
+  `betreiber-umgestellt` dokumentiert zwei solche Fälle).
+- **Fixtures neu erzeugen** (liest nur lesend aus der Mediathek der
+  Testinstallation, Pillow nötig):
+  `python -I tools/erzeuge-darkmode-fixtures.py [UPLOADS]` →
+  `tools/fixtures/darkmode/*.rgba.gz` + `index.json` (Erwartung und
+  Begründung je Bild; BOX/BILINEAR/NEAREST auf ≤ 512 px; synthetische
+  Grauzonen-Bilder aus `synthetisch()`). Paket ~8,4 MB; `.gitattributes`
+  markiert nur `*.gz` als `binary`.
+- **Mediathek-Vergleich — PFLICHT vor jeder Änderung der Schwellen oder der
+  Messung** (Regressionswächter über alle 314 Originale der Testmediathek):
+  `python -I tools/vergleiche-darkmode-mediathek.py [UPLOADS] [ZWISCHENORDNER]`
+  (tastet ab, ~30–60 s, Standard `<Temp>/fos-darkmode-mediathek`), danach
+  `node tools/vergleiche-darkmode-mediathek.js [ZWISCHENORDNER] [--alle]`
+  (klassifiziert mit dem echten Code von 1.5.117 — `git show
+  4149b08:src/js/darkmode-image-invert.js` — und dem aktuellen Code, listet
+  „alt invertiert → neu nicht", „alt nicht → neu invertiert" und uneinige
+  Verfahren). Maßstab: „alt invertiert → neu nicht" muss **0** sein oder
+  jeder Fall einzeln begründet; Stand AP-3.fix1: 0 Rückfälle, 0 uneinige,
+  28 neu invertierte Bilder (alle durch Betreiberentscheidung gedeckt).
+- **Browser-Testseite** (nur Testinstallation, nicht im Repo/ZIP):
+  `…/themes/fos-online-schulbuch/darkmode-test/index.html?dark=1` (42 Bilder
+  mit `data-erwartet`, Inline-Skripte sind per CSP gesperrt, daher `test.js`).
+
+*Autoren-Klassen – Notausgang bei Fehleinordnung (seit
+`PLAN-Rueckmeldungen-Blockverweis-iPad-Tafel-Darkmode-Formeln.md`, AP-3.4,
+#7107):* Ordnet die Automatik ein Bild falsch ein, kann die Redaktion das
+im Editor erzwingen: Bild-Block markieren → Seitenleiste „Block" →
+„Erweitert" → **„Zusätzliche CSS-Klasse(n)"**:
+
+| Klasse | Wirkung im Darkmode |
+|---|---|
+| `fos-darkmode-invert` | Bild wird **immer** invertiert (z. B. schwarze Formel, die die Automatik übersieht) |
+| `fos-darkmode-no-invert` | Bild wird **nie** invertiert (z. B. Grafik, die fälschlich invertiert wird) |
+
+WordPress setzt die Klasse an das `<figure>` des Bild-Blocks, nicht an das
+`<img>` – deshalb wirken beide Klassen am `<figure>` (oder jedem anderen
+Vorfahren) **und** am `<img>` selbst. `fos-darkmode-no-invert` gewinnt,
+wenn beide zutreffen. CSS in `style.css` (Abschnitt „Bilder ohne
+Hintergrund im Darkmode"), JS in `src/js/darkmode-image-invert.js`
+(`autorenVorgabe()`): keine Analyse, Diagnose-Merkmal
+`data-fos-darkmode-checked="erzwungen"` bzw. `"ausgenommen"`; bei
+`erzwungen` bekommt auch das `<img>` die Klasse, damit die Lightbox
+mitzieht.
+
+*Hinweise für die Redaktion (aus Betreiberentscheidung und Review):*
+- **Alpha-Helix-Varianten mit deckend weißem Grund** (`Alpha-Helix-1`,
+  `-2-1`, `-2-2`, `-3-1`, `-3-2`, `-4`; Alpha durchgehend 255): Der Betreiber
+  möchte sie im Darkmode invertiert sehen. Die Automatik invertiert deckende
+  Bilder grundsätzlich nie (sonst kippen Fotos), also **nur per
+  `fos-darkmode-invert`** am Bild-Block. (Die transparenten Varianten
+  `Alpha-Helix`, `-2`, `-3` erkennt die Automatik selbst.)
+- **Freigestellte Fotos** (Person/Gegenstand auf transparentem Grund, z. B.
+  freigestellter Bunsenbrenner, Feuerwerk) mit dunklen Randpartien können als
+  „schwarze Tinte auf transparentem Grund" gelten und invertiert werden (G8,
+  siehe Einschränkungen): bei Bedarf `fos-darkmode-no-invert`.
+- **3D-/Molekülmodelle mit CPK-Farben** (rot/blau/grün/grau auf
+  transparentem Grund): die reine Invertierung kippt Farben in ihr
+  Komplement (Rot ↔ Cyan, Blau ↔ Gelb) (G4, bewusste Eigenschaft der
+  Entscheidung „kein `hue-rotate`"): bei Bedarf `fos-darkmode-no-invert`.
+
+*Bekannte, bewusst akzeptierte Einschränkungen (Reviews AP-3.rev/AP-3.rev2,
+alle gering, kein Fix-AP):*
+- **G1:** Ein Bild mit 0×0 Abtastpixeln wird von `klassifiziere()` als
+  `deckend` eingestuft (Randfall ohne Größe; praktisch nur kaputte Bilder).
+- **G3:** `src`/`srcset`-Wechsel an einem bereits geprüften Bild werden nicht
+  beobachtet; ein per Skript ausgetauschtes Bild behält sein altes Urteil
+  (verwandt: ein `fehler` aus dem `error`-Ereignis wird bei späterem
+  `src`-Wechsel nicht erneut geprüft, G9b).
+- **G4:** Die reine Invertierung kippt Farbtöne (siehe CPK-Hinweis oben);
+  bewusste Entscheidung, konsistent mit dem Tafelbild im CDB-Designer.
+- **G7:** Die Schwelle 1,6 ‰ ist knapp. Die Fixtures stammen nur aus
+  Originalen; bei kleinen `srcset`-Kandidaten (300 px) schrumpft der Abstand
+  Nicht/Muss auf 0,4–0,5 ‰ (Einstabmesskette-300 1,4 ‰ gegen
+  Steuerung-262×300 1,9 ‰); 150×150-Ausschnitte kippen zum Teil. Kein
+  Fehlklassifikat gefunden; im Inhalt praktisch unbenutzt. Empfehlung
+  (Folgevorhaben): je ein 300-px-Fixture für Einstabmesskette und
+  Inhibitor/Steuerung aufnehmen.
+- **G8 (Restrisiko R6):** Freigestellte Fotos mit dunklen Randpartien werden
+  jetzt invertiert (synthetisch und mit echten Fotos auf transparentem Grund
+  nachgewiesen; in der Testmediathek gibt es kein solches Bild). Entspricht
+  der Betreiber-Leitlinie; Notausgang `fos-darkmode-no-invert`. Ein grob
+  verkleinernder Browser (WebKit-ähnlich, NEAREST) invertiert solche
+  Grenzfälle eher.
+- **G9:** Verstecktes defektes Bild mit `alt=""` bleibt nach dem Einblenden
+  `ohne-groesse` (nicht `fehler`) und dauerhaft im `IntersectionObserver` —
+  harmlos, aber im Web-Inspector irreführend.
+- **WebKit nur am iPad prüfbar:** Alle Tests liefen in Chromium/Edge (Blink),
+  auch die Geräteemulation. Verkleinern halbtransparenter Pixel,
+  `naturalWidth 0` bei `viewBox`-SVG und die `decode()`-Ablehnung in WebKit
+  sind NICHT nachgewiesen; die Gegenprobe am echten iPad macht der Betreiber
+  (Anleitung: `PLAN-Rueckmeldungen-…-Darkmode-Formeln.md`, Übergabenotiz
+  AP-3.doc). Im Zweifel: `data-fos-darkmode-checked` und Bilddatei melden →
+  neues Fixture.
+- Seite 5899 (Ausgangsmeldung #7107) ist live passwortgeschützt und war in der
+  Testinstallation nicht verfügbar; die Wirkung dort ist über Fixtures und
+  Mediathek-Vergleich abgesichert, nicht an der Seite selbst.
 
 **Hintergrund/Historie:** `PLAN-CSS-Variablen-Darkmode.md` (Root-Verzeichnis)
 legte in einer Vorstufe die heutigen CSS-Variablen und ihre
