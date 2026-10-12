@@ -64,6 +64,7 @@ NICHT = "nicht-invertieren"
 # quelle: Pfad relativ zu UPLOADS; Sonderformen:
 #   "svgpng:<pfad.svg>"  - eingebettetes PNG aus einer SVG des Zwischenablage-Uploaders
 #   "hell:<pfad.png>"    - RGB invertiert, Alpha unveraendert (heller Strich auf transparent)
+#   "synth:<name>"       - synthetisches Grauzonen-Bild aus synthetisch() (AP-3.fix1)
 BILDER = [
     # --- muss invertieren: Fehlfaelle aus #7107 (Original + groesste Zwischengroesse) ---
     ("glycolyse-zweite-atp", "2025/09/Glycolyse-zweite-ATP-Bildung.png", INV, "fehlfall", "0 Strichpixel bei alter Logik"),
@@ -110,20 +111,171 @@ BILDER = [
     # --- darf nicht invertieren: farbige transparente Grafiken mit hellen Flaechen ---
     ("farbig-ghs02-flamme", "2025/05/GHS02_flamme.png", NICHT, "farbig-hell",
      "GHS-Piktogramm: roter Rahmen, weisse Innenflaeche, 50 % transparent; Invertieren macht es cyan/schwarz"),
-    ("farbig-atmungskette", "2026/02/Atmungskette-Uebersicht.png", NICHT, "farbig-hell",
+    # AP-3.fix1: Die beiden folgenden waren in AP-3.1 "darf nicht invertieren".
+    # Betreiberentscheidung 2026-10-12 (Vorschau uploads/darkmode-test/kontrollgruppe.html,
+    # Faelle 3B und 5B): schwarze Beschriftung/Umrisse auf transparentem Grund sind ohne
+    # invert unlesbar -> MUSS invertieren. Bewusst umgestellt, keine Testanpassung an Code.
+    ("farbig-atmungskette", "2026/02/Atmungskette-Uebersicht.png", INV, "betreiber-umgestellt",
+     "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 3B, vorher 'darf nicht'): "
+     "schwarze Beschriftung/Pfeile auf transparentem Grund; urspruenglich: "
      "Uebersichtsgrafik mit grossen hellen Farbflaechen (wl ~168)"),
-    ("farbig-ketonkoerper-transport", "2026/02/Ketonkoerper-Transport.png", NICHT, "farbig-hell",
+    ("farbig-ketonkoerper-transport", "2026/02/Ketonkoerper-Transport.png", INV, "betreiber-umgestellt",
+     "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 5B, vorher 'darf nicht'): "
+     "schwarze Zell-Umrisse/Pfeile auf transparentem Grund; urspruenglich: "
      "4357x4124, helle Farbflaechen (wl ~198), sehr starke Verkleinerung"),
     ("farbig-einstabmesskette", "2025/11/Einstabmesskette.png", NICHT, "farbig-hell",
-     "Geraetezeichnung mit hellen Flaechen (wl ~209)"),
+     "Geraetezeichnung mit hellen Flaechen (wl ~209); Betreiberentscheidung 2026-10-12 "
+     "(kontrollgruppe.html Fall 9A) bestaetigt: nicht invertieren"),
     # --- darf nicht invertieren: heller Strich auf transparentem Grund ---
     ("hell-atp-invertiert", "hell:2025/09/ATP.png", NICHT, "heller-strich",
      "synthetisch: ATP.png mit invertiertem RGB (weisse Linien, Alpha unveraendert); "
      "in der Mediathek gibt es kein weisses Logo auf transparentem Grund"),
+
+    # ===================== AP-3.fix1 (Befund K1 aus AP-3.rev) =====================
+    # Grauzone der gewichteten Helligkeit 75-167. Nur Originale (keine Zwischengroessen),
+    # damit das Fixture-Paket klein bleibt; Zwischengroessen pruefte AP-3.1 bereits.
+    # --- muss invertieren: Regression gegenueber 1.5.117 (alt invertiert, AP-3.1-Messung 'hell') ---
+    ("k1-phospholipide", "2025/10/phospholipide.png", INV, "k1-regression",
+     "alt (1.5.117) invertiert; halbtransparente Pastell-Markerflaechen ueberstimmten die schwarzen Linien (wl 155)"),
+    ("k1-sphingomyelin", "2025/10/Sphingomyelin.png", INV, "k1-regression", "wie phospholipide (wl 132)"),
+    ("k1-ceramid", "2025/10/Ceramid.png", INV, "k1-regression", "wie phospholipide (wl 142)"),
+    ("k1-glykolipid", "2025/10/Glykolipid.png", INV, "k1-regression", "wie phospholipide (wl 133)"),
+    ("k1-glycolyse-phasen", "2025/09/Glycolyse-Phasen.png", INV, "k1-regression",
+     "alt invertiert; graue/schwarze Beschriftung neben Farbflaechen (wl 116)"),
+    ("k1-dc1-1", "2025/11/DC1-1.png", INV, "k1-regression",
+     "alt in BOX/BILINEAR invertiert; schwarze Linien der DC-Kammer, halbtransparente Flaechen (wl 162-167)"),
+    # --- muss invertieren: Strukturformeln mit Textmarker (alt wie AP-3.1 falsch) ---
+    ("k1-schritt-1-vt", "2026/01/Schritt-1-vt.png", INV, "k1-textmarker", "schwarze Formel mit Textmarker (wl 137)"),
+    ("k1-schritt-4-vt", "2026/01/Schritt-4-vt.png", INV, "k1-textmarker", "schwarze Formel mit Textmarker (wl 124)"),
+    ("k1-schritt-5-vt", "2026/01/Schritt-5-vt.png", INV, "k1-textmarker", "schwarze Formel mit Textmarker (wl 115)"),
+    # --- muss invertieren: Grenzfaelle, Betreiberentscheidung 2026-10-12 (grenzfaelle.html, alle "B") ---
+    ("grenz-alpha-helix-3", "2026/03/Alpha-Helix-3.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren. "
+     "3D-Modell, CPK-Farben kippen; wl 104 (knappste transparente Alpha-Helix-Variante; Alpha-Helix 83 "
+     "und -2 95 liegen tiefer und sind durch dieses Fixture mitgedeckt). Varianten mit deckend weissem "
+     "Grund (-1, -2-1, -2-2, -3-1, -3-2, -4) nur ueber Autoren-Klasse fos-darkmode-invert"),
+    ("grenz-spannungsreihe", "2025/11/Spannungseihe.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 100-104)"),
+    ("grenz-apo-holoenzym", "2026/04/APO-und-Holoenzym.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 102)"),
+    ("grenz-steuerung-glyc-glucon", "2025/11/Steruerung-Glycolyse-Gluconeogenese.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 142)"),
+    ("grenz-glycogen-wiki", "2025/12/Glycogen-Wiki.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 120)"),
+    ("grenz-fetttransport", "2026/02/Fetttranspoirt.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 150)"),
+    ("grenz-malat-aspartat-2", "2026/02/Malat-Aspartat-Shuttle-2.png", INV, "betreiber-grenzfall",
+     "Betreiberentscheidung 2026-10-12, Vorschau dunkler Grund ohne/mit invert: invertieren (wl 166); "
+     "Malat-Aspartat-Shuttle-1 (kontrollgruppe.html 4B) ist praktisch dasselbe Bild"),
+    # --- muss invertieren: Kontrollgruppen-Vorschau, Betreiberentscheidung 2026-10-12 (kontrollgruppe.html) ---
+    ("kg-triglycerid", "2025/05/Triglycerid.png", INV, "betreiber-kontrollgruppe",
+     "Betreiberentscheidung 2026-10-12 (Fall 2B): dunkelgraue Beschriftung auf transparent (wl 126)"),
+    ("kg-dc2", "2025/11/DC2.png", INV, "betreiber-kontrollgruppe",
+     "Betreiberentscheidung 2026-10-12 (Fall 6B): schwarze Linien, halbtransparente Flaechen (wl 190); "
+     "DC1 ist durch k1-dc1-1 gedeckt"),
+    ("kg-pdc-uebersicht", "2026/01/PDC-Uebersicht.png", INV, "betreiber-kontrollgruppe",
+     "Betreiberentscheidung 2026-10-12 (Fall 7B): deckende Pastellflaechen, schwarze Schrift auf transparent (wl 211)"),
+    ("kg-kompetitiver-inhibitor", "2025/09/kompetetiver-Inhibitor-MMD-1.png", INV, "betreiber-kontrollgruppe",
+     "Betreiberentscheidung 2026-10-12 (Fall 8B): Diagramm deckend hell, Formelzeichen schwarz auf transparent (wl 232)"),
+    # --- darf nicht invertieren: Norm-Piktogramme mit deckend heller Flaeche ---
+    # Betreiberentscheidung 2026-10-12 (Fall 1A, Leitlinie): GHS-Piktogramme nie invertieren.
+    # Ersetzt mit den synthetischen Grauzonen-Fixtures unten das nicht erfuellbare Kriterium
+    # ">= 3 echte Bilder mit wl 75-167 auf jeder Seite" (siehe Plan, AP-3.fix1).
+    ("ghs01-explos", "2025/05/GHS01_explos.png", NICHT, "betreiber-piktogramm", "GHS-Piktogramm (wl 195), Leitlinie 2026-10-12"),
+    ("ghs03-rondflam", "2025/05/GHS03_rondflam.png", NICHT, "betreiber-piktogramm",
+     "Betreiberentscheidung 2026-10-12 (kontrollgruppe.html Fall 1A): nicht invertieren (wl 165)"),
+    ("ghs04-bottle", "2025/05/GHS04_bottle.png", NICHT, "betreiber-piktogramm", "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"),
+    ("ghs05-acid", "2025/05/GHS05_acid.png", NICHT, "betreiber-piktogramm", "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"),
+    ("ghs06-skull", "2025/05/GHS06_skull.png", NICHT, "betreiber-piktogramm", "GHS-Piktogramm (wl 183), Leitlinie 2026-10-12"),
+    ("ghs07-exclam", "2025/05/GHS07_exclam.png", NICHT, "betreiber-piktogramm", "GHS-Piktogramm (wl 188), Leitlinie 2026-10-12"),
+    # --- synthetische Grauzonen-Fixtures (wl 75-167), je Seite drei ---
+    ("synth-n-piktogramm", "synth:piktogramm", NICHT, "synth-grauzone",
+     "synthetisch: Raute deckend hellgrau mit rotem Rahmen und grossem schwarzem Symbol innen (Norm-Piktogramm)"),
+    ("synth-n-farbkarte", "synth:farbkarte", NICHT, "synth-grauzone",
+     "synthetisch: deckende orange Karte, schwarze Schriftstriche nur INNERHALB der Karte"),
+    ("synth-n-freigestellt", "synth:freigestellt", NICHT, "synth-grauzone",
+     "synthetisch: freigestelltes 'Foto' (deckende Ellipse mit Mitteltoenen), keine dunkle Tinte"),
+    ("synth-m-linien-marker", "synth:linien-marker", INV, "synth-grauzone",
+     "synthetisch: schwarze Formel-Linien auf transparent, grosse halbtransparente gelbe Markerflaechen darueber"),
+    ("synth-m-schrift-kaesten", "synth:schrift-kaesten", INV, "synth-grauzone",
+     "synthetisch: deckende Pastellkaesten, schwarze Schriftstriche frei auf transparentem Grund daneben"),
+    ("synth-m-graue-beschriftung", "synth:graue-beschriftung", INV, "synth-grauzone",
+     "synthetisch: deckende Farbbalken, dunkelgraue Beschriftung frei auf transparentem Grund (wie Triglycerid)"),
 ]
 
 
+def synthetisch(name):
+    """Deterministische Grauzonen-Bilder (1200x900, transparenter Grund)."""
+    from PIL import ImageDraw
+    W, H = 1200, 900
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+
+    def schrift(x0, y0, zeilen, breite, farbe, staerke=7):
+        # "Schrift" als kurze Striche/Boegen, reproduzierbar ohne Schriftdatei
+        for z in range(zeilen):
+            y = y0 + z * 48
+            x = x0
+            k = 0
+            while x < x0 + breite:
+                w = 14 + (k * 7) % 22
+                d.line([(x, y), (x + w, y + 26)], fill=farbe, width=staerke)
+                d.line([(x + w, y), (x, y + 26)], fill=farbe, width=staerke)
+                x += w + 12
+                k += 1
+
+    if name == "piktogramm":
+        raute = [(600, 60), (1040, 450), (600, 840), (160, 450)]
+        d.polygon(raute, fill=(230, 230, 230, 255))
+        d.line(raute + [raute[0]], fill=(215, 25, 25, 255), width=46, joint="curve")
+        d.ellipse([440, 260, 760, 580], fill=(0, 0, 0, 255))
+        d.ellipse([510, 330, 690, 510], fill=(230, 230, 230, 255))
+        d.rectangle([430, 600, 770, 660], fill=(0, 0, 0, 255))
+        d.polygon([(600, 170), (690, 300), (510, 300)], fill=(0, 0, 0, 255))
+    elif name == "farbkarte":
+        d.rounded_rectangle([150, 150, 1050, 750], radius=40, fill=(240, 150, 70, 255))
+        schrift(230, 230, 9, 740, (0, 0, 0, 255))
+    elif name == "freigestellt":
+        maske = Image.new("L", (W, H), 0)
+        ImageDraw.Draw(maske).ellipse([100, 80, 1100, 820], fill=255)
+        foto = Image.new("RGB", (W, H))
+        px = foto.load()
+        for y in range(H):
+            for x in range(W):
+                # weicher Verlauf in Mitteltoenen (komprimiert gut, keine dunkle Tinte)
+                px[x, y] = (100 + 90 * x // W, 115 + 60 * y // H, 80 + 50 * (x + y) // (W + H))
+        im.paste(foto.convert("RGBA"), (0, 0), maske)
+    elif name == "linien-marker":
+        import math
+        # halbtransparente Pastell-Markerflaechen UNTER den Linien (wie phospholipide.png)
+        d.rounded_rectangle([140, 170, 560, 480], radius=60, fill=(235, 165, 195, 120))
+        d.rounded_rectangle([640, 170, 1060, 480], radius=60, fill=(165, 205, 240, 120))
+        d.rounded_rectangle([300, 530, 900, 800], radius=60, fill=(235, 215, 125, 120))
+        for cx, cy in [(300, 320), (600, 420), (900, 320), (450, 660), (750, 660)]:
+            pkt = [(cx + 120 * math.cos(math.pi / 3 * i + math.pi / 6),
+                    cy + 120 * math.sin(math.pi / 3 * i + math.pi / 6)) for i in range(7)]
+            d.line(pkt, fill=(0, 0, 0, 255), width=9)
+        schrift(120, 60, 2, 960, (0, 0, 0, 255), 7)
+    elif name == "schrift-kaesten":
+        d.rounded_rectangle([60, 80, 560, 420], radius=30, fill=(130, 175, 225, 255))
+        d.rounded_rectangle([640, 80, 1140, 420], radius=30, fill=(230, 150, 120, 255))
+        d.rounded_rectangle([60, 500, 560, 840], radius=30, fill=(140, 200, 130, 255))
+        schrift(660, 520, 7, 460, (0, 0, 0, 255), 9)
+        d.line([(580, 250), (630, 250)], fill=(0, 0, 0, 255), width=6)
+        d.line([(310, 440), (310, 490)], fill=(0, 0, 0, 255), width=6)
+    elif name == "graue-beschriftung":
+        d.rectangle([80, 80, 300, 700], fill=(70, 170, 60, 255))
+        for y in (90, 330, 570):
+            d.rounded_rectangle([320, y, 1120, y + 110], radius=18, fill=(235, 120, 50, 255))
+        schrift(90, 760, 2, 1000, (60, 60, 60, 255))
+    else:
+        raise RuntimeError("unbekanntes synthetisches Bild " + name)
+    return im
+
+
 def lade(quelle):
+    if quelle.startswith("synth:"):
+        return synthetisch(quelle[6:])
     if quelle.startswith("svgpng:"):
         pfad = os.path.join(UPLOADS, quelle[7:])
         with open(pfad, "r", encoding="utf-8") as f:
