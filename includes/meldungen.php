@@ -97,11 +97,17 @@ function simple_clean_meldung_art_label($art) {
     return isset($frueher[$art]) ? $frueher[$art] : 'unbekannt';
 }
 
-/** Die drei Bearbeitungszustände mit ihren Beschriftungen. */
+/**
+ * Die drei Bearbeitungszustände mit ihren Beschriftungen.
+ *
+ * Beschriftungen seit v1.5.119 „Offen / In Bearbeitung / Erledigt" (vorher
+ * „Neu / In Arbeit / Erledigt", Betreiberwunsch). Die Schlüssel blieben
+ * unverändert — sie stehen als post_status in der Datenbank.
+ */
 function simple_clean_meldung_zustaende() {
     return array(
-        FOS_MELDUNG_NEU      => 'Neu',
-        FOS_MELDUNG_ARBEIT   => 'In Arbeit',
+        FOS_MELDUNG_NEU      => 'Offen',
+        FOS_MELDUNG_ARBEIT   => 'In Bearbeitung',
         FOS_MELDUNG_ERLEDIGT => 'Erledigt',
     );
 }
@@ -154,11 +160,17 @@ function simple_clean_meldungen_register() {
     ));
 
     // Eigene Zustände statt der WordPress-Standards. Sie erscheinen dadurch
-    // von selbst als Filterzeile über der Liste („Neu (12) | In Arbeit (3)").
+    // von selbst als Filterzeile über der Liste („Offen (12) | In Bearbeitung (3)").
+    //
+    // label_count MUSS aus _n_noop() kommen (Schlüssel singular/plural). Ein
+    // schlichtes array(Einzahl, Mehrzahl) ergibt in translate_nooped_plural()
+    // eine leere Beschriftung, und WP_List_Table::get_views_links() verwirft
+    // den Link dann stillschweigend — die Filterzeile zeigte bis v1.5.118 nur
+    // „Alle". Bitte nicht wieder „vereinfachen".
     $zaehler = array(
-        FOS_MELDUNG_NEU      => array('Neu <span class="count">(%s)</span>', 'Neu <span class="count">(%s)</span>'),
-        FOS_MELDUNG_ARBEIT   => array('In Arbeit <span class="count">(%s)</span>', 'In Arbeit <span class="count">(%s)</span>'),
-        FOS_MELDUNG_ERLEDIGT => array('Erledigt <span class="count">(%s)</span>', 'Erledigt <span class="count">(%s)</span>'),
+        FOS_MELDUNG_NEU      => _n_noop('Offen <span class="count">(%s)</span>', 'Offen <span class="count">(%s)</span>'),
+        FOS_MELDUNG_ARBEIT   => _n_noop('In Bearbeitung <span class="count">(%s)</span>', 'In Bearbeitung <span class="count">(%s)</span>'),
+        FOS_MELDUNG_ERLEDIGT => _n_noop('Erledigt <span class="count">(%s)</span>', 'Erledigt <span class="count">(%s)</span>'),
     );
     foreach (simple_clean_meldung_zustaende() as $schluessel => $label) {
         register_post_status($schluessel, array(
