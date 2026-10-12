@@ -1925,8 +1925,53 @@ ein Sammeleintrag und ist seit v1.5.115 in `vorschlag_inhalt` und
 `public => false`, nicht in Suche, Verzeichnis, Sitemap oder REST — eine
 Meldung enthält oft den Namen einer Schülerin oder eines Schülers. Drei eigene
 Zustände (`fos_meldung_neu`, `_arbeit`, `_erledigt`), registriert mit
-`show_in_admin_status_list`; dadurch steht die Filterzeile „Neu (12) | In
-Arbeit (3) | Erledigt (40)" ohne eigenes Zutun über der Liste.
+`show_in_admin_status_list`; dadurch steht die Filterzeile „Offen (12) | In
+Bearbeitung (3) | Erledigt (40)" ohne eigenes Zutun über der Liste.
+
+**Beschriftungen seit v1.5.119 „Offen / In Bearbeitung / Erledigt"**
+(vorher „Neu / In Arbeit"); die Schlüssel blieben, sie stehen als
+`post_status` in der Datenbank.
+
+**Falle `label_count` (behoben v1.5.119):** Die Filterzeile zeigte bis
+v1.5.118 nur „Alle". `label_count` war ein schlichtes
+`array(Einzahl, Mehrzahl)`; WordPress erwartet die Form von `_n_noop()`
+(Schlüssel `singular`/`plural`). `translate_nooped_plural()` lieferte damit
+eine leere Beschriftung, und `WP_List_Table::get_views_links()` verwirft
+Links ohne Beschriftung stillschweigend. Jetzt `_n_noop()` — nicht wieder
+„vereinfachen".
+
+### Status direkt in der Liste setzen (seit v1.5.119)
+
+Spalte **„Status"** mit drei Knöpfen je Zeile (Offen rot, In Bearbeitung
+blau, Erledigt grün; aktiver Knopf gefüllt, `aria-pressed`). Ein Klick
+speichert per AJAX (`wp_ajax_fos_meldung_zustand` →
+`simple_clean_meldung_ajax_zustand()`: Nonce `fos_meldung_zustand`,
+`edit_post` je Meldung, Whitelist der drei Zustände, nur Inhaltstyp
+`fos_meldung`), ohne Neuladen. Die Antwort liefert die neuen Zähler je
+Zustand (Filterzeile und Blase am Menüpunkt laufen mit) und den neu erzeugten
+Kopiertext (er enthält den Status). Geschrieben wird über dieselbe
+`simple_clean_meldung_zustand_setzen()` wie bei Sammelaktion und
+Einzelansicht.
+
+**Erledigte separat unten:** In der Ansicht „Alle" sortiert
+`simple_clean_meldung_erledigte_ans_ende()` (Filter `posts_orderby`, nur
+Hauptabfrage der Meldungsliste) erledigte Meldungen ans Ende — als
+VORANGESTELLTES Kriterium, eine Spaltensortierung gilt innerhalb der beiden
+Gruppen weiter. `src/js/meldungen-admin.js` (`ordneErledigte()`) setzt davor
+ein Trennband „Erledigt (n auf dieser Seite)" und verschiebt eine Zeile nach
+einem Statuswechsel sofort in die richtige Gruppe; erledigte Zeilen sind
+gedämpft. In den Filteransichten (Offen/In Bearbeitung/Erledigt) gibt es kein
+Band. Über mehrere Listenseiten hinweg stehen die Erledigten auf den hinteren
+Seiten. Auf schmalen Bildschirmen blendet WordPress die Statusspalte wie alle
+Nebenspalten hinter den Aufklapp-Pfeil der Zeile.
+
+**Konfiguration fürs Skript als `data-`Attribut, nicht per
+`wp_localize_script()`:** Nonce, AJAX-Adresse und der Gruppier-Schalter
+stehen an jeder `.fos-meldung-status`-Gruppe. Grund: Eine strenge
+Content-Security-Policy (so auf der Testinstallation) blockiert Inline-
+Skripte — die Statusknöpfe funktionieren dort trotzdem. Die Kopiertexte
+(`fosMeldungTexte`) kommen weiterhin per `wp_localize_script()` und fehlen
+unter einer solchen CSP (bekannt, bisher ohne Auswirkung auf die Live-Seite).
 
 **`supports => array('title')` — bewusst ohne `'editor'`.** Ohne
 Editor-Unterstützung öffnet WordPress die klassische Bearbeitungsansicht statt

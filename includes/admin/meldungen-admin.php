@@ -131,6 +131,7 @@ function simple_clean_meldung_spalten($spalten) {
         }
         $neu[$schluessel] = $label;
         if ($schluessel === 'title') {
+            $neu['fos_status'] = 'Status';
             $neu['fos_art']    = 'Art';
             $neu['fos_seite']  = 'Seite';
             $neu['fos_melder'] = 'Melder';
@@ -145,6 +146,42 @@ add_filter('manage_' . FOS_MELDUNG_CPT . '_posts_columns', 'simple_clean_meldung
  */
 function simple_clean_meldung_spalte_inhalt($spalte, $post_id) {
     switch ($spalte) {
+        case 'fos_status':
+            // Drei Knöpfe statt Umweg über Einzelansicht oder Sammelaktion —
+            // der Zustand lässt sich direkt in der Liste setzen (seit v1.5.119).
+            // Gespeichert wird per AJAX, siehe simple_clean_meldung_ajax_zustand().
+            //
+            // Die Konfiguration fürs Skript steht als data-Attribut am Markup,
+            // nicht per wp_localize_script(): Ein Inline-Skript blockiert eine
+            // strenge Content-Security-Policy (so auf der Testinstallation).
+            static $nonce = null;
+            if ($nonce === null) {
+                $nonce = wp_create_nonce('fos_meldung_zustand');
+            }
+            $aktuell = get_post_status($post_id);
+            printf(
+                '<div class="fos-meldung-status" role="group" aria-label="Status" data-id="%d" data-nonce="%s" data-ajax="%s" data-erledigt="%s" data-offen="%s" data-gruppieren="%s">',
+                (int) $post_id,
+                esc_attr($nonce),
+                esc_url(admin_url('admin-ajax.php')),
+                esc_attr(FOS_MELDUNG_ERLEDIGT),
+                esc_attr(FOS_MELDUNG_NEU),
+                simple_clean_meldung_ist_alle_ansicht() ? '1' : ''
+            );
+            foreach (simple_clean_meldung_zustaende() as $schluessel => $label) {
+                $aktiv = $schluessel === $aktuell;
+                printf(
+                    '<button type="button" class="button button-small fos-meldung-status__knopf fos-meldung-status__knopf--%s%s" data-zustand="%s" aria-pressed="%s">%s</button>',
+                    esc_attr(str_replace('fos_meldung_', '', $schluessel)),
+                    $aktiv ? ' is-aktiv' : '',
+                    esc_attr($schluessel),
+                    $aktiv ? 'true' : 'false',
+                    esc_html($label)
+                );
+            }
+            echo '</div>';
+            break;
+
         case 'fos_art':
             $art = (string) get_post_meta($post_id, '_fos_art', true);
             echo $art !== '' ? esc_html(simple_clean_meldung_art_label($art)) : '—';
@@ -258,6 +295,82 @@ function simple_clean_meldung_filter_anwenden($query) {
     ));
 }
 add_action('pre_get_posts', 'simple_clean_meldung_filter_anwenden');
+
+/**
+ * Ist die aktuelle Admin-Liste die Ansicht „Alle" der Meldungen?
+ *
+ * Nur dort werden erledigte Meldungen ans Ende gestellt und abgetrennt — in
+ * den Filteransichten („Offen", „Erledigt" …) gibt es nichts zu trennen.
+ */
+function simple_clean_meldung_ist_alle_ansicht() {
+    global $pagenow, $typenow;
+    if (!is_admin() || $pagenow !== 'edit.php' || $typenow !== FOS_MELDUNG_CPT) {
+        return false;
+    }
+    $status = isset($_GET['post_status']) ? sanitize_key($_GET['post_status']) : '';
+    return $status === '' || $status === 'all';
+}
+
+/**
+ * Erledigte Meldungen in der Ansicht „Alle" ans Ende sortieren (seit v1.5.119).
+ *
+ * Als VORANGESTELLTES Sortierkriterium, damit eine vom Nutzer gewählte
+ * Spaltensortierung innerhalb der beiden Gruppen weiter gilt. Über die
+ * Seitenzählung hinweg: Erledigte stehen auf den hinteren Seiten — das
+ * Trennband setzt das Skript auf der Seite, auf der sie beginnen.
+ */
+function simple_clean_meldung_erledigte_ans_ende($orderby, $query) {
+    if (!$query->is_main_query() || !simple_clean_meldung_ist_alle_ansicht()) {
+        return $orderby;
+    }
+    global $wpdb;
+    $erledigt = $wpdb->prepare("{$wpdb->posts}.post_status = %s ASC", FOS_MELDUNG_ERLEDIGT);
+    return $orderby !== '' ? $erledigt . ', ' . $orderby : $erledigt;
+}
+add_filter('posts_orderby', 'simple_clean_meldung_erledigte_ans_ende', 10, 2);
+
+/**
+ * AJAX: Zustand einer Meldung direkt aus der Liste setzen.
+ *
+ * Antwortet mit den neuen Zählern je Zustand (für die Filterzeile und die
+ * Blase am Menüpunkt) und dem neu erzeugten Kopiertext — der enthält den
+ * Status, der vorher mitgelieferte wäre sonst veraltet.
+ */
+function simple_clean_meldung_ajax_zustand() {
+    check_ajax_referer('fos_meldung_zustand', 'nonce');
+
+    $id        = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+    $zustand   = isset($_POST['zustand']) ? sanitize_key(wp_unslash($_POST['zustand'])) : '';
+    $zustaende = simple_clean_meldung_zustaende();
+    $post      = $id ? get_post($id) : null;
+
+    if (!$post || $post->post_type !== FOS_MELDUNG_CPT || !isset($zustaende[$zustand])) {
+        wp_send_json_error(array('message' => 'Ungültige Anfrage.'), 400);
+    }
+    if (!current_user_can('edit_post', $id)) {
+        wp_send_json_error(array('message' => 'Keine Berechtigung.'), 403);
+    }
+
+    // false heißt hier auch „war schon so" — kein Fehler.
+    simple_clean_meldung_zustand_setzen($id, $zustand);
+    if (get_post_status($id) !== $zustand) {
+        wp_send_json_error(array('message' => 'Speichern fehlgeschlagen.'), 500);
+    }
+
+    $zaehlung = wp_count_posts(FOS_MELDUNG_CPT);
+    $anzahl   = array();
+    foreach ($zustaende as $schluessel => $label) {
+        $anzahl[$schluessel] = isset($zaehlung->$schluessel) ? (int) $zaehlung->$schluessel : 0;
+    }
+
+    wp_send_json_success(array(
+        'zustand' => $zustand,
+        'label'   => $zustaende[$zustand],
+        'anzahl'  => $anzahl,
+        'text'    => simple_clean_meldung_als_text($id),
+    ));
+}
+add_action('wp_ajax_fos_meldung_zustand', 'simple_clean_meldung_ajax_zustand');
 
 /**
  * Sammelaktionen für die Zustände.
@@ -502,6 +615,36 @@ function simple_clean_meldung_admin_css($hook) {
     echo '<style>#minor-publishing-actions,#misc-publishing-actions{display:none;}</style>';
 }
 add_action('admin_head', 'simple_clean_meldung_admin_css');
+
+/**
+ * Gestaltung der Liste: Statusknöpfe, gedämpfte erledigte Zeilen, Trennband.
+ *
+ * Inline wie die Regel oben — eine eigene Datei lohnt für die paar Zeilen
+ * nicht. Farben über var(--x, #fallback) (Theme-Konvention), Rückfallwerte
+ * aus der WordPress-Admin-Palette.
+ */
+function simple_clean_meldung_liste_css() {
+    global $pagenow, $typenow;
+    if ($pagenow !== 'edit.php' || $typenow !== FOS_MELDUNG_CPT) {
+        return;
+    }
+    ?>
+    <style>
+        .column-fos_status { width: 15.5em; }
+        .fos-meldung-status { display: flex; flex-wrap: wrap; gap: 4px; }
+        .fos-meldung-status .button.fos-meldung-status__knopf { margin: 0; }
+        .fos-meldung-status .button.is-aktiv { color: var(--fos-meldung-text-aktiv, #ffffff); }
+        .fos-meldung-status .button.fos-meldung-status__knopf--neu.is-aktiv { background: var(--fos-meldung-offen, #d63638); border-color: var(--fos-meldung-offen, #d63638); }
+        .fos-meldung-status .button.fos-meldung-status__knopf--arbeit.is-aktiv { background: var(--fos-meldung-arbeit, #2271b1); border-color: var(--fos-meldung-arbeit, #2271b1); }
+        .fos-meldung-status .button.fos-meldung-status__knopf--erledigt.is-aktiv { background: var(--fos-meldung-erledigt, #00a32a); border-color: var(--fos-meldung-erledigt, #00a32a); }
+        .fos-meldung-status.is-beschaeftigt { opacity: .6; pointer-events: none; }
+        .fos-meldung-status__fehler { display: block; width: 100%; color: var(--fos-meldung-offen, #d63638); font-size: 12px; }
+        #the-list tr.status-fos_meldung_erledigt > *:not(.column-fos_status):not(.check-column) { opacity: .6; }
+        #the-list tr.fos-meldung-trenner td { background: var(--fos-meldung-trenner, #f0f0f1); border-top: 2px solid var(--fos-meldung-erledigt, #00a32a); font-weight: 600; padding: 10px; }
+    </style>
+    <?php
+}
+add_action('admin_head', 'simple_clean_meldung_liste_css');
 
 /**
  * Das Kopier-Skript laden — nur auf den beiden Meldungs-Bildschirmen.
