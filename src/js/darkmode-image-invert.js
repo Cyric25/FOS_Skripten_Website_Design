@@ -50,8 +50,9 @@
  *     Analyse gesetzt: invertiert|hell|deckend|leer|fehler|ohne-groesse
  *   - SVG nur mit viewBox (complete, aber naturalWidth 0): decode()
  *     abwarten, dann mit angezeigter Groesse analysieren; ist auch die 0,
- *     erneut bei load bzw. sobald das Bild sichtbar wird
- *     (IntersectionObserver)
+ *     erneut bei load bzw. sobald das Bild eine Flaeche hat
+ *     (IntersectionObserver). Lehnt decode() ab und das Bild steht mit 0x0
+ *     im Layout, ist es defekt -> 'fehler' (AP-3.fix2: keine Endlosschleife)
  *   - Analyse in Leerlauf-Haeppchen; Messwerte in window.fosDarkmodeStatistik
  *
  * AUTOREN-KLASSEN (AP-3.4): .fos-darkmode-no-invert (Bild oder Vorfahre,
@@ -362,21 +363,62 @@
     // wird - dann hat es ein Layout und getBoundingClientRect() liefert Masse.
     // Zusaetzlich loest ein spaeteres 'load' die Pruefung erneut aus. Kein
     // Intervall, kein Vollscan.
+    //
+    // AP-3.fix2 (M1, #7107): Ein defektes Bild mit alt="" hat 0x0 und meldet
+    // dem IntersectionObserver trotzdem isIntersecting = true (kantenbuendig
+    // zaehlt). Frueher: unobserve -> pruefeBild -> wieder 'ohne-groesse' ->
+    // observe ... einmal je Frame (Listener-Leck, Dauerlayout). Deshalb:
+    //   - der Rueckruf prueft nur bei Flaeche > 0 erneut, sonst bleibt das
+    //     Bild einfach beobachtet (KEIN unobserve/observe im Wechsel)
+    //   - load-Listener und Beobachtung je Bild hoechstens einmal (Merker)
+    //   - nach abgelehntem decode() ohne Groesse: 'fehler', keine Beobachtung
     var sichtbarBeobachter = null;
+
+    function hatFlaeche( rect ) {
+        return !! rect && rect.width > 0 && rect.height > 0;
+    }
+
+    // Wiederholung ueber die Warteschlange (Zeitbudget, MAX_PARALLEL) statt direkt
+    function einreihenUndPlanen( img ) {
+        einreihen( img );
+        planeAbarbeitung( true );
+    }
+
+    // Hoechstens EIN load-Listener je Bild (fuer einen spaeteren src-Wechsel
+    // bzw. nachgeladene Bilder). Ein bisheriges 'fehler' wird dann verworfen.
+    function horcheAufLoad( img ) {
+        if ( img._fosDarkmodeLoadHorcht ) return;
+        img._fosDarkmodeLoadHorcht = true;
+        img.addEventListener( 'load', function () {
+            img._fosDarkmodeLoadHorcht = false;
+            if ( img.dataset.fosDarkmodeChecked === 'fehler' ) {
+                delete img.dataset.fosDarkmodeChecked;
+            }
+            einreihenUndPlanen( img );
+        }, { once: true } );
+    }
+
     function spaeterErneut( img ) {
-        img.addEventListener( 'load', function () { pruefeBild( img ); }, { once: true } );
+        horcheAufLoad( img );
         if ( typeof window.IntersectionObserver === 'function' ) {
             if ( ! sichtbarBeobachter ) {
                 sichtbarBeobachter = new IntersectionObserver( function ( eintraege ) {
                     eintraege.forEach( function ( eintrag ) {
-                        if ( eintrag.isIntersecting ) {
+                        // Ohne Flaeche (0x0, display:none) nichts tun und weiter
+                        // beobachten: der Browser meldet erneut, sobald sich
+                        // Schnitt oder Groesse aendern.
+                        if ( eintrag.isIntersecting && hatFlaeche( eintrag.boundingClientRect ) ) {
                             sichtbarBeobachter.unobserve( eintrag.target );
-                            pruefeBild( eintrag.target );
+                            eintrag.target._fosDarkmodeBeobachtet = false;
+                            einreihenUndPlanen( eintrag.target );
                         }
                     } );
                 } );
             }
-            sichtbarBeobachter.observe( img );
+            if ( ! img._fosDarkmodeBeobachtet ) {
+                img._fosDarkmodeBeobachtet = true;
+                sichtbarBeobachter.observe( img );
+            }
         }
     }
 
@@ -397,8 +439,19 @@
         }
         if ( ! breite || ! hoehe ) {
             img._fosDarkmodeLaeuft = false;
-            setzeErgebnis( img, 'ohne-groesse' );
-            spaeterErneut( img );
+            if ( decodeAbgelehnt && img.getClientRects().length ) {
+                // AP-3.fix2: decode() abgelehnt, keine Groesse, aber im Layout
+                // (0x0-Box) -> defektes Bild, endgueltig. Kein erneutes Pruefen
+                // per IntersectionObserver (Endlosschleife); hoechstens ein
+                // load-Listener fuer einen spaeteren src-Wechsel.
+                setzeErgebnis( img, 'fehler' );
+                horcheAufLoad( img );
+            } else {
+                // SVG nur mit viewBox (oder nicht im Layout, z. B. display:none):
+                // sobald das Bild sichtbar wird bzw. ein 'load' kommt, erneut.
+                setzeErgebnis( img, 'ohne-groesse' );
+                spaeterErneut( img );
+            }
             fertig();
             return;
         }
@@ -456,7 +509,7 @@
         if ( ! img.complete ) {
             img.addEventListener( 'load', function () {
                 img._fosDarkmodeLaeuft = false;
-                pruefeBild( img );
+                einreihenUndPlanen( img ); // ueber die Warteschlange (AP-3.fix2, G2)
             }, { once: true } );
             img.addEventListener( 'error', function () {
                 img._fosDarkmodeLaeuft = false;
